@@ -31,6 +31,9 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
+    VkShaderModule _vert;
+    VkShaderModule _frag;
+
     void init();
     void cleanup();
     void draw();

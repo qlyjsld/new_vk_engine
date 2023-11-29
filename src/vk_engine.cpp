@@ -64,10 +64,20 @@ void vk_engine::device_init()
 
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
 
+    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
+    dynamic_rendering_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+    dynamic_rendering_features.pNext = nullptr;
+    dynamic_rendering_features.dynamicRendering = VK_TRUE;
+
     /* select vulkan physical device, defaulted to discrete GPU */
     vkb::PhysicalDeviceSelector vkb_physical_device_selector{vkb_instance};
     vkb::PhysicalDevice vkb_physical_device =
-        vkb_physical_device_selector.set_surface(_surface).select().value();
+        vkb_physical_device_selector
+            .add_required_extension_features(dynamic_rendering_features)
+            .set_surface(_surface)
+            .select()
+            .value();
     _physical_device = vkb_physical_device.physical_device;
 
     /* create vulkan device */
@@ -122,23 +132,21 @@ void vk_engine::pipeline_init()
 {
     PipelineBuilder graphics_pipeline_builder = {};
 
-    VkShaderModule vert;
-    if (!load_shader_module("../shaders/.vert.spv", &vert))
+    if (!load_shader_module("../shaders/.vert.spv", &_vert))
         std::cerr << "load vert failed" << std::endl;
     else
         std::cout << "vert loaded" << std::endl;
 
     graphics_pipeline_builder._shader_stage_infos.push_back(
-        vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_VERTEX_BIT, vert));
+        vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
 
-    VkShaderModule frag;
-    if (!load_shader_module("../shaders/.frag.spv", &frag))
+    if (!load_shader_module("../shaders/.frag.spv", &_frag))
         std::cerr << "load frag failed" << std::endl;
     else
         std::cout << "frag loaded" << std::endl;
 
     graphics_pipeline_builder._shader_stage_infos.push_back(
-        vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag));
+        vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
 
     graphics_pipeline_builder._viewport.x = 0.f;
     graphics_pipeline_builder._viewport.y = 0.f;
@@ -179,6 +187,8 @@ void vk_engine::cleanup()
     if (_is_initialized) {
         vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
         vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
+        vkDestroyShaderModule(_device, _frag, nullptr);
+        vkDestroyShaderModule(_device, _vert, nullptr);
         vkDestroySemaphore(_device, _present_sem, nullptr);
         vkDestroySemaphore(_device, _sumbit_sem, nullptr);
         vkDestroyFence(_device, _fence, nullptr);
@@ -343,13 +353,13 @@ void PipelineBuilder::build(VkDevice device, VkFormat *format)
     graphics_pipeline_info.pStages = _shader_stage_infos.data();
     graphics_pipeline_info.pVertexInputState = &_vertex_input_state_info;
     graphics_pipeline_info.pInputAssemblyState = &_input_asm_state_info;
-    // graphics_pipeline_info.pTessellationState = nullptr;
+    // graphics_pipeline_info.pTessellationState = ;
     graphics_pipeline_info.pViewportState = &viewport_state_info;
     graphics_pipeline_info.pRasterizationState = &_rasterization_state_info;
     graphics_pipeline_info.pMultisampleState = &_multisample_state_info;
-    // graphics_pipeline_info.pDepthStencilState = nullptr;
+    // graphics_pipeline_info.pDepthStencilState = ;
     graphics_pipeline_info.pColorBlendState = &color_blend_state_info;
-    // graphics_pipeline_info.pDynamicState = nullptr;
+    // graphics_pipeline_info.pDynamicState = ;
     graphics_pipeline_info.layout = _pipeline_layout;
     // graphics_pipeline_info.renderPass = ;
     // graphics_pipeline_info.subpass = ;
