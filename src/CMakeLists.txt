@@ -9,4 +9,4 @@ add_executable(vk_engine
     vk_cmd.cpp
     vk_cmd.h)
 
-target_link_libraries(vk_engine Vulkan::Vulkan SDL3::SDL3 vk-bootstrap)
+target_link_libraries(vk_engine Vulkan::Vulkan SDL3::SDL3 vk-bootstrap GPUOpen::VulkanMemoryAllocator)

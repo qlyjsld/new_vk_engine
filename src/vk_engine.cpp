@@ -11,6 +11,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "SDL_keycode.h"
 #include "vk_cmd.h"
 #include "vk_init.h"
 #include "vk_type.h"
@@ -279,6 +280,8 @@ void vk_engine::run()
             if (e.type == SDL_EVENT_QUIT)
                 bquit = true;
             if (e.type == SDL_EVENT_KEY_DOWN) {
+                if (e.key.keysym.sym == SDLK_ESCAPE)
+                    bquit = true;
                 std::cout << SDL_GetKeyName(e.key.keysym.sym) << " pressed " << std::endl;
             }
         }

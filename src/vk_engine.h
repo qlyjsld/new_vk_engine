@@ -1,8 +1,26 @@
 ﻿#pragma once
 
 #include "vk_type.h"
+#include <deque>
+#include <functional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+struct deletion_queue {
+public:
+    std::deque<std::function<void()>> fs;
+
+    void push_back(std::function<void()> &&f) { fs.push_back(f); }
+
+    void flush()
+    {
+        for (auto f = fs.rbegin(); f != fs.rend(); f++) {
+            (*f)();
+        }
+
+        fs.clear();
+    };
+};
 
 class vk_engine
 {
@@ -33,6 +51,8 @@ public:
 
     VkShaderModule _vert;
     VkShaderModule _frag;
+
+    deletion_queue _d_queue;
 
     void init();
     void cleanup();
