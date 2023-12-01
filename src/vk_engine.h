@@ -1,6 +1,9 @@
 ﻿#pragma once
 
+#include "vk_mem_alloc.h"
+#include "vk_mesh.h"
 #include "vk_type.h"
+#include <cstddef>
 #include <deque>
 #include <functional>
 #include <vector>
@@ -52,6 +55,9 @@ public:
     VkShaderModule _vert;
     VkShaderModule _frag;
 
+    VmaAllocator _allocator;
+    std::vector<mesh> _meshes;
+
     deletion_queue _d_queue;
 
     void init();
@@ -67,6 +73,9 @@ private:
     void command_init();
     void sync_init();
     void pipeline_init();
+
+    void load_meshes();
+    void upload_meshes(mesh *meshes, size_t size);
 };
 
 class PipelineBuilder

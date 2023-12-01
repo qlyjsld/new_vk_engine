@@ -1,6 +1,8 @@
 ﻿#include "vk_engine.h"
+#include "vk_mesh.h"
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 
@@ -10,6 +12,9 @@
 #include <stdint.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 #include "SDL_keycode.h"
 #include "vk_cmd.h"
@@ -37,7 +42,15 @@ void vk_engine::init()
     swapchain_init();
     command_init();
     sync_init();
+
+    VmaAllocatorCreateInfo vma_allocator_info = {};
+    vma_allocator_info.physicalDevice = _physical_device;
+    vma_allocator_info.device = _device;
+    vma_allocator_info.instance = _instance;
+    vmaCreateAllocator(&vma_allocator_info, &_allocator);
+
     pipeline_init();
+    load_meshes();
 
     _is_initialized = true;
 }
@@ -161,6 +174,15 @@ void vk_engine::pipeline_init()
 
     graphics_pipeline_builder._vertex_input_state_info =
         vk_init::vk_create_vertex_input_state_info();
+
+    vertex_input_description description = vertex::get_vertex_input_description();
+    auto *vertex_input_state_info = &graphics_pipeline_builder._vertex_input_state_info;
+    vertex_input_state_info->vertexBindingDescriptionCount = description.bindings.size();
+    vertex_input_state_info->pVertexBindingDescriptions = description.bindings.data();
+    vertex_input_state_info->vertexAttributeDescriptionCount =
+        description.attributes.size();
+    vertex_input_state_info->pVertexAttributeDescriptions = description.attributes.data();
+
     graphics_pipeline_builder._input_asm_state_info =
         vk_init::vk_create_input_asm_state_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     graphics_pipeline_builder._rasterization_state_info =
@@ -181,30 +203,41 @@ void vk_engine::pipeline_init()
     _gfx_pipeline_layout = graphics_pipeline_builder._pipeline_layout;
 }
 
-void vk_engine::cleanup()
+void vk_engine::load_meshes()
 {
-    vkDeviceWaitIdle(_device);
+    mesh triangle;
+    vertex vs[3];
+    vs[0].pos = glm::vec3{-.5f, .5f, 0.f};
+    vs[0].color = glm::vec3{1.f, 0.f, 0.f};
+    vs[1].pos = glm::vec3{.5f, .5f, 0.f};
+    vs[1].color = glm::vec3{0.f, 1.f, 0.f};
+    vs[2].pos = glm::vec3{0.f, -.5f, 0.f};
+    vs[2].color = glm::vec3{0.f, 0.f, 1.f};
+    triangle.vertices = {vs[0], vs[1], vs[2]};
+    upload_meshes(&triangle, 1);
+}
 
-    if (_is_initialized) {
-        vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
-        vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
-        vkDestroyShaderModule(_device, _frag, nullptr);
-        vkDestroyShaderModule(_device, _vert, nullptr);
-        vkDestroySemaphore(_device, _present_sem, nullptr);
-        vkDestroySemaphore(_device, _sumbit_sem, nullptr);
-        vkDestroyFence(_device, _fence, nullptr);
-        vkDestroyCommandPool(_device, _cmd_pool, nullptr);
-        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+void vk_engine::upload_meshes(mesh *meshes, size_t size)
+{
+    for (uint32_t i = 0; i < size; ++i) {
+        mesh mesh = meshes[i];
+        VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        buffer_info.size = mesh.vertices.size() * sizeof(vertex);
+        buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
-        for (int i = 0; i < _swapchain_img_views.size(); i++) {
-            vkDestroyImageView(_device, _swapchain_img_views[i], nullptr);
-        }
+        VmaAllocationCreateInfo vma_allocation_info = {};
+        vma_allocation_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-        vkDestroyDevice(_device, nullptr);
-        vkDestroySurfaceKHR(_instance, _surface, nullptr);
-        vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
-        vkDestroyInstance(_instance, nullptr);
-        SDL_DestroyWindow(_window);
+        vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
+                        &mesh.vertex_buffer.buffer, &mesh.vertex_buffer.allocation,
+                        nullptr);
+
+        void *data;
+        vmaMapMemory(_allocator, mesh.vertex_buffer.allocation, &data);
+        std::memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(vertex));
+        vmaUnmapMemory(_allocator, mesh.vertex_buffer.allocation);
+
+        _meshes.push_back(mesh);
     }
 }
 
@@ -244,6 +277,9 @@ void vk_engine::draw()
 
     vkCmdBindPipeline(_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _gfx_pipeline);
 
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &_meshes[0].vertex_buffer.buffer, &offset);
+
     vkCmdDraw(_cmd_buffer, 3, 1, 0, 0);
 
     vkCmdEndRendering(_cmd_buffer);
@@ -268,6 +304,37 @@ void vk_engine::draw()
     VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
 
     _frame_number++;
+}
+
+void vk_engine::cleanup()
+{
+    vkDeviceWaitIdle(_device);
+
+    if (_is_initialized) {
+        for (uint32_t i = 0; i < _meshes.size(); i++)
+            vmaDestroyBuffer(_allocator, _meshes[i].vertex_buffer.buffer,
+                             _meshes[i].vertex_buffer.allocation);
+
+        vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
+        vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
+        vkDestroyShaderModule(_device, _frag, nullptr);
+        vkDestroyShaderModule(_device, _vert, nullptr);
+        vmaDestroyAllocator(_allocator);
+        vkDestroySemaphore(_device, _present_sem, nullptr);
+        vkDestroySemaphore(_device, _sumbit_sem, nullptr);
+        vkDestroyFence(_device, _fence, nullptr);
+        vkDestroyCommandPool(_device, _cmd_pool, nullptr);
+        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+        for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)
+            vkDestroyImageView(_device, _swapchain_img_views[i], nullptr);
+
+        vkDestroyDevice(_device, nullptr);
+        vkDestroySurfaceKHR(_instance, _surface, nullptr);
+        vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
+        vkDestroyInstance(_instance, nullptr);
+        SDL_DestroyWindow(_window);
+    }
 }
 
 void vk_engine::run()
