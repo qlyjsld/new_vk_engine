@@ -1,5 +1,6 @@
 ﻿#include "vk_engine.h"
 #include "vk_mesh.h"
+#include "vk_pipeline_builder.h"
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -20,15 +21,7 @@
 #include "vk_cmd.h"
 #include "vk_init.h"
 #include "vk_type.h"
-
-#define VK_CHECK(x)                                                                      \
-    do {                                                                                 \
-        VkResult err = x;                                                                \
-        if (err) {                                                                       \
-            std::cerr << "vulkan error: " << err << std::endl;                           \
-            abort();                                                                     \
-        }                                                                                \
-    } while (0)
+#include "vk_util.h"
 
 void vk_engine::init()
 {
@@ -161,28 +154,8 @@ void vk_engine::pipeline_init()
 
     graphics_pipeline_builder._shader_stage_infos.push_back(
         vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
-
-    graphics_pipeline_builder._viewport.x = 0.f;
-    graphics_pipeline_builder._viewport.y = 0.f;
-    graphics_pipeline_builder._viewport.width = _window_extent.width;
-    graphics_pipeline_builder._viewport.height = _window_extent.height;
-    graphics_pipeline_builder._viewport.minDepth = 0.f;
-    graphics_pipeline_builder._viewport.maxDepth = 1.f;
-
-    graphics_pipeline_builder._scissor.offset = VkOffset2D{0, 0};
-    graphics_pipeline_builder._scissor.extent = _window_extent;
-
     graphics_pipeline_builder._vertex_input_state_info =
         vk_init::vk_create_vertex_input_state_info();
-
-    vertex_input_description description = vertex::get_vertex_input_description();
-    auto *vertex_input_state_info = &graphics_pipeline_builder._vertex_input_state_info;
-    vertex_input_state_info->vertexBindingDescriptionCount = description.bindings.size();
-    vertex_input_state_info->pVertexBindingDescriptions = description.bindings.data();
-    vertex_input_state_info->vertexAttributeDescriptionCount =
-        description.attributes.size();
-    vertex_input_state_info->pVertexAttributeDescriptions = description.attributes.data();
-
     graphics_pipeline_builder._input_asm_state_info =
         vk_init::vk_create_input_asm_state_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     graphics_pipeline_builder._rasterization_state_info =
@@ -191,6 +164,9 @@ void vk_engine::pipeline_init()
         vk_init::vk_create_color_blend_attachment_state();
     graphics_pipeline_builder._multisample_state_info =
         vk_init::vk_create_multisample_state_info();
+
+    vertex_input_description description = vertex::get_vertex_input_description();
+    graphics_pipeline_builder.customize(_window_extent, &description);
 
     VkPipelineLayoutCreateInfo pipeline_layout_info =
         vk_init::vk_create_pipeline_layout_info();
@@ -382,60 +358,4 @@ bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_
     VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module));
 
     return true;
-}
-
-void PipelineBuilder::build(VkDevice device, VkFormat *format)
-{
-    VkPipelineViewportStateCreateInfo viewport_state_info = {};
-    viewport_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewport_state_info.pNext = nullptr;
-    // viewport_state_info.flags = ;
-    viewport_state_info.viewportCount = 1;
-    viewport_state_info.pViewports = &_viewport;
-    viewport_state_info.scissorCount = 1;
-    viewport_state_info.pScissors = &_scissor;
-
-    VkPipelineColorBlendStateCreateInfo color_blend_state_info = {};
-    color_blend_state_info.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    color_blend_state_info.pNext = nullptr;
-    // color_blend_state_info.flags = ;
-    color_blend_state_info.logicOpEnable = VK_FALSE;
-    color_blend_state_info.logicOp = VK_LOGIC_OP_COPY;
-    color_blend_state_info.attachmentCount = 1;
-    color_blend_state_info.pAttachments = &_color_blend_attachment_state;
-    // color_blend_state_info.blendConstants[] = ;
-
-    VkPipelineRenderingCreateInfo rendering_info = {};
-    rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    rendering_info.pNext = nullptr;
-    // rendering_info.viewMask = ;
-    rendering_info.colorAttachmentCount = 1;
-    rendering_info.pColorAttachmentFormats = format;
-    // rendering_info.depthAttachmentFormat = ;
-    // rendering_info.stencilAttachmentFormat = ;
-
-    VkGraphicsPipelineCreateInfo graphics_pipeline_info = {};
-    graphics_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    graphics_pipeline_info.pNext = &rendering_info;
-    // graphics_pipeline_info.flags = ;
-    graphics_pipeline_info.stageCount = _shader_stage_infos.size();
-    graphics_pipeline_info.pStages = _shader_stage_infos.data();
-    graphics_pipeline_info.pVertexInputState = &_vertex_input_state_info;
-    graphics_pipeline_info.pInputAssemblyState = &_input_asm_state_info;
-    // graphics_pipeline_info.pTessellationState = ;
-    graphics_pipeline_info.pViewportState = &viewport_state_info;
-    graphics_pipeline_info.pRasterizationState = &_rasterization_state_info;
-    graphics_pipeline_info.pMultisampleState = &_multisample_state_info;
-    // graphics_pipeline_info.pDepthStencilState = ;
-    graphics_pipeline_info.pColorBlendState = &color_blend_state_info;
-    // graphics_pipeline_info.pDynamicState = ;
-    graphics_pipeline_info.layout = _pipeline_layout;
-    // graphics_pipeline_info.renderPass = ;
-    // graphics_pipeline_info.subpass = ;
-    graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    // graphics_pipeline_info.basePipelineIndex = ;
-
-    VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_info,
-                                       nullptr, &_pipeline));
 }
