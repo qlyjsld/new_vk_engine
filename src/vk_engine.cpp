@@ -42,6 +42,7 @@ void vk_engine::init()
     vma_allocator_info.instance = _instance;
     vmaCreateAllocator(&vma_allocator_info, &_allocator);
 
+    camera_init();
     pipeline_init();
     load_meshes();
 
@@ -135,6 +136,8 @@ void vk_engine::sync_init()
     VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_present_sem));
 }
 
+void vk_engine::camera_init() { _cam.init(); }
+
 void vk_engine::pipeline_init()
 {
     PipelineBuilder graphics_pipeline_builder = {};
@@ -170,6 +173,14 @@ void vk_engine::pipeline_init()
 
     VkPipelineLayoutCreateInfo pipeline_layout_info =
         vk_init::vk_create_pipeline_layout_info();
+
+    VkPushConstantRange push_constant_range = {};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant_range.offset = 0;
+    push_constant_range.size = sizeof(mesh_push_constants);
+
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
                                     &graphics_pipeline_builder._pipeline_layout));
@@ -256,7 +267,14 @@ void vk_engine::draw()
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &_meshes[0].vertex_buffer.buffer, &offset);
 
-    vkCmdDraw(_cmd_buffer, 3, 1, 0, 0);
+    mesh_push_constants push_constants;
+    // push_constant.data = ;
+    push_constants.render_matrix = glm::mat4{0.f};
+
+    vkCmdPushConstants(_cmd_buffer, _gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(mesh_push_constants), &push_constants);
+
+    vkCmdDraw(_cmd_buffer, _meshes[0].vertices.size(), 1, 0, 0);
 
     vkCmdEndRendering(_cmd_buffer);
 

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "vk_camera.h"
 #include "vk_mem_alloc.h"
 #include "vk_mesh.h"
 #include "vk_type.h"
@@ -26,7 +27,7 @@ public:
     };
 };
 
-struct mesh_push_constant {
+struct mesh_push_constants {
     glm::vec4 data;
     glm::mat4 render_matrix;
 };
@@ -64,6 +65,7 @@ public:
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
 
+    vk_camera _cam;
     deletion_queue _d_queue;
 
     void init();
@@ -78,6 +80,7 @@ private:
     void swapchain_init();
     void command_init();
     void sync_init();
+    void camera_init();
     void pipeline_init();
 
     void load_meshes();
