@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstring>
 #include <fstream>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <iostream>
 
 #include <SDL3/SDL.h>
@@ -136,8 +138,6 @@ void vk_engine::sync_init()
     VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_present_sem));
 }
 
-void vk_engine::camera_init() { _cam.init(); }
-
 void vk_engine::pipeline_init()
 {
     PipelineBuilder graphics_pipeline_builder = {};
@@ -262,19 +262,23 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(_cmd_buffer, &rendering_info);
 
-    vkCmdBindPipeline(_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _gfx_pipeline);
+    for (uint32_t i = 0; i < _meshes.size(); ++i) {
+        mesh *mesh = &_meshes[i];
 
-    VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &_meshes[0].vertex_buffer.buffer, &offset);
+        vkCmdBindPipeline(_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _gfx_pipeline);
 
-    mesh_push_constants push_constants;
-    // push_constant.data = ;
-    push_constants.render_matrix = glm::mat4{0.f};
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer, &offset);
 
-    vkCmdPushConstants(_cmd_buffer, _gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                       sizeof(mesh_push_constants), &push_constants);
+        mesh_push_constants push_constants;
+        // push_constant.data = ;
+        push_constants.render_matrix = glm::mat4{0.f};
 
-    vkCmdDraw(_cmd_buffer, _meshes[0].vertices.size(), 1, 0, 0);
+        vkCmdPushConstants(_cmd_buffer, _gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
+                           0, sizeof(mesh_push_constants), &push_constants);
+
+        vkCmdDraw(_cmd_buffer, mesh->vertices.size(), 1, 0, 0);
+    }
 
     vkCmdEndRendering(_cmd_buffer);
 

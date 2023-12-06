@@ -11,6 +11,8 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+constexpr int FRAME_OVERLAP = 2;
+
 struct deletion_queue {
 public:
     std::deque<std::function<void()>> fs;
@@ -80,7 +82,7 @@ private:
     void swapchain_init();
     void command_init();
     void sync_init();
-    void camera_init();
+    void camera_init() { _cam.init(); }
     void pipeline_init();
 
     void load_meshes();

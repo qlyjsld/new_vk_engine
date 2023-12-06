@@ -1,6 +1,11 @@
 #include "vk_mesh.h"
 #include <cstddef>
 
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <tiny_gltf.h>
+
 vertex_input_description vertex::get_vertex_input_description()
 {
     vertex_input_description description;
@@ -34,3 +39,5 @@ vertex_input_description vertex::get_vertex_input_description()
 
     return description;
 }
+
+bool mesh::load_from_gltf(const char *filename) { return true; }

@@ -21,4 +21,6 @@ struct vertex {
 struct mesh {
     std::vector<vertex> vertices;
     allocated_buffer vertex_buffer;
+
+    bool load_from_gltf(const char *filename);
 };
