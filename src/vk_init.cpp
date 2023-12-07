@@ -1,5 +1,4 @@
 ﻿#include "vk_init.h"
-#include <cstddef>
 #include <vulkan/vulkan_core.h>
 
 VkCommandPoolCreateInfo vk_init::vk_create_cmd_pool_info(uint32_t queue_family_index)

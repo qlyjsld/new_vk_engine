@@ -4,10 +4,10 @@
 #include "vk_mem_alloc.h"
 #include "vk_mesh.h"
 #include "vk_type.h"
-#include <cstddef>
 #include <deque>
 #include <functional>
-#include <glm/glm.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -39,7 +39,7 @@ class vk_engine
 public:
     bool _is_initialized{false};
     int _frame_number{0};
-    VkExtent2D _window_extent{800, 600};
+    VkExtent2D _window_extent{1600, 900};
     struct SDL_Window *_window{nullptr};
 
     VkInstance _instance;

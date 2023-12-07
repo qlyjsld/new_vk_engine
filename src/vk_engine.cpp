@@ -1,9 +1,6 @@
 ﻿#include "vk_engine.h"
 #include "vk_mesh.h"
 #include "vk_pipeline_builder.h"
-#include <cmath>
-#include <cstddef>
-#include <cstring>
 #include <fstream>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -12,14 +9,12 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
-#include <stdint.h>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
-#include "SDL_keycode.h"
 #include "vk_cmd.h"
 #include "vk_init.h"
 #include "vk_type.h"
@@ -192,16 +187,8 @@ void vk_engine::pipeline_init()
 
 void vk_engine::load_meshes()
 {
-    mesh triangle;
-    vertex vs[3];
-    vs[0].pos = glm::vec3{-.5f, .5f, 0.f};
-    vs[0].color = glm::vec3{1.f, 0.f, 0.f};
-    vs[1].pos = glm::vec3{.5f, .5f, 0.f};
-    vs[1].color = glm::vec3{0.f, 1.f, 0.f};
-    vs[2].pos = glm::vec3{0.f, -.5f, 0.f};
-    vs[2].color = glm::vec3{0.f, 0.f, 1.f};
-    triangle.vertices = {vs[0], vs[1], vs[2]};
-    upload_meshes(&triangle, 1);
+    mesh duck("../assets/glTF-Sample-Assets/Models/Duck/glTF-Binary/Duck.glb");
+    upload_meshes(&duck, 1);
 }
 
 void vk_engine::upload_meshes(mesh *meshes, size_t size)
@@ -270,9 +257,14 @@ void vk_engine::draw()
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer, &offset);
 
+        glm::mat4 view = glm::translate(glm::mat4(1.f), glm::vec3(_cam.pos));
+        glm::mat4 projection =
+            glm::perspective(glm::radians(68.f), 1600.f / 900.f, 0.1f, 1024.0f);
+        projection[1][1] *= -1;
+        glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -256.f));
+
         mesh_push_constants push_constants;
-        // push_constant.data = ;
-        push_constants.render_matrix = glm::mat4{0.f};
+        push_constants.render_matrix = projection * view * model;
 
         vkCmdPushConstants(_cmd_buffer, _gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
                            0, sizeof(mesh_push_constants), &push_constants);

@@ -1,10 +1,12 @@
 #include "vk_mesh.h"
-#include <cstddef>
+#include <iostream>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <tiny_gltf.h>
+
+using namespace tinygltf;
 
 vertex_input_description vertex::get_vertex_input_description()
 {
@@ -40,4 +42,59 @@ vertex_input_description vertex::get_vertex_input_description()
     return description;
 }
 
-bool mesh::load_from_gltf(const char *filename) { return true; }
+bool mesh::load_from_gltf(const char *filename)
+{
+    TinyGLTF loader;
+    Model model;
+    std::string err;
+    std::string warn;
+    bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename);
+
+    if (!warn.empty()) {
+        std::cerr << "warn: " << warn.c_str() << std::endl;
+    }
+
+    if (!err.empty()) {
+        std::cerr << "err: " << err.c_str() << std::endl;
+    }
+
+    if (!ret) {
+        std::cerr << "failed to parse gltf" << std::endl;
+        return false;
+    }
+
+    for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
+         it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
+        if (!strcmp(it->first.data(), "POSITION")) {
+            auto accessor = model.accessors[it->second];
+            auto bufferview = model.bufferViews[accessor.bufferView];
+            auto buffer = model.buffers[bufferview.buffer];
+            unsigned char *data =
+                buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
+            for (uint32_t i = 0; i < accessor.count; ++i) {
+                vertex v;
+                v.pos = glm::vec3{*(float *)data, *(float *)(data + sizeof(float)),
+                                  *(float *)(data + 2 * sizeof(float))};
+
+                vertices.push_back(v);
+                data += bufferview.byteStride;
+            }
+        }
+    }
+
+    if (model.meshes[0].primitives[0].indices != -1) {
+        auto accessor = model.accessors[model.meshes[0].primitives[0].indices];
+        auto bufferview = model.bufferViews[accessor.bufferView];
+        auto buffer = model.buffers[bufferview.buffer];
+        unsigned char *data =
+            buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
+        for (uint32_t i = 0; i < accessor.count; ++i) {
+            indices.push_back(*(uint16_t *)data);
+            data += bufferview.byteStride + sizeof(uint16_t);
+        }
+    }
+
+    std::cout << filename << " loaded" << std::endl;
+
+    return true;
+}

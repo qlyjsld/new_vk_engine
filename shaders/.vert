@@ -26,7 +26,6 @@ void main()
         vec3(0.f, 0.f, 1.f)
     );
 
-    // gl_Position = PushConstants.render_matrix * vec4(vPos, 1.f);
-    gl_Position = vec4(vPos, 1.f);
+    gl_Position = PushConstants.render_matrix * vec4(vPos, 1.f);
     outColor = vColor;
 }

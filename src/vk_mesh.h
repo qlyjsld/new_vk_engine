@@ -19,8 +19,12 @@ struct vertex {
 };
 
 struct mesh {
+    mesh(const char *filename) { load_from_gltf(filename); }
+
     std::vector<vertex> vertices;
+    std::vector<uint16_t> indices;
     allocated_buffer vertex_buffer;
+    allocated_buffer index_buffer;
 
     bool load_from_gltf(const char *filename);
 };
