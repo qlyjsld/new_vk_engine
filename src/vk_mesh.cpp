@@ -82,6 +82,23 @@ bool mesh::load_from_gltf(const char *filename)
         }
     }
 
+    for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
+         it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
+        if (!strcmp(it->first.data(), "NORMAL")) {
+            auto accessor = model.accessors[it->second];
+            auto bufferview = model.bufferViews[accessor.bufferView];
+            auto buffer = model.buffers[bufferview.buffer];
+            unsigned char *data =
+                buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
+            for (uint32_t i = 0; i < accessor.count; ++i) {
+                vertices[i].normal =
+                    glm::vec3{*(float *)data, *(float *)(data + sizeof(float)),
+                              *(float *)(data + 2 * sizeof(float))};
+                data += bufferview.byteStride;
+            }
+        }
+    }
+
     if (model.meshes[0].primitives[0].indices != -1) {
         auto accessor = model.accessors[model.meshes[0].primitives[0].indices];
         auto bufferview = model.bufferViews[accessor.bufferView];

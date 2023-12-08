@@ -195,14 +195,16 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 {
     for (uint32_t i = 0; i < size; ++i) {
         mesh mesh = meshes[i];
-        VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        buffer_info.size = mesh.vertices.size() * sizeof(vertex);
-        buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        /* create vertex buffer */
+        VkBufferCreateInfo vertex_buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        vertex_buffer_info.size = mesh.vertices.size() * sizeof(vertex);
+        vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
         VmaAllocationCreateInfo vma_allocation_info = {};
         vma_allocation_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-        vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
+        vmaCreateBuffer(_allocator, &vertex_buffer_info, &vma_allocation_info,
                         &mesh.vertex_buffer.buffer, &mesh.vertex_buffer.allocation,
                         nullptr);
 
@@ -210,6 +212,22 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         vmaMapMemory(_allocator, mesh.vertex_buffer.allocation, &data);
         std::memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(vertex));
         vmaUnmapMemory(_allocator, mesh.vertex_buffer.allocation);
+
+        /* create index buffer */
+        VkBufferCreateInfo index_buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+        index_buffer_info.size = mesh.indices.size() * sizeof(uint16_t);
+        index_buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo vma_allocation_info_2 = {};
+        vma_allocation_info_2.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        vmaCreateBuffer(_allocator, &index_buffer_info, &vma_allocation_info_2,
+                        &mesh.index_buffer.buffer, &mesh.index_buffer.allocation,
+                        nullptr);
+
+        vmaMapMemory(_allocator, mesh.index_buffer.allocation, &data);
+        std::memcpy(data, mesh.indices.data(), mesh.indices.size() * sizeof(uint16_t));
+        vmaUnmapMemory(_allocator, mesh.index_buffer.allocation);
 
         _meshes.push_back(mesh);
     }
@@ -257,11 +275,14 @@ void vk_engine::draw()
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer, &offset);
 
+        vkCmdBindIndexBuffer(_cmd_buffer, mesh->index_buffer.buffer, 0,
+                             VK_INDEX_TYPE_UINT16);
+
         glm::mat4 view = glm::translate(glm::mat4(1.f), glm::vec3(_cam.pos));
         glm::mat4 projection =
-            glm::perspective(glm::radians(68.f), 1600.f / 900.f, 0.1f, 1024.0f);
+            glm::perspective(glm::radians(106.f), 1600.f / 900.f, 0.1f, 1024.0f);
         projection[1][1] *= -1;
-        glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -256.f));
+        glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f));
 
         mesh_push_constants push_constants;
         push_constants.render_matrix = projection * view * model;
@@ -269,7 +290,7 @@ void vk_engine::draw()
         vkCmdPushConstants(_cmd_buffer, _gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
                            0, sizeof(mesh_push_constants), &push_constants);
 
-        vkCmdDraw(_cmd_buffer, mesh->vertices.size(), 1, 0, 0);
+        vkCmdDrawIndexed(_cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
     }
 
     vkCmdEndRendering(_cmd_buffer);
@@ -301,9 +322,12 @@ void vk_engine::cleanup()
     vkDeviceWaitIdle(_device);
 
     if (_is_initialized) {
-        for (uint32_t i = 0; i < _meshes.size(); i++)
+        for (uint32_t i = 0; i < _meshes.size(); i++) {
             vmaDestroyBuffer(_allocator, _meshes[i].vertex_buffer.buffer,
                              _meshes[i].vertex_buffer.allocation);
+            vmaDestroyBuffer(_allocator, _meshes[i].index_buffer.buffer,
+                             _meshes[i].index_buffer.allocation);
+        }
 
         vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
         vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);

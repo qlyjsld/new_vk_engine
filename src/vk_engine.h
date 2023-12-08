@@ -21,9 +21,8 @@ public:
 
     void flush()
     {
-        for (auto f = fs.rbegin(); f != fs.rend(); f++) {
+        for (auto f = fs.rbegin(); f != fs.rend(); f++)
             (*f)();
-        }
 
         fs.clear();
     };
