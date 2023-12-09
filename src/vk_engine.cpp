@@ -100,8 +100,7 @@ void vk_engine::swapchain_init()
 {
     vkb::SwapchainBuilder vkb_swapchain_builder{_physical_device, _device, _surface};
     vkb::Swapchain vkb_swapchain =
-        vkb_swapchain_builder
-            // .set_desired_present_mode(VK_PRESENT_MODE_IMMEDIATE_KHR)
+        vkb_swapchain_builder.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
             .set_desired_extent(_window_extent.width, _window_extent.height)
             .build()
             .value();
@@ -114,23 +113,29 @@ void vk_engine::swapchain_init()
 
 void vk_engine::command_init()
 {
-    VkCommandPoolCreateInfo cmd_pool_info =
-        vk_init::vk_create_cmd_pool_info(_gfx_queue_family_index);
-    VK_CHECK(vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_cmd_pool));
+    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
+        VkCommandPoolCreateInfo cmd_pool_info =
+            vk_init::vk_create_cmd_pool_info(_gfx_queue_family_index);
+        VK_CHECK(
+            vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_frames[i].cmd_pool));
 
-    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-        vk_init::vk_create_cmd_buffer_allocate_info(1, _cmd_pool);
-    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info, &_cmd_buffer));
+        VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+            vk_init::vk_create_cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
+        VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                          &_frames[i].cmd_buffer));
+    }
 }
 
 void vk_engine::sync_init()
 {
-    VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(true);
-    VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_fence));
+    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
+        VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(true);
+        VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_frames[i].fence));
 
-    VkSemaphoreCreateInfo sem_info = vk_init::vk_create_sem_info();
-    VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_sumbit_sem));
-    VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_present_sem));
+        VkSemaphoreCreateInfo sem_info = vk_init::vk_create_sem_info();
+        VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].sumbit_sem));
+        VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].present_sem));
+    }
 }
 
 void vk_engine::pipeline_init()
@@ -236,12 +241,13 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 void vk_engine::draw()
 {
     /* block cpu accessing frame in used */
-    VK_CHECK(vkWaitForFences(_device, 1, &_fence, VK_TRUE, UINT64_MAX));
-    VK_CHECK(vkResetFences(_device, 1, &_fence));
-    VK_CHECK(vkResetCommandBuffer(_cmd_buffer, 0x00000000));
+    frame *frame = get_current_frame();
+    VK_CHECK(vkWaitForFences(_device, 1, &frame->fence, VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(_device, 1, &frame->fence));
+    VK_CHECK(vkResetCommandBuffer(frame->cmd_buffer, 0x00000000));
 
     /* wait and acquire the next frame */
-    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, _present_sem,
+    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, frame->present_sem,
                                    VK_NULL_HANDLE, &_img_index));
 
     /* prepare command buffer and dynamic rendering functions */
@@ -249,11 +255,11 @@ void vk_engine::draw()
         vk_init::vk_create_cmd_buffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(_cmd_buffer, &cmd_buffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(frame->cmd_buffer, &cmd_buffer_begin_info));
 
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
-        _cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
+        frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_queue_family_index);
 
     /* frame attachment info */
@@ -265,17 +271,19 @@ void vk_engine::draw()
     VkRenderingInfo rendering_info =
         vk_init::vk_create_rendering_info(&color_attachment, _window_extent);
 
-    vkCmdBeginRendering(_cmd_buffer, &rendering_info);
+    vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
     for (uint32_t i = 0; i < _meshes.size(); ++i) {
         mesh *mesh = &_meshes[i];
 
-        vkCmdBindPipeline(_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _gfx_pipeline);
+        vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          _gfx_pipeline);
 
         VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(_cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer, &offset);
+        vkCmdBindVertexBuffers(frame->cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer,
+                               &offset);
 
-        vkCmdBindIndexBuffer(_cmd_buffer, mesh->index_buffer.buffer, 0,
+        vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer, 0,
                              VK_INDEX_TYPE_UINT16);
 
         glm::mat4 view = glm::translate(glm::mat4(1.f), glm::vec3(_cam.pos));
@@ -287,31 +295,33 @@ void vk_engine::draw()
         mesh_push_constants push_constants;
         push_constants.render_matrix = projection * view * model;
 
-        vkCmdPushConstants(_cmd_buffer, _gfx_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT,
-                           0, sizeof(mesh_push_constants), &push_constants);
+        vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
+                           VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mesh_push_constants),
+                           &push_constants);
 
-        vkCmdDrawIndexed(_cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
     }
 
-    vkCmdEndRendering(_cmd_buffer);
+    vkCmdEndRendering(frame->cmd_buffer);
 
     /* transition image format for presenting */
-    vk_cmd::vk_img_layout_transition(_cmd_buffer, _swapchain_imgs[_img_index],
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _swapchain_imgs[_img_index],
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                      VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                      _gfx_queue_family_index);
 
-    VK_CHECK(vkEndCommandBuffer(_cmd_buffer));
+    VK_CHECK(vkEndCommandBuffer(frame->cmd_buffer));
 
     /* submit and present queue */
     VkPipelineStageFlags pipeline_stage_flags = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
 
-    VkSubmitInfo submit_info = vk_init::vk_create_submit_info(
-        &_cmd_buffer, &_present_sem, &_sumbit_sem, &pipeline_stage_flags);
-    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, _fence));
+    VkSubmitInfo submit_info =
+        vk_init::vk_create_submit_info(&frame->cmd_buffer, &frame->present_sem,
+                                       &frame->sumbit_sem, &pipeline_stage_flags);
+    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, frame->fence));
 
     VkPresentInfoKHR present_info =
-        vk_init::vk_create_present_info(&_swapchain, &_sumbit_sem, &_img_index);
+        vk_init::vk_create_present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
     VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
 
     _frame_number++;
@@ -334,10 +344,14 @@ void vk_engine::cleanup()
         vkDestroyShaderModule(_device, _frag, nullptr);
         vkDestroyShaderModule(_device, _vert, nullptr);
         vmaDestroyAllocator(_allocator);
-        vkDestroySemaphore(_device, _present_sem, nullptr);
-        vkDestroySemaphore(_device, _sumbit_sem, nullptr);
-        vkDestroyFence(_device, _fence, nullptr);
-        vkDestroyCommandPool(_device, _cmd_pool, nullptr);
+
+        for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
+            vkDestroySemaphore(_device, _frames[i].present_sem, nullptr);
+            vkDestroySemaphore(_device, _frames[i].sumbit_sem, nullptr);
+            vkDestroyFence(_device, _frames[i].fence, nullptr);
+            vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
+        }
+
         vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 
         for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)

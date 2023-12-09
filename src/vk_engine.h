@@ -33,6 +33,13 @@ struct mesh_push_constants {
     glm::mat4 render_matrix;
 };
 
+struct frame {
+    VkFence fence;
+    VkSemaphore sumbit_sem, present_sem;
+    VkCommandPool cmd_pool;
+    VkCommandBuffer cmd_buffer;
+};
+
 class vk_engine
 {
 public:
@@ -52,10 +59,7 @@ public:
     std::vector<VkImageView> _swapchain_img_views;
     VkQueue _gfx_queue;
     uint32_t _gfx_queue_family_index;
-    VkCommandPool _cmd_pool;
-    VkCommandBuffer _cmd_buffer;
-    VkFence _fence;
-    VkSemaphore _sumbit_sem, _present_sem;
+    frame _frames[FRAME_OVERLAP];
     uint32_t _img_index;
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
@@ -74,6 +78,7 @@ public:
     void draw();
     void run();
 
+    frame *get_current_frame() { return &_frames[_frame_number % FRAME_OVERLAP]; };
     bool load_shader_module(const char *file, VkShaderModule *shader_module);
 
 private:
