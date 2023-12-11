@@ -73,8 +73,8 @@ bool mesh::load_from_gltf(const char *filename)
                 buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
             for (uint32_t i = 0; i < accessor.count; ++i) {
                 vertex v;
-                v.pos = glm::vec3{*(float *)data, *(float *)(data + sizeof(float)),
-                                  *(float *)(data + 2 * sizeof(float))};
+                v.pos = glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
+                                  *(float *)(data + 2 * sizeof(float)));
 
                 vertices.push_back(v);
                 data += bufferview.byteStride;
@@ -92,8 +92,8 @@ bool mesh::load_from_gltf(const char *filename)
                 buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
             for (uint32_t i = 0; i < accessor.count; ++i) {
                 vertices[i].normal =
-                    glm::vec3{*(float *)data, *(float *)(data + sizeof(float)),
-                              *(float *)(data + 2 * sizeof(float))};
+                    glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
+                              *(float *)(data + 2 * sizeof(float)));
                 data += bufferview.byteStride;
             }
         }

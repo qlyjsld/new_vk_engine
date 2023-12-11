@@ -291,7 +291,7 @@ void vk_engine::draw()
     VkRenderingAttachmentInfo depth_attachment =
         vk_init::vk_create_rendering_attachment_info(
             _depth_img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-            VkClearValue{-1.f, -1.f, -1.f});
+            VkClearValue{1.f, 1.f, 1.f});
 
     /* start drawing */
     VkRenderingInfo rendering_info = vk_init::vk_create_rendering_info(
@@ -312,11 +312,17 @@ void vk_engine::draw()
         vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer, 0,
                              VK_INDEX_TYPE_UINT16);
 
-        glm::mat4 view = glm::translate(glm::mat4(1.f), glm::vec3(_cam.pos));
+        glm::mat4 view = glm::translate(glm::mat4(1.f), -glm::vec3(_cam.pos));
+
         glm::mat4 projection =
-            glm::perspective(glm::radians(106.f), 1600.f / 900.f, 0.1f, 1024.0f);
+            glm::perspective(glm::radians(68.f), 1600.f / 900.f, 0.1f, 1024.0f);
+
         projection[1][1] *= -1;
-        glm::mat4 model = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f));
+
+        glm::mat4 model =
+            glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.01f),
+                        glm::vec3(0.f, 1.f, 0.f));
 
         mesh_push_constants push_constants;
         push_constants.render_matrix = projection * view * model;
@@ -350,6 +356,7 @@ void vk_engine::draw()
         vk_init::vk_create_present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
     VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
 
+    _last_frame = SDL_GetTicks();
     _frame_number++;
 }
 

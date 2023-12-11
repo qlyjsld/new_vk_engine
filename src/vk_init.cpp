@@ -269,7 +269,7 @@ VkImageCreateInfo vk_init::vk_create_image_info(VkFormat format, VkExtent3D exte
     img_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // img_info.queueFamilyIndexCount = ;
     // img_info.pQueueFamilyIndices = ;
-    img_info.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     return img_info;
 }
 
@@ -298,7 +298,7 @@ VkPipelineDepthStencilStateCreateInfo vk_init::vk_create_depth_stencil_state_inf
     // depth_stencil_state_info.flags = ;
     depth_stencil_state_info.depthTestEnable = VK_TRUE;
     depth_stencil_state_info.depthWriteEnable = VK_TRUE;
-    depth_stencil_state_info.depthCompareOp = VK_COMPARE_OP_GREATER;
+    depth_stencil_state_info.depthCompareOp = VK_COMPARE_OP_LESS;
     depth_stencil_state_info.depthBoundsTestEnable = VK_FALSE;
     depth_stencil_state_info.stencilTestEnable = VK_FALSE;
     // depth_stencil_state_info.front = ;
