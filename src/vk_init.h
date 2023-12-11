@@ -14,15 +14,17 @@ VkFenceCreateInfo vk_create_fence_info(bool signaled);
 
 VkSemaphoreCreateInfo vk_create_sem_info();
 
-VkRenderingAttachmentInfo vk_create_rendering_attachment_info(VkClearValue clear_value,
-                                                              VkImageView image_view);
+VkRenderingAttachmentInfo vk_create_rendering_attachment_info(VkImageView img_view,
+                                                              VkImageLayout layout,
+                                                              VkClearValue clear_value);
 
 VkRenderingInfo vk_create_rendering_info(VkRenderingAttachmentInfo *color_attachments,
+                                         VkRenderingAttachmentInfo *depth_attachment,
                                          VkExtent2D extent);
 
 VkCommandBufferBeginInfo vk_create_cmd_buffer_begin_info();
 
-VkImageSubresourceRange vk_create_subresource_range();
+VkImageSubresourceRange vk_create_subresource_range(VkImageAspectFlagBits aspect);
 
 VkImageMemoryBarrier vk_create_img_mem_barrier();
 
@@ -48,5 +50,13 @@ VkPipelineColorBlendAttachmentState vk_create_color_blend_attachment_state();
 VkPipelineMultisampleStateCreateInfo vk_create_multisample_state_info();
 
 VkPipelineLayoutCreateInfo vk_create_pipeline_layout_info();
+
+VkImageCreateInfo vk_create_image_info(VkFormat format, VkExtent3D extent,
+                                       VkImageUsageFlagBits usage);
+
+VkImageViewCreateInfo vk_create_image_view_info(VkImageAspectFlagBits aspect, VkImage img,
+                                                VkFormat format);
+
+VkPipelineDepthStencilStateCreateInfo vk_create_depth_stencil_state_info();
 
 } // namespace vk_init

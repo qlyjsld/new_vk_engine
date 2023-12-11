@@ -53,14 +53,16 @@ public:
     VkPhysicalDevice _physical_device;
     VkDevice _device;
     VkSurfaceKHR _surface;
+
     VkSwapchainKHR _swapchain;
     VkFormat _swapchain_format;
     std::vector<VkImage> _swapchain_imgs;
     std::vector<VkImageView> _swapchain_img_views;
+    uint32_t _img_index;
+
     VkQueue _gfx_queue;
     uint32_t _gfx_queue_family_index;
     frame _frames[FRAME_OVERLAP];
-    uint32_t _img_index;
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
@@ -69,6 +71,10 @@ public:
 
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
+
+    VkImageView _depth_img_view;
+    allocated_img _depth_img;
+    VkFormat _depth_img_format;
 
     vk_camera _cam;
     deletion_queue _d_queue;

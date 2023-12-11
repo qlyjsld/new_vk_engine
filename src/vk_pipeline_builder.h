@@ -15,10 +15,11 @@ public:
     VkPipelineRasterizationStateCreateInfo _rasterization_state_info;
     VkPipelineColorBlendAttachmentState _color_blend_attachment_state;
     VkPipelineMultisampleStateCreateInfo _multisample_state_info;
+    VkPipelineDepthStencilStateCreateInfo _depth_stencil_state_info;
     VkPipelineLayout _pipeline_layout;
     VkPipeline _pipeline;
 
     void customize(VkExtent2D window_extent, vertex_input_description *description);
-    void build(VkDevice device, VkFormat *format);
+    void build(VkDevice device, VkFormat *format, VkFormat depth_format);
     VkPipeline value() { return _pipeline; };
 };

@@ -23,7 +23,7 @@ void PipelineBuilder::customize(VkExtent2D window_extent,
         description->attributes.data();
 }
 
-void PipelineBuilder::build(VkDevice device, VkFormat *format)
+void PipelineBuilder::build(VkDevice device, VkFormat *format, VkFormat depth_format)
 {
     VkPipelineViewportStateCreateInfo viewport_state_info = {};
     viewport_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -51,7 +51,7 @@ void PipelineBuilder::build(VkDevice device, VkFormat *format)
     // rendering_info.viewMask = ;
     rendering_info.colorAttachmentCount = 1;
     rendering_info.pColorAttachmentFormats = format;
-    // rendering_info.depthAttachmentFormat = ;
+    rendering_info.depthAttachmentFormat = depth_format;
     // rendering_info.stencilAttachmentFormat = ;
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {};
@@ -66,7 +66,7 @@ void PipelineBuilder::build(VkDevice device, VkFormat *format)
     graphics_pipeline_info.pViewportState = &viewport_state_info;
     graphics_pipeline_info.pRasterizationState = &_rasterization_state_info;
     graphics_pipeline_info.pMultisampleState = &_multisample_state_info;
-    // graphics_pipeline_info.pDepthStencilState = ;
+    graphics_pipeline_info.pDepthStencilState = &_depth_stencil_state_info;
     graphics_pipeline_info.pColorBlendState = &color_blend_state_info;
     // graphics_pipeline_info.pDynamicState = ;
     graphics_pipeline_info.layout = _pipeline_layout;

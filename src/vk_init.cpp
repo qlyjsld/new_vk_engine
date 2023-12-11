@@ -43,14 +43,14 @@ VkSemaphoreCreateInfo vk_init::vk_create_sem_info()
 }
 
 VkRenderingAttachmentInfo
-vk_init::vk_create_rendering_attachment_info(VkClearValue clear_value,
-                                             VkImageView image_view)
+vk_init::vk_create_rendering_attachment_info(VkImageView img_view, VkImageLayout layout,
+                                             VkClearValue clear_value)
 {
     VkRenderingAttachmentInfo attachment_info = {};
     attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     attachment_info.pNext = nullptr;
-    attachment_info.imageView = image_view;
-    attachment_info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_info.imageView = img_view;
+    attachment_info.imageLayout = layout;
     // attachment_info.resolveMode = ;
     // attachment_info.resolveImageView = ;
     // attachment_info.resolveImageLayout = ;
@@ -62,6 +62,7 @@ vk_init::vk_create_rendering_attachment_info(VkClearValue clear_value,
 
 VkRenderingInfo
 vk_init::vk_create_rendering_info(VkRenderingAttachmentInfo *color_attachments,
+                                  VkRenderingAttachmentInfo *depth_attachment,
                                   VkExtent2D extent)
 {
     VkRect2D render_area = {};
@@ -77,7 +78,7 @@ vk_init::vk_create_rendering_info(VkRenderingAttachmentInfo *color_attachments,
     rendering_info.viewMask = 0;
     rendering_info.colorAttachmentCount = 1;
     rendering_info.pColorAttachments = color_attachments;
-    rendering_info.pDepthAttachment = nullptr;
+    rendering_info.pDepthAttachment = depth_attachment;
     rendering_info.pStencilAttachment = nullptr;
     return rendering_info;
 }
@@ -92,10 +93,10 @@ VkCommandBufferBeginInfo vk_init::vk_create_cmd_buffer_begin_info()
     return cmd_buffer_begin_info;
 }
 
-VkImageSubresourceRange vk_init::vk_create_subresource_range()
+VkImageSubresourceRange vk_init::vk_create_subresource_range(VkImageAspectFlagBits aspect)
 {
     VkImageSubresourceRange subresource_range = {};
-    subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subresource_range.aspectMask = aspect;
     subresource_range.baseMipLevel = 0;
     subresource_range.levelCount = 1;
     subresource_range.baseArrayLayer = 0;
@@ -128,8 +129,7 @@ VkSubmitInfo vk_init::vk_create_submit_info(VkCommandBuffer *cmd_buffer,
 }
 
 VkPresentInfoKHR vk_init::vk_create_present_info(VkSwapchainKHR *swapchain,
-                                                 VkSemaphore *sem,
-                                                 uint32_t *image_indices)
+                                                 VkSemaphore *sem, uint32_t *img_indices)
 {
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -138,7 +138,7 @@ VkPresentInfoKHR vk_init::vk_create_present_info(VkSwapchainKHR *swapchain,
     present_info.pWaitSemaphores = sem;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = swapchain;
-    present_info.pImageIndices = image_indices;
+    present_info.pImageIndices = img_indices;
     present_info.pResults = nullptr;
     return present_info;
 }
@@ -249,4 +249,61 @@ VkPipelineLayoutCreateInfo vk_init::vk_create_pipeline_layout_info()
     pipeline_layout_info.pushConstantRangeCount = 0;
     pipeline_layout_info.pPushConstantRanges = nullptr;
     return pipeline_layout_info;
+}
+
+VkImageCreateInfo vk_init::vk_create_image_info(VkFormat format, VkExtent3D extent,
+                                                VkImageUsageFlagBits usage)
+{
+    VkImageCreateInfo img_info = {};
+    img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    img_info.pNext = nullptr;
+    // img_info.flags = ;
+    img_info.imageType = VK_IMAGE_TYPE_2D;
+    img_info.format = format;
+    img_info.extent = extent;
+    img_info.mipLevels = 1;
+    img_info.arrayLayers = 1;
+    img_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    img_info.usage = usage;
+    img_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    // img_info.queueFamilyIndexCount = ;
+    // img_info.pQueueFamilyIndices = ;
+    img_info.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    return img_info;
+}
+
+VkImageViewCreateInfo vk_init::vk_create_image_view_info(VkImageAspectFlagBits aspect,
+                                                         VkImage img, VkFormat format)
+{
+    VkImageSubresourceRange subresource_range = vk_create_subresource_range(aspect);
+    VkImageViewCreateInfo img_view_info = {};
+    img_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    img_view_info.pNext = nullptr;
+    // img_view_info.flags = ;
+    img_view_info.image = img;
+    img_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    img_view_info.format = format;
+    // img_view_info.components = ;
+    img_view_info.subresourceRange = subresource_range;
+    return img_view_info;
+}
+
+VkPipelineDepthStencilStateCreateInfo vk_init::vk_create_depth_stencil_state_info()
+{
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state_info = {};
+    depth_stencil_state_info.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil_state_info.pNext = nullptr;
+    // depth_stencil_state_info.flags = ;
+    depth_stencil_state_info.depthTestEnable = VK_TRUE;
+    depth_stencil_state_info.depthWriteEnable = VK_TRUE;
+    depth_stencil_state_info.depthCompareOp = VK_COMPARE_OP_GREATER;
+    depth_stencil_state_info.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil_state_info.stencilTestEnable = VK_FALSE;
+    // depth_stencil_state_info.front = ;
+    // depth_stencil_state_info.back = ;
+    // depth_stencil_state_info.minDepthBounds = ;
+    // depth_stencil_state_info.maxDepthBounds = ;
+    return depth_stencil_state_info;
 }

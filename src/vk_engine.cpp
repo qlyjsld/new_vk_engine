@@ -29,15 +29,16 @@ void vk_engine::init()
                                SDL_WINDOW_VULKAN);
 
     device_init();
-    swapchain_init();
-    command_init();
-    sync_init();
 
     VmaAllocatorCreateInfo vma_allocator_info = {};
     vma_allocator_info.physicalDevice = _physical_device;
     vma_allocator_info.device = _device;
     vma_allocator_info.instance = _instance;
     vmaCreateAllocator(&vma_allocator_info, &_allocator);
+
+    swapchain_init();
+    command_init();
+    sync_init();
 
     camera_init();
     pipeline_init();
@@ -109,6 +110,23 @@ void vk_engine::swapchain_init()
     _swapchain_format = vkb_swapchain.image_format;
     _swapchain_imgs = vkb_swapchain.get_images().value();
     _swapchain_img_views = vkb_swapchain.get_image_views().value();
+
+    _depth_img_format = VK_FORMAT_D32_SFLOAT;
+
+    VkImageCreateInfo img_info = vk_init::vk_create_image_info(
+        _depth_img_format, VkExtent3D{_window_extent.width, _window_extent.height, 1},
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+    VmaAllocationCreateInfo alloc_info = {};
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VK_CHECK(vmaCreateImage(_allocator, &img_info, &alloc_info, &_depth_img.img,
+                            &_depth_img.allocation, nullptr));
+
+    VkImageViewCreateInfo img_view_info = vk_init::vk_create_image_view_info(
+        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img, _depth_img_format);
+
+    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img_view));
 }
 
 void vk_engine::command_init()
@@ -167,6 +185,8 @@ void vk_engine::pipeline_init()
         vk_init::vk_create_color_blend_attachment_state();
     graphics_pipeline_builder._multisample_state_info =
         vk_init::vk_create_multisample_state_info();
+    graphics_pipeline_builder._depth_stencil_state_info =
+        vk_init::vk_create_depth_stencil_state_info();
 
     vertex_input_description description = vertex::get_vertex_input_description();
     graphics_pipeline_builder.customize(_window_extent, &description);
@@ -185,7 +205,7 @@ void vk_engine::pipeline_init()
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
                                     &graphics_pipeline_builder._pipeline_layout));
 
-    graphics_pipeline_builder.build(_device, &_swapchain_format);
+    graphics_pipeline_builder.build(_device, &_swapchain_format, _depth_img_format);
     _gfx_pipeline = graphics_pipeline_builder.value();
     _gfx_pipeline_layout = graphics_pipeline_builder._pipeline_layout;
 }
@@ -264,12 +284,18 @@ void vk_engine::draw()
 
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment =
-        vk_init::vk_create_rendering_attachment_info(VkClearValue{1.f, 1.f, 1.f},
-                                                     _swapchain_img_views[_img_index]);
+        vk_init::vk_create_rendering_attachment_info(
+            _swapchain_img_views[_img_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VkClearValue{1.f, 1.f, 1.f});
+
+    VkRenderingAttachmentInfo depth_attachment =
+        vk_init::vk_create_rendering_attachment_info(
+            _depth_img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            VkClearValue{-1.f, -1.f, -1.f});
 
     /* start drawing */
-    VkRenderingInfo rendering_info =
-        vk_init::vk_create_rendering_info(&color_attachment, _window_extent);
+    VkRenderingInfo rendering_info = vk_init::vk_create_rendering_info(
+        &color_attachment, &depth_attachment, _window_extent);
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
@@ -343,7 +369,6 @@ void vk_engine::cleanup()
         vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
         vkDestroyShaderModule(_device, _frag, nullptr);
         vkDestroyShaderModule(_device, _vert, nullptr);
-        vmaDestroyAllocator(_allocator);
 
         for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
             vkDestroySemaphore(_device, _frames[i].present_sem, nullptr);
@@ -352,11 +377,15 @@ void vk_engine::cleanup()
             vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
         }
 
-        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+        vkDestroyImageView(_device, _depth_img_view, nullptr);
+        vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation);
 
         for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)
             vkDestroyImageView(_device, _swapchain_img_views[i], nullptr);
 
+        vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+
+        vmaDestroyAllocator(_allocator);
         vkDestroyDevice(_device, nullptr);
         vkDestroySurfaceKHR(_instance, _surface, nullptr);
         vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
