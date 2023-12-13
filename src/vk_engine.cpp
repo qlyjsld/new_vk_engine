@@ -41,6 +41,7 @@ void vk_engine::init()
     sync_init();
 
     camera_init();
+    descriptor_init();
     pipeline_init();
     load_meshes();
 
@@ -156,6 +157,78 @@ void vk_engine::sync_init()
     }
 }
 
+void vk_engine::descriptor_init()
+{
+    std::vector<VkDescriptorPoolSize> desc_pool_size = {
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8}};
+
+    VkDescriptorPoolCreateInfo desc_pool_info = {};
+    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_info.pNext = nullptr;
+    // desc_pool_info.flags = ;
+    desc_pool_info.maxSets = 16;
+    desc_pool_info.poolSizeCount = desc_pool_size.size();
+    desc_pool_info.pPoolSizes = desc_pool_size.data();
+
+    VK_CHECK(vkCreateDescriptorPool(_device, &desc_pool_info, nullptr, &_desc_pool));
+
+    VkDescriptorSetLayoutBinding desc_set_layout_binding = {};
+    desc_set_layout_binding.binding = 0;
+    desc_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc_set_layout_binding.descriptorCount = 1;
+    desc_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // desc_set_layout_binding.pImmutableSamplers = ;
+
+    VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
+    desc_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    desc_set_layout_info.pNext = nullptr;
+    // desc_set_layout_info.flags = ;
+    desc_set_layout_info.bindingCount = 1;
+    desc_set_layout_info.pBindings = &desc_set_layout_binding;
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &desc_set_layout_info, nullptr,
+                                         &_desc_set_layout));
+
+    VkDescriptorSetAllocateInfo desc_set_allocate_info = {};
+    desc_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    desc_set_allocate_info.pNext = nullptr;
+    desc_set_allocate_info.descriptorPool = _desc_pool;
+    desc_set_allocate_info.descriptorSetCount = 1;
+    desc_set_allocate_info.pSetLayouts = &_desc_set_layout;
+
+    VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_desc_set));
+
+    VkBufferCreateInfo mat_buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    mat_buffer_info.size = sizeof(render_mat);
+    mat_buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+    VmaAllocationCreateInfo vma_allocation_info = {};
+    vma_allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VK_CHECK(vmaCreateBuffer(_allocator, &mat_buffer_info, &vma_allocation_info,
+                             &_mat_buffer.buffer, &_mat_buffer.allocation, nullptr));
+
+    VkDescriptorBufferInfo desc_buffer_info = {};
+    desc_buffer_info.buffer = _mat_buffer.buffer;
+    desc_buffer_info.offset = 0;
+    desc_buffer_info.range = sizeof(render_mat);
+
+    VkWriteDescriptorSet write_set = {};
+    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_set.pNext = nullptr;
+    write_set.dstSet = _desc_set;
+    write_set.dstBinding = 0;
+    // write_set.dstArrayElement = ;
+    write_set.descriptorCount = 1;
+    write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    // write_set.pImageInfo = ;
+    write_set.pBufferInfo = &desc_buffer_info;
+    // write_set.pTexelBufferView = ;
+
+    vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+}
+
 void vk_engine::pipeline_init()
 {
     PipelineBuilder graphics_pipeline_builder = {};
@@ -199,6 +272,8 @@ void vk_engine::pipeline_init()
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(mesh_push_constants);
 
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &_desc_set_layout;
     pipeline_layout_info.pushConstantRangeCount = 1;
     pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
@@ -227,11 +302,12 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
         VmaAllocationCreateInfo vma_allocation_info = {};
-        vma_allocation_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        vma_allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+        vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-        vmaCreateBuffer(_allocator, &vertex_buffer_info, &vma_allocation_info,
-                        &mesh.vertex_buffer.buffer, &mesh.vertex_buffer.allocation,
-                        nullptr);
+        VK_CHECK(vmaCreateBuffer(_allocator, &vertex_buffer_info, &vma_allocation_info,
+                                 &mesh.vertex_buffer.buffer,
+                                 &mesh.vertex_buffer.allocation, nullptr));
 
         void *data;
         vmaMapMemory(_allocator, mesh.vertex_buffer.allocation, &data);
@@ -244,17 +320,22 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         index_buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
         VmaAllocationCreateInfo vma_allocation_info_2 = {};
-        vma_allocation_info_2.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        vma_allocation_info_2.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+        vma_allocation_info_2.usage = VMA_MEMORY_USAGE_AUTO;
 
-        vmaCreateBuffer(_allocator, &index_buffer_info, &vma_allocation_info_2,
-                        &mesh.index_buffer.buffer, &mesh.index_buffer.allocation,
-                        nullptr);
+        VK_CHECK(vmaCreateBuffer(_allocator, &index_buffer_info, &vma_allocation_info_2,
+                                 &mesh.index_buffer.buffer, &mesh.index_buffer.allocation,
+                                 nullptr));
 
         vmaMapMemory(_allocator, mesh.index_buffer.allocation, &data);
         std::memcpy(data, mesh.indices.data(), mesh.indices.size() * sizeof(uint16_t));
         vmaUnmapMemory(_allocator, mesh.index_buffer.allocation);
 
         _meshes.push_back(mesh);
+
+        /* temporary hardcode transform matrix */
+        _transform_mat.push_back(
+            glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f)));
     }
 }
 
@@ -301,6 +382,7 @@ void vk_engine::draw()
 
     for (uint32_t i = 0; i < _meshes.size(); ++i) {
         mesh *mesh = &_meshes[i];
+        glm::mat4 *transform_mat = &_transform_mat[i];
 
         vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           _gfx_pipeline);
@@ -312,20 +394,24 @@ void vk_engine::draw()
         vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer, 0,
                              VK_INDEX_TYPE_UINT16);
 
-        glm::mat4 view = glm::translate(glm::mat4(1.f), -glm::vec3(_cam.pos));
+        render_mat mat;
+        mat.view = glm::translate(glm::mat4(1.f), -glm::vec3(_cam.pos));
+        mat.proj = glm::perspective(glm::radians(68.f), 1600.f / 900.f, 0.1f, 1024.0f);
+        mat.proj[1][1] *= -1;
+        mat.model = *transform_mat * glm::rotate(glm::mat4(1.0f),
+                                                 glm::radians(_frame_number * 0.01f),
+                                                 glm::vec3(0.f, 1.f, 0.f));
 
-        glm::mat4 projection =
-            glm::perspective(glm::radians(68.f), 1600.f / 900.f, 0.1f, 1024.0f);
+        void *data;
+        vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
+        std::memcpy(data, &mat, sizeof(render_mat));
+        vmaUnmapMemory(_allocator, _mat_buffer.allocation);
 
-        projection[1][1] *= -1;
-
-        glm::mat4 model =
-            glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.01f),
-                        glm::vec3(0.f, 1.f, 0.f));
+        vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                _gfx_pipeline_layout, 0, 1, &_desc_set, 0, nullptr);
 
         mesh_push_constants push_constants;
-        push_constants.render_matrix = projection * view * model;
+        push_constants.render_matrix = mat.proj * mat.view * mat.model;
 
         vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
                            VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mesh_push_constants),
@@ -376,6 +462,10 @@ void vk_engine::cleanup()
         vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
         vkDestroyShaderModule(_device, _frag, nullptr);
         vkDestroyShaderModule(_device, _vert, nullptr);
+
+        vmaDestroyBuffer(_allocator, _mat_buffer.buffer, _mat_buffer.allocation);
+        vkDestroyDescriptorSetLayout(_device, _desc_set_layout, nullptr);
+        vkDestroyDescriptorPool(_device, _desc_pool, nullptr);
 
         for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
             vkDestroySemaphore(_device, _frames[i].present_sem, nullptr);

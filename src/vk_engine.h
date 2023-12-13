@@ -11,7 +11,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-constexpr int FRAME_OVERLAP = 2;
+constexpr int FRAME_OVERLAP = 1;
 
 struct deletion_queue {
 public:
@@ -72,13 +72,20 @@ public:
 
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
+    std::vector<glm::mat4> _transform_mat;
+    std::vector<material> _materials;
+
+    VkDescriptorPool _desc_pool;
+    VkDescriptorSetLayout _desc_set_layout;
+    VkDescriptorSet _desc_set;
+    allocated_buffer _mat_buffer;
 
     VkImageView _depth_img_view;
     allocated_img _depth_img;
     VkFormat _depth_img_format;
 
     vk_camera _cam;
-    deletion_queue _d_queue;
+    deletion_queue _deletion_queue;
 
     void init();
     void cleanup();
@@ -94,6 +101,7 @@ private:
     void command_init();
     void sync_init();
     void camera_init() { _cam.init(); }
+    void descriptor_init();
     void pipeline_init();
 
     void load_meshes();

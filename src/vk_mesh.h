@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_type.h"
+#include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -27,4 +28,15 @@ struct mesh {
     allocated_buffer index_buffer;
 
     bool load_from_gltf(const char *filename);
+};
+
+struct render_mat {
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 model;
+};
+
+struct material {
+    VkPipeline pipeline;
+    VkPipelineLayout pipeline_layout;
 };
