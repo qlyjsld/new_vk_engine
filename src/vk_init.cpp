@@ -307,3 +307,42 @@ VkPipelineDepthStencilStateCreateInfo vk_init::vk_create_depth_stencil_state_inf
     // depth_stencil_state_info.maxDepthBounds = ;
     return depth_stencil_state_info;
 }
+
+VkDescriptorPoolCreateInfo
+vk_init::vk_create_descriptor_pool_info(uint32_t pool_size_count,
+                                        VkDescriptorPoolSize *desc_pool_sizes)
+{
+    VkDescriptorPoolCreateInfo desc_pool_info = {};
+    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_info.pNext = nullptr;
+    // desc_pool_info.flags = ;
+    desc_pool_info.maxSets = 16;
+    desc_pool_info.poolSizeCount = pool_size_count;
+    desc_pool_info.pPoolSizes = desc_pool_sizes;
+    return desc_pool_info;
+}
+
+VkDescriptorSetLayoutCreateInfo vk_init::vk_create_descriptor_set_layout_info(
+    uint32_t binding_count, VkDescriptorSetLayoutBinding *desc_set_layout_bindings)
+{
+    VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
+    desc_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    desc_set_layout_info.pNext = nullptr;
+    // desc_set_layout_info.flags = ;
+    desc_set_layout_info.bindingCount = binding_count;
+    desc_set_layout_info.pBindings = desc_set_layout_bindings;
+    return desc_set_layout_info;
+}
+
+VkDescriptorSetAllocateInfo
+vk_init::vk_allocate_descriptor_set_info(VkDescriptorPool desc_pool,
+                                         VkDescriptorSetLayout *desc_set_layout)
+{
+    VkDescriptorSetAllocateInfo desc_set_allocate_info = {};
+    desc_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    desc_set_allocate_info.pNext = nullptr;
+    desc_set_allocate_info.descriptorPool = desc_pool;
+    desc_set_allocate_info.descriptorSetCount = 1;
+    desc_set_allocate_info.pSetLayouts = desc_set_layout;
+    return desc_set_allocate_info;
+}

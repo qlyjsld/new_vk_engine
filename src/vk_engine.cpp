@@ -43,7 +43,9 @@ void vk_engine::init()
     camera_init();
     descriptor_init();
     pipeline_init();
+
     load_meshes();
+    upload_meshes(_meshes.data(), _meshes.size());
 
     _is_initialized = true;
 }
@@ -135,11 +137,13 @@ void vk_engine::command_init()
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
         VkCommandPoolCreateInfo cmd_pool_info =
             vk_init::vk_create_cmd_pool_info(_gfx_queue_family_index);
+
         VK_CHECK(
             vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_frames[i].cmd_pool));
 
         VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
             vk_init::vk_create_cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
+
         VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
                                           &_frames[i].cmd_buffer));
     }
@@ -149,65 +153,51 @@ void vk_engine::sync_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
         VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(true);
+
         VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_frames[i].fence));
 
         VkSemaphoreCreateInfo sem_info = vk_init::vk_create_sem_info();
+
         VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].sumbit_sem));
+
         VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].present_sem));
     }
 }
 
 void vk_engine::descriptor_init()
 {
-    std::vector<VkDescriptorPoolSize> desc_pool_size = {
+    std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8}};
 
-    VkDescriptorPoolCreateInfo desc_pool_info = {};
-    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    desc_pool_info.pNext = nullptr;
-    // desc_pool_info.flags = ;
-    desc_pool_info.maxSets = 16;
-    desc_pool_info.poolSizeCount = desc_pool_size.size();
-    desc_pool_info.pPoolSizes = desc_pool_size.data();
+    VkDescriptorPoolCreateInfo desc_pool_info = vk_init::vk_create_descriptor_pool_info(
+        desc_pool_sizes.size(), desc_pool_sizes.data());
 
     VK_CHECK(vkCreateDescriptorPool(_device, &desc_pool_info, nullptr, &_desc_pool));
 
-    VkDescriptorSetLayoutBinding desc_set_layout_binding = {};
-    desc_set_layout_binding.binding = 0;
-    desc_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    desc_set_layout_binding.descriptorCount = 1;
-    desc_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkDescriptorSetLayoutBinding desc_set_layout_binding_0 = {};
+    desc_set_layout_binding_0.binding = 0;
+    desc_set_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc_set_layout_binding_0.descriptorCount = 1;
+    desc_set_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     // desc_set_layout_binding.pImmutableSamplers = ;
 
-    VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
-    desc_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    desc_set_layout_info.pNext = nullptr;
-    // desc_set_layout_info.flags = ;
-    desc_set_layout_info.bindingCount = 1;
-    desc_set_layout_info.pBindings = &desc_set_layout_binding;
+    std::vector<VkDescriptorSetLayoutBinding> desc_set_layout_bindings = {
+        desc_set_layout_binding_0};
+
+    VkDescriptorSetLayoutCreateInfo desc_set_layout_info =
+        vk_init::vk_create_descriptor_set_layout_info(desc_set_layout_bindings.size(),
+                                                      desc_set_layout_bindings.data());
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &desc_set_layout_info, nullptr,
                                          &_desc_set_layout));
 
-    VkDescriptorSetAllocateInfo desc_set_allocate_info = {};
-    desc_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    desc_set_allocate_info.pNext = nullptr;
-    desc_set_allocate_info.descriptorPool = _desc_pool;
-    desc_set_allocate_info.descriptorSetCount = 1;
-    desc_set_allocate_info.pSetLayouts = &_desc_set_layout;
+    VkDescriptorSetAllocateInfo desc_set_allocate_info =
+        vk_init::vk_allocate_descriptor_set_info(_desc_pool, &_desc_set_layout);
 
     VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_desc_set));
 
-    VkBufferCreateInfo mat_buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    mat_buffer_info.size = sizeof(render_mat);
-    mat_buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-    VmaAllocationCreateInfo vma_allocation_info = {};
-    vma_allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-
-    VK_CHECK(vmaCreateBuffer(_allocator, &mat_buffer_info, &vma_allocation_info,
-                             &_mat_buffer.buffer, &_mat_buffer.allocation, nullptr));
+    _mat_buffer = create_buffer(sizeof(render_mat), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
     VkDescriptorBufferInfo desc_buffer_info = {};
     desc_buffer_info.buffer = _mat_buffer.buffer;
@@ -288,50 +278,32 @@ void vk_engine::pipeline_init()
 void vk_engine::load_meshes()
 {
     mesh duck("../assets/glTF-Sample-Assets/Models/Duck/glTF-Binary/Duck.glb");
-    upload_meshes(&duck, 1);
+    _meshes.push_back(duck);
 }
 
 void vk_engine::upload_meshes(mesh *meshes, size_t size)
 {
     for (uint32_t i = 0; i < size; ++i) {
-        mesh mesh = meshes[i];
+        mesh *mesh = &meshes[i];
 
         /* create vertex buffer */
-        VkBufferCreateInfo vertex_buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        vertex_buffer_info.size = mesh.vertices.size() * sizeof(vertex);
-        vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-        VmaAllocationCreateInfo vma_allocation_info = {};
-        vma_allocation_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-        vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-
-        VK_CHECK(vmaCreateBuffer(_allocator, &vertex_buffer_info, &vma_allocation_info,
-                                 &mesh.vertex_buffer.buffer,
-                                 &mesh.vertex_buffer.allocation, nullptr));
+        mesh->vertex_buffer = create_buffer(mesh->vertices.size() * sizeof(vertex),
+                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
         void *data;
-        vmaMapMemory(_allocator, mesh.vertex_buffer.allocation, &data);
-        std::memcpy(data, mesh.vertices.data(), mesh.vertices.size() * sizeof(vertex));
-        vmaUnmapMemory(_allocator, mesh.vertex_buffer.allocation);
+        vmaMapMemory(_allocator, mesh->vertex_buffer.allocation, &data);
+        std::memcpy(data, mesh->vertices.data(), mesh->vertices.size() * sizeof(vertex));
+        vmaUnmapMemory(_allocator, mesh->vertex_buffer.allocation);
 
         /* create index buffer */
-        VkBufferCreateInfo index_buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        index_buffer_info.size = mesh.indices.size() * sizeof(uint16_t);
-        index_buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        mesh->index_buffer = create_buffer(mesh->indices.size() * sizeof(uint16_t),
+                                           VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
-        VmaAllocationCreateInfo vma_allocation_info_2 = {};
-        vma_allocation_info_2.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
-        vma_allocation_info_2.usage = VMA_MEMORY_USAGE_AUTO;
-
-        VK_CHECK(vmaCreateBuffer(_allocator, &index_buffer_info, &vma_allocation_info_2,
-                                 &mesh.index_buffer.buffer, &mesh.index_buffer.allocation,
-                                 nullptr));
-
-        vmaMapMemory(_allocator, mesh.index_buffer.allocation, &data);
-        std::memcpy(data, mesh.indices.data(), mesh.indices.size() * sizeof(uint16_t));
-        vmaUnmapMemory(_allocator, mesh.index_buffer.allocation);
-
-        _meshes.push_back(mesh);
+        vmaMapMemory(_allocator, mesh->index_buffer.allocation, &data);
+        std::memcpy(data, mesh->indices.data(), mesh->indices.size() * sizeof(uint16_t));
+        vmaUnmapMemory(_allocator, mesh->index_buffer.allocation);
 
         /* temporary hardcode transform matrix */
         _transform_mat.push_back(
@@ -380,6 +352,38 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
+    draw_meshes(frame);
+
+    vkCmdEndRendering(frame->cmd_buffer);
+
+    /* transition image format for presenting */
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _swapchain_imgs[_img_index],
+                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                     _gfx_queue_family_index);
+
+    VK_CHECK(vkEndCommandBuffer(frame->cmd_buffer));
+
+    /* submit and present queue */
+    VkPipelineStageFlags pipeline_stage_flags = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
+
+    VkSubmitInfo submit_info =
+        vk_init::vk_create_submit_info(&frame->cmd_buffer, &frame->present_sem,
+                                       &frame->sumbit_sem, &pipeline_stage_flags);
+
+    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, frame->fence));
+
+    VkPresentInfoKHR present_info =
+        vk_init::vk_create_present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
+
+    VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
+
+    _last_frame = SDL_GetTicks();
+    _frame_number++;
+}
+
+void vk_engine::draw_meshes(frame *frame)
+{
     for (uint32_t i = 0; i < _meshes.size(); ++i) {
         mesh *mesh = &_meshes[i];
         glm::mat4 *transform_mat = &_transform_mat[i];
@@ -419,31 +423,6 @@ void vk_engine::draw()
 
         vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
     }
-
-    vkCmdEndRendering(frame->cmd_buffer);
-
-    /* transition image format for presenting */
-    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _swapchain_imgs[_img_index],
-                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                     _gfx_queue_family_index);
-
-    VK_CHECK(vkEndCommandBuffer(frame->cmd_buffer));
-
-    /* submit and present queue */
-    VkPipelineStageFlags pipeline_stage_flags = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
-
-    VkSubmitInfo submit_info =
-        vk_init::vk_create_submit_info(&frame->cmd_buffer, &frame->present_sem,
-                                       &frame->sumbit_sem, &pipeline_stage_flags);
-    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, frame->fence));
-
-    VkPresentInfoKHR present_info =
-        vk_init::vk_create_present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
-    VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
-
-    _last_frame = SDL_GetTicks();
-    _frame_number++;
 }
 
 void vk_engine::cleanup()
@@ -536,4 +515,23 @@ bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_
     VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module));
 
     return true;
+}
+
+allocated_buffer vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                                          VmaAllocationCreateFlags flags)
+{
+    VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    buffer_info.size = size;
+    buffer_info.usage = usage;
+
+    VmaAllocationCreateInfo vma_allocation_info = {};
+    vma_allocation_info.flags = flags;
+    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    allocated_buffer buffer;
+
+    VK_CHECK(vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
+                             &buffer.buffer, &buffer.allocation, nullptr));
+
+    return buffer;
 }

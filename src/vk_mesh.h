@@ -30,6 +30,11 @@ struct mesh {
     bool load_from_gltf(const char *filename);
 };
 
+struct mesh_push_constants {
+    glm::vec4 data;
+    glm::mat4 render_matrix;
+};
+
 struct render_mat {
     glm::mat4 view;
     glm::mat4 proj;

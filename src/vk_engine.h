@@ -28,11 +28,6 @@ public:
     };
 };
 
-struct mesh_push_constants {
-    glm::vec4 data;
-    glm::mat4 render_matrix;
-};
-
 struct frame {
     VkFence fence;
     VkSemaphore sumbit_sem, present_sem;
@@ -64,8 +59,6 @@ public:
     VkQueue _gfx_queue;
     uint32_t _gfx_queue_family_index;
     frame _frames[FRAME_OVERLAP];
-    VkPipeline _gfx_pipeline;
-    VkPipelineLayout _gfx_pipeline_layout;
 
     VkShaderModule _vert;
     VkShaderModule _frag;
@@ -75,6 +68,8 @@ public:
     std::vector<glm::mat4> _transform_mat;
     std::vector<material> _materials;
 
+    VkPipeline _gfx_pipeline;
+    VkPipelineLayout _gfx_pipeline_layout;
     VkDescriptorPool _desc_pool;
     VkDescriptorSetLayout _desc_set_layout;
     VkDescriptorSet _desc_set;
@@ -92,9 +87,6 @@ public:
     void draw();
     void run();
 
-    frame *get_current_frame() { return &_frames[_frame_number % FRAME_OVERLAP]; };
-    bool load_shader_module(const char *file, VkShaderModule *shader_module);
-
 private:
     void device_init();
     void swapchain_init();
@@ -104,6 +96,14 @@ private:
     void descriptor_init();
     void pipeline_init();
 
+    bool load_shader_module(const char *file, VkShaderModule *shader_module);
+
     void load_meshes();
     void upload_meshes(mesh *meshes, size_t size);
+    void draw_meshes(frame *frame);
+
+    frame *get_current_frame() { return &_frames[_frame_number % FRAME_OVERLAP]; };
+
+    allocated_buffer create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                                   VmaAllocationCreateFlags flags);
 };

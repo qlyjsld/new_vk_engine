@@ -59,4 +59,15 @@ VkImageViewCreateInfo vk_create_image_view_info(VkImageAspectFlagBits aspect, Vk
 
 VkPipelineDepthStencilStateCreateInfo vk_create_depth_stencil_state_info();
 
+VkDescriptorPoolCreateInfo
+vk_create_descriptor_pool_info(uint32_t pool_size_count,
+                               VkDescriptorPoolSize *desc_pool_sizes);
+
+VkDescriptorSetLayoutCreateInfo vk_create_descriptor_set_layout_info(
+    uint32_t binding_count, VkDescriptorSetLayoutBinding *desc_set_layout_bindings);
+
+VkDescriptorSetAllocateInfo
+vk_allocate_descriptor_set_info(VkDescriptorPool desc_pool,
+                                VkDescriptorSetLayout *desc_set_layout);
+
 } // namespace vk_init
