@@ -38,6 +38,7 @@ void vk_engine::init()
 
     swapchain_init();
     command_init();
+    transfer_init();
     sync_init();
 
     camera_init();
@@ -89,6 +90,13 @@ void vk_engine::device_init()
             .value();
     _physical_device = vkb_physical_device.physical_device;
 
+    std::cout << "minUniformBufferOffsetAlignment "
+              << vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment
+              << std::endl;
+
+    _minUniformBufferOffsetAlignment =
+        vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment;
+
     /* create vulkan device */
     vkb::DeviceBuilder vkb_device_builder{vkb_physical_device};
     vkb::Device vkb_device = vkb_device_builder.build().value();
@@ -98,6 +106,10 @@ void vk_engine::device_init()
     _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
     _gfx_queue_family_index =
         vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
+    _transfer_queue = vkb_device.get_queue(vkb::QueueType::transfer).value();
+    _transfer_queue_family_index =
+        vkb_device.get_queue_index(vkb::QueueType::transfer).value();
 }
 
 void vk_engine::swapchain_init()
@@ -149,6 +161,25 @@ void vk_engine::command_init()
     }
 }
 
+void vk_engine::transfer_init()
+{
+    VkCommandPoolCreateInfo cmd_pool_info =
+        vk_init::vk_create_cmd_pool_info(_transfer_queue_family_index);
+
+    VK_CHECK(
+        vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_upload_context.cmd_pool));
+
+    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+        vk_init::vk_create_cmd_buffer_allocate_info(1, _upload_context.cmd_pool);
+
+    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                      &_upload_context.cmd_buffer));
+
+    VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(false);
+
+    VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_upload_context.fence));
+}
+
 void vk_engine::sync_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
@@ -196,7 +227,8 @@ void vk_engine::descriptor_init()
 
     VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_desc_set));
 
-    _mat_buffer = create_buffer(sizeof(render_mat), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    _mat_buffer = create_buffer(pad_uniform_buffer_size(sizeof(render_mat)),
+                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                 VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
     VkDescriptorBufferInfo desc_buffer_info = {};
@@ -257,15 +289,15 @@ void vk_engine::pipeline_init()
     VkPipelineLayoutCreateInfo pipeline_layout_info =
         vk_init::vk_create_pipeline_layout_info();
 
-    VkPushConstantRange push_constant_range = {};
-    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    push_constant_range.offset = 0;
-    push_constant_range.size = sizeof(mesh_push_constants);
+    // VkPushConstantRange push_constant_range = {};
+    // push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // push_constant_range.offset = 0;
+    // push_constant_range.size = sizeof(mesh_push_constants);
 
     pipeline_layout_info.setLayoutCount = 1;
     pipeline_layout_info.pSetLayouts = &_desc_set_layout;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+    // pipeline_layout_info.pushConstantRangeCount = 1;
+    // pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
                                     &graphics_pipeline_builder._pipeline_layout));
@@ -285,25 +317,52 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 {
     for (uint32_t i = 0; i < size; ++i) {
         mesh *mesh = &meshes[i];
+        allocated_buffer staging_buffer;
 
         /* create vertex buffer */
-        mesh->vertex_buffer = create_buffer(mesh->vertices.size() * sizeof(vertex),
-                                            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+        staging_buffer = create_buffer(mesh->vertices.size() * sizeof(vertex),
+                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
         void *data;
-        vmaMapMemory(_allocator, mesh->vertex_buffer.allocation, &data);
+        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
         std::memcpy(data, mesh->vertices.data(), mesh->vertices.size() * sizeof(vertex));
-        vmaUnmapMemory(_allocator, mesh->vertex_buffer.allocation);
+        vmaUnmapMemory(_allocator, staging_buffer.allocation);
+
+        mesh->vertex_buffer = create_buffer(
+            mesh->vertices.size() * sizeof(vertex),
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+
+        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+            VkBufferCopy region = {};
+            region.size = mesh->vertices.size() * sizeof(vertex);
+            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, mesh->vertex_buffer.buffer,
+                            1, &region);
+        });
+
+        vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
 
         /* create index buffer */
-        mesh->index_buffer = create_buffer(mesh->indices.size() * sizeof(uint16_t),
-                                           VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+        staging_buffer = create_buffer(mesh->indices.size() * sizeof(uint16_t),
+                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
-        vmaMapMemory(_allocator, mesh->index_buffer.allocation, &data);
+        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
         std::memcpy(data, mesh->indices.data(), mesh->indices.size() * sizeof(uint16_t));
-        vmaUnmapMemory(_allocator, mesh->index_buffer.allocation);
+        vmaUnmapMemory(_allocator, staging_buffer.allocation);
+
+        mesh->index_buffer = create_buffer(
+            mesh->indices.size() * sizeof(uint16_t),
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+
+        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+            VkBufferCopy region = {};
+            region.size = mesh->indices.size() * sizeof(uint16_t);
+            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, mesh->index_buffer.buffer,
+                            1, &region);
+        });
+
+        vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
 
         /* temporary hardcode transform matrix */
         _transform_mat.push_back(
@@ -317,7 +376,6 @@ void vk_engine::draw()
     frame *frame = get_current_frame();
     VK_CHECK(vkWaitForFences(_device, 1, &frame->fence, VK_TRUE, UINT64_MAX));
     VK_CHECK(vkResetFences(_device, 1, &frame->fence));
-    VK_CHECK(vkResetCommandBuffer(frame->cmd_buffer, 0x00000000));
 
     /* wait and acquire the next frame */
     VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, frame->present_sem,
@@ -411,15 +469,16 @@ void vk_engine::draw_meshes(frame *frame)
         std::memcpy(data, &mat, sizeof(render_mat));
         vmaUnmapMemory(_allocator, _mat_buffer.allocation);
 
+        // offset = _frame_index * pad_uniform_buffer_size(sizeof(render_mat));
         vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 _gfx_pipeline_layout, 0, 1, &_desc_set, 0, nullptr);
 
-        mesh_push_constants push_constants;
-        push_constants.render_matrix = mat.proj * mat.view * mat.model;
+        // mesh_push_constants push_constants;
+        // push_constants.render_matrix = mat.proj * mat.view * mat.model;
 
-        vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
-                           VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mesh_push_constants),
-                           &push_constants);
+        // vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
+        //                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mesh_push_constants),
+        //                    &push_constants);
 
         vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
     }
@@ -450,8 +509,13 @@ void vk_engine::cleanup()
             vkDestroySemaphore(_device, _frames[i].present_sem, nullptr);
             vkDestroySemaphore(_device, _frames[i].sumbit_sem, nullptr);
             vkDestroyFence(_device, _frames[i].fence, nullptr);
-            vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
         }
+
+        vkDestroyFence(_device, _upload_context.fence, nullptr);
+        vkDestroyCommandPool(_device, _upload_context.cmd_pool, nullptr);
+
+        for (uint32_t i = 0; i < FRAME_OVERLAP; ++i)
+            vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
 
         vkDestroyImageView(_device, _depth_img_view, nullptr);
         vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation);
@@ -488,6 +552,30 @@ void vk_engine::run()
 
         draw();
     }
+}
+
+void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
+{
+    /* prepare command buffer */
+    VkCommandBufferBeginInfo cmd_buffer_begin_info =
+        vk_init::vk_create_cmd_buffer_begin_info();
+
+    /* begin command buffer recording */
+    VK_CHECK(vkBeginCommandBuffer(_upload_context.cmd_buffer, &cmd_buffer_begin_info));
+
+    fs(_upload_context.cmd_buffer);
+
+    VK_CHECK(vkEndCommandBuffer(_upload_context.cmd_buffer));
+
+    VkSubmitInfo submit_info = vk_init::vk_create_submit_info(&_upload_context.cmd_buffer,
+                                                              nullptr, nullptr, nullptr);
+
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.signalSemaphoreCount = 0;
+
+    VK_CHECK(vkQueueSubmit(_transfer_queue, 1, &submit_info, _upload_context.fence));
+    VK_CHECK(vkWaitForFences(_device, 1, &_upload_context.fence, VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(_device, 1, &_upload_context.fence));
 }
 
 bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_module)
@@ -534,4 +622,13 @@ allocated_buffer vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags 
                              &buffer.buffer, &buffer.allocation, nullptr));
 
     return buffer;
+}
+
+size_t vk_engine::pad_uniform_buffer_size(size_t original_size)
+{
+    size_t aligned_size = original_size;
+    if (_minUniformBufferOffsetAlignment > 0)
+        aligned_size = (aligned_size + _minUniformBufferOffsetAlignment - 1) &
+                       ~(_minUniformBufferOffsetAlignment - 1);
+    return aligned_size;
 }

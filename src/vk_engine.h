@@ -11,7 +11,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-constexpr int FRAME_OVERLAP = 1;
+constexpr int FRAME_OVERLAP = 2;
 
 struct deletion_queue {
 public:
@@ -35,12 +35,19 @@ struct frame {
     VkCommandBuffer cmd_buffer;
 };
 
+struct upload_context {
+    VkFence fence;
+    VkCommandPool cmd_pool;
+    VkCommandBuffer cmd_buffer;
+};
+
 class vk_engine
 {
 public:
     bool _is_initialized{false};
     uint64_t _frame_number{0};
     uint64_t _last_frame{0};
+    uint64_t _frame_index{0};
     VkExtent2D _window_extent{1600, 900};
     struct SDL_Window *_window{nullptr};
 
@@ -49,6 +56,7 @@ public:
     VkPhysicalDevice _physical_device;
     VkDevice _device;
     VkSurfaceKHR _surface;
+    VkDeviceSize _minUniformBufferOffsetAlignment;
 
     VkSwapchainKHR _swapchain;
     VkFormat _swapchain_format;
@@ -79,6 +87,11 @@ public:
     allocated_img _depth_img;
     VkFormat _depth_img_format;
 
+    VkQueue _transfer_queue;
+    uint32_t _transfer_queue_family_index;
+    upload_context _upload_context;
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
+
     vk_camera _cam;
     deletion_queue _deletion_queue;
 
@@ -91,6 +104,7 @@ private:
     void device_init();
     void swapchain_init();
     void command_init();
+    void transfer_init();
     void sync_init();
     void camera_init() { _cam.init(); }
     void descriptor_init();
@@ -102,8 +116,14 @@ private:
     void upload_meshes(mesh *meshes, size_t size);
     void draw_meshes(frame *frame);
 
-    frame *get_current_frame() { return &_frames[_frame_number % FRAME_OVERLAP]; };
+    frame *get_current_frame()
+    {
+        _frame_index = _frame_number % FRAME_OVERLAP;
+        return &_frames[_frame_index];
+    };
 
     allocated_buffer create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                    VmaAllocationCreateFlags flags);
+
+    size_t pad_uniform_buffer_size(size_t original_size);
 };

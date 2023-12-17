@@ -13,11 +13,11 @@ layout (set = 0, binding = 0) uniform readonly in_mat
     mat4 model;
 } render_mat;
 
-layout (push_constant) uniform constants
-{
-    vec4 data;
-    mat4 render_mat;
-} push_constants;
+// layout (push_constant) uniform constants
+// {
+//     vec4 data;
+//     mat4 render_mat;
+// } push_constants;
 
 void main()
 {

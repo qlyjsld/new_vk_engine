@@ -6,7 +6,8 @@ VkCommandPoolCreateInfo vk_init::vk_create_cmd_pool_info(uint32_t queue_family_i
     VkCommandPoolCreateInfo cmd_pool_info = {};
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.pNext = nullptr;
-    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
+                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     cmd_pool_info.queueFamilyIndex = queue_family_index;
     return cmd_pool_info;
 }
