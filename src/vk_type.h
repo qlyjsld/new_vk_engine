@@ -11,4 +11,6 @@ struct allocated_buffer {
 struct allocated_img {
     VkImage img;
     VmaAllocation allocation;
+    VkImageView img_view;
+    VkFormat format;
 };

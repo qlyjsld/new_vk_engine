@@ -126,10 +126,10 @@ void vk_engine::swapchain_init()
     _swapchain_imgs = vkb_swapchain.get_images().value();
     _swapchain_img_views = vkb_swapchain.get_image_views().value();
 
-    _depth_img_format = VK_FORMAT_D32_SFLOAT;
+    _depth_img.format = VK_FORMAT_D32_SFLOAT;
 
     VkImageCreateInfo img_info = vk_init::vk_create_image_info(
-        _depth_img_format, VkExtent3D{_window_extent.width, _window_extent.height, 1},
+        _depth_img.format, VkExtent3D{_window_extent.width, _window_extent.height, 1},
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
     VmaAllocationCreateInfo alloc_info = {};
@@ -139,9 +139,9 @@ void vk_engine::swapchain_init()
                             &_depth_img.allocation, nullptr));
 
     VkImageViewCreateInfo img_view_info = vk_init::vk_create_image_view_info(
-        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img, _depth_img_format);
+        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img, _depth_img.format);
 
-    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img_view));
+    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img.img_view));
 }
 
 void vk_engine::command_init()
@@ -302,7 +302,7 @@ void vk_engine::pipeline_init()
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
                                     &graphics_pipeline_builder._pipeline_layout));
 
-    graphics_pipeline_builder.build(_device, &_swapchain_format, _depth_img_format);
+    graphics_pipeline_builder.build(_device, &_swapchain_format, _depth_img.format);
     _gfx_pipeline = graphics_pipeline_builder.value();
     _gfx_pipeline_layout = graphics_pipeline_builder._pipeline_layout;
 }
@@ -401,7 +401,7 @@ void vk_engine::draw()
 
     VkRenderingAttachmentInfo depth_attachment =
         vk_init::vk_create_rendering_attachment_info(
-            _depth_img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
             VkClearValue{1.f, 1.f, 1.f});
 
     /* start drawing */
@@ -517,7 +517,7 @@ void vk_engine::cleanup()
         for (uint32_t i = 0; i < FRAME_OVERLAP; ++i)
             vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
 
-        vkDestroyImageView(_device, _depth_img_view, nullptr);
+        vkDestroyImageView(_device, _depth_img.img_view, nullptr);
         vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation);
 
         for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)

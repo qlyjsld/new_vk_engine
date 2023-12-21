@@ -83,9 +83,7 @@ public:
     VkDescriptorSet _desc_set;
     allocated_buffer _mat_buffer;
 
-    VkImageView _depth_img_view;
     allocated_img _depth_img;
-    VkFormat _depth_img_format;
 
     VkQueue _transfer_queue;
     uint32_t _transfer_queue_family_index;
