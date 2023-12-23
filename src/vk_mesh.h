@@ -14,7 +14,7 @@ struct vertex_input_description {
 struct vertex {
     glm::vec3 pos;
     glm::vec3 normal;
-    glm::vec3 color;
+    glm::vec2 texcoord;
 
     static vertex_input_description get_vertex_input_description();
 };
@@ -26,6 +26,9 @@ struct mesh {
     std::vector<uint16_t> indices;
     allocated_buffer vertex_buffer;
     allocated_buffer index_buffer;
+
+    std::vector<unsigned char> texture;
+    allocated_img texture_buffer;
 
     bool load_from_gltf(const char *filename);
 };

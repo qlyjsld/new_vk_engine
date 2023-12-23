@@ -94,7 +94,7 @@ VkCommandBufferBeginInfo vk_init::vk_create_cmd_buffer_begin_info()
     return cmd_buffer_begin_info;
 }
 
-VkImageSubresourceRange vk_init::vk_create_subresource_range(VkImageAspectFlagBits aspect)
+VkImageSubresourceRange vk_init::vk_create_subresource_range(VkImageAspectFlags aspect)
 {
     VkImageSubresourceRange subresource_range = {};
     subresource_range.aspectMask = aspect;
@@ -253,7 +253,7 @@ VkPipelineLayoutCreateInfo vk_init::vk_create_pipeline_layout_info()
 }
 
 VkImageCreateInfo vk_init::vk_create_image_info(VkFormat format, VkExtent3D extent,
-                                                VkImageUsageFlagBits usage)
+                                                VkImageUsageFlags usage)
 {
     VkImageCreateInfo img_info = {};
     img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -274,7 +274,7 @@ VkImageCreateInfo vk_init::vk_create_image_info(VkFormat format, VkExtent3D exte
     return img_info;
 }
 
-VkImageViewCreateInfo vk_init::vk_create_image_view_info(VkImageAspectFlagBits aspect,
+VkImageViewCreateInfo vk_init::vk_create_image_view_info(VkImageAspectFlags aspect,
                                                          VkImage img, VkFormat format)
 {
     VkImageSubresourceRange subresource_range = vk_create_subresource_range(aspect);

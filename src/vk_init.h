@@ -24,7 +24,7 @@ VkRenderingInfo vk_create_rendering_info(VkRenderingAttachmentInfo *color_attach
 
 VkCommandBufferBeginInfo vk_create_cmd_buffer_begin_info();
 
-VkImageSubresourceRange vk_create_subresource_range(VkImageAspectFlagBits aspect);
+VkImageSubresourceRange vk_create_subresource_range(VkImageAspectFlags aspect);
 
 VkImageMemoryBarrier vk_create_img_mem_barrier();
 
@@ -52,9 +52,9 @@ VkPipelineMultisampleStateCreateInfo vk_create_multisample_state_info();
 VkPipelineLayoutCreateInfo vk_create_pipeline_layout_info();
 
 VkImageCreateInfo vk_create_image_info(VkFormat format, VkExtent3D extent,
-                                       VkImageUsageFlagBits usage);
+                                       VkImageUsageFlags usage);
 
-VkImageViewCreateInfo vk_create_image_view_info(VkImageAspectFlagBits aspect, VkImage img,
+VkImageViewCreateInfo vk_create_image_view_info(VkImageAspectFlags aspect, VkImage img,
                                                 VkFormat format);
 
 VkPipelineDepthStencilStateCreateInfo vk_create_depth_stencil_state_info();

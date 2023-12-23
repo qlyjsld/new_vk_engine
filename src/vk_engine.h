@@ -112,6 +112,7 @@ private:
 
     void load_meshes();
     void upload_meshes(mesh *meshes, size_t size);
+    void upload_textures(mesh *meshes, size_t size);
     void draw_meshes(frame *frame);
 
     frame *get_current_frame()
@@ -122,6 +123,10 @@ private:
 
     allocated_buffer create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                    VmaAllocationCreateFlags flags);
+
+    allocated_img create_img(VkFormat format, VkExtent3D extent,
+                             VkImageAspectFlags aspect, VkImageUsageFlags usage,
+                             VmaAllocationCreateFlags flags);
 
     size_t pad_uniform_buffer_size(size_t original_size);
 };

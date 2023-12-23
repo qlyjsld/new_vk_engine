@@ -47,6 +47,7 @@ void vk_engine::init()
 
     load_meshes();
     upload_meshes(_meshes.data(), _meshes.size());
+    upload_textures(_meshes.data(), _meshes.size());
 
     _is_initialized = true;
 }
@@ -370,6 +371,61 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
     }
 }
 
+void vk_engine::upload_textures(mesh *meshes, size_t size)
+{
+    for (uint32_t i = 0; i < size; ++i) {
+        mesh *mesh = &meshes[i];
+        allocated_buffer staging_buffer;
+
+        staging_buffer = create_buffer(mesh->texture.size() * sizeof(unsigned char),
+                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+        void *data;
+        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
+        std::memcpy(data, mesh->texture.data(),
+                    mesh->texture.size() * sizeof(unsigned char));
+        vmaUnmapMemory(_allocator, staging_buffer.allocation);
+
+        VkExtent3D extent = {};
+        extent.width = 512;
+        extent.height = 512;
+        extent.depth = 1;
+
+        mesh->texture_buffer =
+            create_img(mesh->texture_buffer.format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                       VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+
+        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+            vk_cmd::vk_img_layout_transition(
+                cmd_buffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+
+            VkBufferImageCopy region = {};
+            region.bufferOffset = 0;
+            region.bufferRowLength = 0;
+            region.bufferImageHeight = 0;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel = 0;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
+            region.imageOffset = VkOffset3D{0, 0, 0};
+            region.imageExtent = extent;
+
+            vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
+                                   mesh->texture_buffer.img,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+            vk_cmd::vk_img_layout_transition(cmd_buffer, mesh->texture_buffer.img,
+                                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                             _transfer_queue_family_index);
+        });
+
+        vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
+    }
+}
+
 void vk_engine::draw()
 {
     /* block cpu accessing frame in used */
@@ -494,6 +550,9 @@ void vk_engine::cleanup()
                              _meshes[i].vertex_buffer.allocation);
             vmaDestroyBuffer(_allocator, _meshes[i].index_buffer.buffer,
                              _meshes[i].index_buffer.allocation);
+            vmaDestroyImage(_allocator, _meshes[i].texture_buffer.img,
+                            _meshes[i].texture_buffer.allocation);
+            vkDestroyImageView(_device, _meshes[i].texture_buffer.img_view, nullptr);
         }
 
         vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
@@ -622,6 +681,30 @@ allocated_buffer vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags 
                              &buffer.buffer, &buffer.allocation, nullptr));
 
     return buffer;
+}
+
+allocated_img vk_engine::create_img(VkFormat format, VkExtent3D extent,
+                                    VkImageAspectFlags aspect, VkImageUsageFlags usage,
+                                    VmaAllocationCreateFlags flags)
+{
+    VkImageCreateInfo img_info = vk_init::vk_create_image_info(format, extent, usage);
+
+    VmaAllocationCreateInfo vma_allocation_info = {};
+    vma_allocation_info.flags = flags;
+    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    allocated_img img;
+    img.format = format;
+
+    VK_CHECK(vmaCreateImage(_allocator, &img_info, &vma_allocation_info, &img.img,
+                            &img.allocation, nullptr));
+
+    VkImageViewCreateInfo img_view_info =
+        vk_init::vk_create_image_view_info(aspect, img.img, format);
+
+    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &img.img_view));
+
+    return img;
 }
 
 size_t vk_engine::pad_uniform_buffer_size(size_t original_size)

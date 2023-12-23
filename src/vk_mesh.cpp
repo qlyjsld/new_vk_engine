@@ -36,7 +36,7 @@ vertex_input_description vertex::get_vertex_input_description()
     color_attr.location = 2;
     color_attr.binding = 0;
     color_attr.format = VK_FORMAT_R32G32B32_SFLOAT;
-    color_attr.offset = offsetof(vertex, color);
+    color_attr.offset = offsetof(vertex, texcoord);
     description.attributes.push_back(color_attr);
 
     return description;
@@ -63,6 +63,7 @@ bool mesh::load_from_gltf(const char *filename)
         return false;
     }
 
+    /* POSITION */
     for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
          it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
         if (!strcmp(it->first.data(), "POSITION")) {
@@ -82,6 +83,7 @@ bool mesh::load_from_gltf(const char *filename)
         }
     }
 
+    /* NORMAL */
     for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
          it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
         if (!strcmp(it->first.data(), "NORMAL")) {
@@ -99,6 +101,24 @@ bool mesh::load_from_gltf(const char *filename)
         }
     }
 
+    /* TEXCROOD */
+    for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
+         it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
+        if (!strcmp(it->first.data(), "TEXCOORD_0")) {
+            auto accessor = model.accessors[it->second];
+            auto bufferview = model.bufferViews[accessor.bufferView];
+            auto buffer = model.buffers[bufferview.buffer];
+            unsigned char *data =
+                buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
+            for (uint32_t i = 0; i < accessor.count; ++i) {
+                vertices[i].texcoord =
+                    glm::vec2(*(float *)data, *(float *)(data + sizeof(float)));
+                data += bufferview.byteStride;
+            }
+        }
+    }
+
+    /* INDICES */
     if (model.meshes[0].primitives[0].indices != -1) {
         auto accessor = model.accessors[model.meshes[0].primitives[0].indices];
         auto bufferview = model.bufferViews[accessor.bufferView];
@@ -109,6 +129,16 @@ bool mesh::load_from_gltf(const char *filename)
             indices.push_back(*(uint16_t *)data);
             data += bufferview.byteStride + sizeof(uint16_t);
         }
+    }
+
+    /* TEXTURE */
+    if (model.meshes[0].primitives[0].material != -1) {
+        auto material = model.materials[model.meshes[0].primitives[0].material];
+        auto base_color_texture = material.pbrMetallicRoughness.baseColorTexture;
+        auto texture = model.textures[base_color_texture.index];
+        auto img = model.images[texture.source];
+        this->texture = img.image;
+        texture_buffer.format = VK_FORMAT_R8G8B8A8_SRGB;
     }
 
     std::cout << filename << " loaded" << std::endl;
