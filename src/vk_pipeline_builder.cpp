@@ -1,5 +1,6 @@
 #include "vk_pipeline_builder.h"
-#include "vk_util.h"
+
+#include <iostream>
 #include <vulkan/vulkan_core.h>
 
 void PipelineBuilder::customize(VkExtent2D window_extent,

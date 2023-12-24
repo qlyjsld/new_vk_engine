@@ -1,8 +1,9 @@
 #pragma once
 
-#include "vk_mesh.h"
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "vk_mesh.h"
 
 class PipelineBuilder
 {

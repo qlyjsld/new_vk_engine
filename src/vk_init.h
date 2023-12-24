@@ -1,7 +1,8 @@
 ﻿#pragma once
 
-#include "vk_type.h"
 #include <vulkan/vulkan_core.h>
+
+#include "vk_type.h"
 
 namespace vk_init
 {

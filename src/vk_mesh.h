@@ -1,10 +1,12 @@
 #pragma once
 
-#include "vk_type.h"
-#include <glm/mat4x4.hpp>
-#include <glm/vec3.hpp>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
+
+#include "vk_type.h"
 
 struct vertex_input_description {
     std::vector<VkVertexInputBindingDescription> bindings;

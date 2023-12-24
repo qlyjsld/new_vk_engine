@@ -1,15 +1,17 @@
 ﻿#pragma once
 
+#include <deque>
+#include <functional>
+#include <vector>
+#include <vulkan/vulkan_core.h>
+
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
+
 #include "vk_camera.h"
 #include "vk_mem_alloc.h"
 #include "vk_mesh.h"
 #include "vk_type.h"
-#include <deque>
-#include <functional>
-#include <glm/mat4x4.hpp>
-#include <glm/vec4.hpp>
-#include <vector>
-#include <vulkan/vulkan_core.h>
 
 constexpr int FRAME_OVERLAP = 2;
 
@@ -102,7 +104,6 @@ private:
     void device_init();
     void swapchain_init();
     void command_init();
-    void transfer_init();
     void sync_init();
     void camera_init() { _cam.init(); }
     void descriptor_init();
