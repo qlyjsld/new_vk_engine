@@ -240,7 +240,8 @@ void vk_engine::sync_init()
 void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8}};
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8}};
 
     VkDescriptorPoolCreateInfo desc_pool_info = vk_init::vk_create_descriptor_pool_info(
         desc_pool_sizes.size(), desc_pool_sizes.data());
@@ -257,8 +258,15 @@ void vk_engine::descriptor_init()
     desc_set_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     // desc_set_layout_binding.pImmutableSamplers = ;
 
+    VkDescriptorSetLayoutBinding desc_set_layout_binding_1 = {};
+    desc_set_layout_binding_1.binding = 1;
+    desc_set_layout_binding_1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    desc_set_layout_binding_1.descriptorCount = 1;
+    desc_set_layout_binding_1.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    // desc_set_layout_binding.pImmutableSamplers = ;
+
     std::vector<VkDescriptorSetLayoutBinding> desc_set_layout_bindings = {
-        desc_set_layout_binding_0};
+        desc_set_layout_binding_0, desc_set_layout_binding_1};
 
     VkDescriptorSetLayoutCreateInfo desc_set_layout_info =
         vk_init::vk_create_descriptor_set_layout_info(desc_set_layout_bindings.size(),
@@ -293,12 +301,9 @@ void vk_engine::descriptor_init()
     write_set.pNext = nullptr;
     write_set.dstSet = _desc_set;
     write_set.dstBinding = 0;
-    // write_set.dstArrayElement = ;
     write_set.descriptorCount = 1;
     write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    // write_set.pImageInfo = ;
     write_set.pBufferInfo = &desc_buffer_info;
-    // write_set.pTexelBufferView = ;
 
     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 }
@@ -501,6 +506,48 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         });
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
+
+        VkSamplerCreateInfo sampler_info = {};
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.pNext = nullptr;
+        // sampler_info.flags = ;
+        sampler_info.magFilter = VK_FILTER_NEAREST;
+        sampler_info.minFilter = VK_FILTER_NEAREST;
+        // sampler_info.mipmapMode = ;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        // sampler_info.mipLodBias = ;
+        // sampler_info.anisotropyEnable = ;
+        // sampler_info.maxAnisotropy = ;
+        // sampler_info.compareEnable = ;
+        // sampler_info.compareOp = ;
+        // sampler_info.minLod = ;
+        // sampler_info.maxLod = ;
+        // sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        // sampler_info.unnormalizedCoordinates = VK_FALSE;
+
+        VkSampler sampler;
+
+        VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &sampler));
+
+        _deletion_queue.push_back([=]() { vkDestroySampler(_device, sampler, nullptr); });
+
+        VkDescriptorImageInfo desc_img_info = {};
+        desc_img_info.sampler = sampler;
+        desc_img_info.imageView = mesh->texture_buffer.img_view;
+        desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet write_set = {};
+        write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_set.pNext = nullptr;
+        write_set.dstSet = _desc_set;
+        write_set.dstBinding = 1;
+        write_set.descriptorCount = 1;
+        write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_set.pImageInfo = &desc_img_info;
+
+        vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
     }
 }
 

@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <deque>
 #include <functional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -17,7 +16,7 @@ constexpr int FRAME_OVERLAP = 2;
 
 struct deletion_queue {
 public:
-    std::deque<std::function<void()>> fs;
+    std::vector<std::function<void()>> fs;
 
     void push_back(std::function<void()> &&f) { fs.push_back(f); }
 
