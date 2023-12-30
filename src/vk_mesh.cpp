@@ -1,6 +1,8 @@
 #include "vk_mesh.h"
 
+#include <glm/ext/matrix_transform.hpp>
 #include <iostream>
+#include <vector>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -8,6 +10,12 @@
 #include <tiny_gltf.h>
 
 using namespace tinygltf;
+
+struct buffer_view {
+    unsigned char *data;
+    uint32_t stride;
+    uint32_t count;
+};
 
 vertex_input_description vertex::get_vertex_input_description()
 {
@@ -43,12 +51,31 @@ vertex_input_description vertex::get_vertex_input_description()
     return description;
 }
 
-bool mesh::load_from_gltf(const char *filename)
+buffer_view retreive_buffer(Model *model, Primitive *primitive,
+                            uint32_t accessor_index = -1, const char *attr = nullptr)
+{
+    buffer_view buffer_view;
+    Accessor accessor;
+    if (attr != nullptr) {
+        auto attribute = primitive->attributes.find(attr);
+        accessor = model->accessors[attribute->second];
+    } else
+        accessor = model->accessors[accessor_index];
+    auto bufferview = model->bufferViews[accessor.bufferView];
+    auto buffer = model->buffers[bufferview.buffer];
+    buffer_view.data = buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
+    buffer_view.stride = bufferview.byteStride;
+    buffer_view.count = accessor.count;
+    return buffer_view;
+}
+
+std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 {
     TinyGLTF loader;
     Model model;
     std::string err;
     std::string warn;
+    std::vector<mesh> meshes;
     bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename);
 
     if (!warn.empty()) {
@@ -61,88 +88,69 @@ bool mesh::load_from_gltf(const char *filename)
 
     if (!ret) {
         std::cerr << "failed to parse gltf" << std::endl;
-        return false;
+        return meshes;
     }
 
-    /* POSITION */
-    for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
-         it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
-        if (!strcmp(it->first.data(), "POSITION")) {
-            auto accessor = model.accessors[it->second];
-            auto bufferview = model.bufferViews[accessor.bufferView];
-            auto buffer = model.buffers[bufferview.buffer];
-            unsigned char *data =
-                buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
-            for (uint32_t i = 0; i < accessor.count; ++i) {
-                vertex v;
-                v.pos = glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
-                                  *(float *)(data + 2 * sizeof(float)));
+    for (auto m = model.meshes.cbegin(); m != model.meshes.cend(); ++m) {
+        mesh mesh;
+        auto primitive = m->primitives[0];
 
-                vertices.push_back(v);
-                data += bufferview.byteStride;
-            }
-        }
-    }
-
-    /* NORMAL */
-    for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
-         it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
-        if (!strcmp(it->first.data(), "NORMAL")) {
-            auto accessor = model.accessors[it->second];
-            auto bufferview = model.bufferViews[accessor.bufferView];
-            auto buffer = model.buffers[bufferview.buffer];
-            unsigned char *data =
-                buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
-            for (uint32_t i = 0; i < accessor.count; ++i) {
-                vertices[i].normal =
-                    glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
+        /* POSITION */
+        buffer_view pos = retreive_buffer(&model, &primitive, -1, "POSITION");
+        unsigned char *data = pos.data;
+        for (uint32_t i = 0; i < pos.count; ++i) {
+            vertex v;
+            v.pos = glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
                               *(float *)(data + 2 * sizeof(float)));
-                data += bufferview.byteStride;
+
+            mesh.vertices.push_back(v);
+            data += pos.stride;
+        }
+
+        /* NORMAL */
+        buffer_view normal = retreive_buffer(&model, &primitive, -1, "NORMAL");
+        data = normal.data;
+        for (uint32_t i = 0; i < normal.count; ++i) {
+            mesh.vertices[i].normal =
+                glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
+                          *(float *)(data + 2 * sizeof(float)));
+            data += normal.stride;
+        }
+
+        /* TEXCROOD */
+        buffer_view texcrood = retreive_buffer(&model, &primitive, -1, "TEXCOORD_0");
+        data = texcrood.data;
+        for (uint32_t i = 0; i < texcrood.count; ++i) {
+            mesh.vertices[i].texcoord =
+                glm::vec2(*(float *)data, *(float *)(data + sizeof(float)));
+            data += texcrood.stride;
+        }
+
+        /* INDEX */
+        if (primitive.indices != -1) {
+            buffer_view index = retreive_buffer(&model, &primitive, primitive.indices);
+            data = index.data;
+
+            for (uint32_t i = 0; i < index.count; ++i) {
+                mesh.indices.push_back(*(uint16_t *)data);
+                data += index.stride + sizeof(uint16_t);
             }
         }
-    }
 
-    /* TEXCROOD */
-    for (auto it = model.meshes[0].primitives[0].attributes.cbegin();
-         it != model.meshes[0].primitives[0].attributes.cend(); ++it) {
-        if (!strcmp(it->first.data(), "TEXCOORD_0")) {
-            auto accessor = model.accessors[it->second];
-            auto bufferview = model.bufferViews[accessor.bufferView];
-            auto buffer = model.buffers[bufferview.buffer];
-            unsigned char *data =
-                buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
-            for (uint32_t i = 0; i < accessor.count; ++i) {
-                vertices[i].texcoord =
-                    glm::vec2(*(float *)data, *(float *)(data + sizeof(float)));
-                data += bufferview.byteStride;
-            }
+        // /* TEXTURE */
+        if (primitive.material != -1) {
+            auto material = model.materials[primitive.material];
+            auto base_color_texture = material.pbrMetallicRoughness.baseColorTexture;
+            auto texture = model.textures[base_color_texture.index];
+            auto img = model.images[texture.source];
+            mesh.texture = img.image;
+            mesh.texture_buffer.format = VK_FORMAT_R8G8B8A8_SRGB;
         }
-    }
 
-    /* INDICES */
-    if (model.meshes[0].primitives[0].indices != -1) {
-        auto accessor = model.accessors[model.meshes[0].primitives[0].indices];
-        auto bufferview = model.bufferViews[accessor.bufferView];
-        auto buffer = model.buffers[bufferview.buffer];
-        unsigned char *data =
-            buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
-        for (uint32_t i = 0; i < accessor.count; ++i) {
-            indices.push_back(*(uint16_t *)data);
-            data += bufferview.byteStride + sizeof(uint16_t);
-        }
-    }
-
-    /* TEXTURE */
-    if (model.meshes[0].primitives[0].material != -1) {
-        auto material = model.materials[model.meshes[0].primitives[0].material];
-        auto base_color_texture = material.pbrMetallicRoughness.baseColorTexture;
-        auto texture = model.textures[base_color_texture.index];
-        auto img = model.images[texture.source];
-        this->texture = img.image;
-        texture_buffer.format = VK_FORMAT_R8G8B8A8_SRGB;
+        meshes.push_back(mesh);
     }
 
     std::cout << filename << " loaded" << std::endl;
 
-    return true;
+    return meshes;
 }

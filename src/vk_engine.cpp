@@ -377,8 +377,9 @@ void vk_engine::pipeline_init()
 
 void vk_engine::load_meshes()
 {
-    mesh duck("../assets/glTF-Sample-Assets/Models/Duck/glTF-Binary/Duck.glb");
-    _meshes.push_back(duck);
+    _meshes = load_from_gltf("../assets/glTF-Sample-Assets/Models/Duck/"
+                             "glTF-Binary/Duck.glb",
+                             _nodes);
 }
 
 void vk_engine::upload_meshes(mesh *meshes, size_t size)
@@ -441,10 +442,6 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         });
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
-
-        /* temporary hardcode transform matrix */
-        _transform_mat.push_back(
-            glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f)));
     }
 }
 
@@ -510,22 +507,11 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         VkSamplerCreateInfo sampler_info = {};
         sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sampler_info.pNext = nullptr;
-        // sampler_info.flags = ;
         sampler_info.magFilter = VK_FILTER_NEAREST;
         sampler_info.minFilter = VK_FILTER_NEAREST;
-        // sampler_info.mipmapMode = ;
         sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        // sampler_info.mipLodBias = ;
-        // sampler_info.anisotropyEnable = ;
-        // sampler_info.maxAnisotropy = ;
-        // sampler_info.compareEnable = ;
-        // sampler_info.compareOp = ;
-        // sampler_info.minLod = ;
-        // sampler_info.maxLod = ;
-        // sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        // sampler_info.unnormalizedCoordinates = VK_FALSE;
 
         VkSampler sampler;
 
@@ -591,7 +577,7 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
-    draw_meshes(frame);
+    draw_nodes(frame);
 
     vkCmdEndRendering(frame->cmd_buffer);
 
@@ -621,11 +607,12 @@ void vk_engine::draw()
     _frame_number++;
 }
 
-void vk_engine::draw_meshes(frame *frame)
+void vk_engine::draw_nodes(frame *frame)
 {
-    for (uint32_t i = 0; i < _meshes.size(); ++i) {
-        mesh *mesh = &_meshes[i];
-        glm::mat4 *transform_mat = &_transform_mat[i];
+    for (uint32_t i = 0; i < _nodes.size(); ++i) {
+        node *node = &_nodes[i];
+        mesh *mesh = &_meshes[node->mesh_id];
+        glm::mat4 *transform_mat = &node->transform_mat;
 
         vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           _gfx_pipeline);
@@ -655,7 +642,7 @@ void vk_engine::draw_meshes(frame *frame)
                                 _gfx_pipeline_layout, 0, 1, &_desc_set, 0, nullptr);
 
         // mesh_push_constants push_constants;
-        // push_constants.render_matrix = mat.proj * mat.view * mat.model;
+        // push_constants.render_mat = mat.proj * mat.view * mat.model;
 
         // vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
         //                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mesh_push_constants),

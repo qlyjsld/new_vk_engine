@@ -74,8 +74,7 @@ public:
 
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
-    std::vector<glm::mat4> _transform_mat;
-    std::vector<material> _materials;
+    std::vector<node> _nodes;
 
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
@@ -113,7 +112,7 @@ private:
     void load_meshes();
     void upload_meshes(mesh *meshes, size_t size);
     void upload_textures(mesh *meshes, size_t size);
-    void draw_meshes(frame *frame);
+    void draw_nodes(frame *frame);
 
     frame *get_current_frame()
     {

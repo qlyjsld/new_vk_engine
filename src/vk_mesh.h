@@ -22,22 +22,19 @@ struct vertex {
 };
 
 struct mesh {
-    mesh(const char *filename) { load_from_gltf(filename); }
-
     std::vector<vertex> vertices;
-    std::vector<uint16_t> indices;
     allocated_buffer vertex_buffer;
+
+    std::vector<uint16_t> indices;
     allocated_buffer index_buffer;
 
     std::vector<unsigned char> texture;
     allocated_img texture_buffer;
-
-    bool load_from_gltf(const char *filename);
 };
 
 struct mesh_push_constants {
     glm::vec4 data;
-    glm::mat4 render_matrix;
+    glm::mat4 render_mat;
 };
 
 struct render_mat {
@@ -50,3 +47,12 @@ struct material {
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
 };
+
+struct node {
+    char *names;
+    uint32_t mesh_id;
+    glm::mat4 transform_mat;
+    // material material;
+};
+
+std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes);
