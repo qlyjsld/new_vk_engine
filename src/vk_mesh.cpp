@@ -17,6 +17,12 @@ struct buffer_view {
     uint32_t count;
 };
 
+struct texture_view {
+    uint32_t width;
+    uint32_t height;
+    std::vector<unsigned char> img;
+};
+
 vertex_input_description vertex::get_vertex_input_description()
 {
     vertex_input_description description;
@@ -67,6 +73,19 @@ buffer_view retreive_buffer(Model *model, Primitive *primitive,
     buffer_view.stride = bufferview.byteStride;
     buffer_view.count = accessor.count;
     return buffer_view;
+}
+
+texture_view retreive_texture(Model *model, uint32_t material_index = -1)
+{
+    texture_view texture_view;
+    auto material = model->materials[material_index];
+    auto base_color_texture = material.pbrMetallicRoughness.baseColorTexture;
+    auto texture = model->textures[base_color_texture.index];
+    auto img = model->images[texture.source];
+    texture_view.width = img.width;
+    texture_view.height = img.height;
+    texture_view.img = img.image;
+    return texture_view;
 }
 
 std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
@@ -139,11 +158,10 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
         // /* TEXTURE */
         if (primitive.material != -1) {
-            auto material = model.materials[primitive.material];
-            auto base_color_texture = material.pbrMetallicRoughness.baseColorTexture;
-            auto texture = model.textures[base_color_texture.index];
-            auto img = model.images[texture.source];
-            mesh.texture = img.image;
+            texture_view texture_view = retreive_texture(&model, primitive.material);
+            mesh.texture = texture_view.img;
+            mesh.texture_buffer.width = texture_view.width;
+            mesh.texture_buffer.height = texture_view.height;
             mesh.texture_buffer.format = VK_FORMAT_R8G8B8A8_SRGB;
         }
 

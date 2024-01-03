@@ -241,6 +241,7 @@ void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 8},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8}};
 
     VkDescriptorPoolCreateInfo desc_pool_info = vk_init::vk_create_descriptor_pool_info(
@@ -253,7 +254,7 @@ void vk_engine::descriptor_init()
 
     VkDescriptorSetLayoutBinding desc_set_layout_binding_0 = {};
     desc_set_layout_binding_0.binding = 0;
-    desc_set_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc_set_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     desc_set_layout_binding_0.descriptorCount = 1;
     desc_set_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     // desc_set_layout_binding.pImmutableSamplers = ;
@@ -282,30 +283,6 @@ void vk_engine::descriptor_init()
         vk_init::vk_allocate_descriptor_set_info(_desc_pool, &_desc_set_layout);
 
     VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_desc_set));
-
-    _mat_buffer = create_buffer(pad_uniform_buffer_size(sizeof(render_mat)),
-                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-
-    _deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(_allocator, _mat_buffer.buffer, _mat_buffer.allocation);
-    });
-
-    VkDescriptorBufferInfo desc_buffer_info = {};
-    desc_buffer_info.buffer = _mat_buffer.buffer;
-    desc_buffer_info.offset = 0;
-    desc_buffer_info.range = sizeof(render_mat);
-
-    VkWriteDescriptorSet write_set = {};
-    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_set.pNext = nullptr;
-    write_set.dstSet = _desc_set;
-    write_set.dstBinding = 0;
-    write_set.descriptorCount = 1;
-    write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    write_set.pBufferInfo = &desc_buffer_info;
-
-    vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 }
 
 void vk_engine::pipeline_init()
@@ -380,6 +357,39 @@ void vk_engine::load_meshes()
     _meshes = load_from_gltf("../assets/glTF-Sample-Assets/Models/Duck/"
                              "glTF-Binary/Duck.glb",
                              _nodes);
+
+    node node;
+    node.mesh_id = 0;
+    node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f));
+    _nodes.push_back(node);
+    node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(256.f, -64.f, -128.f));
+    _nodes.push_back(node);
+    node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(-256.f, -64.f, -128.f));
+    _nodes.push_back(node);
+
+    _mat_buffer = create_buffer(
+        _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+    _deletion_queue.push_back([=]() {
+        vmaDestroyBuffer(_allocator, _mat_buffer.buffer, _mat_buffer.allocation);
+    });
+
+    VkDescriptorBufferInfo desc_buffer_info = {};
+    desc_buffer_info.buffer = _mat_buffer.buffer;
+    desc_buffer_info.offset = 0;
+    desc_buffer_info.range = sizeof(render_mat);
+
+    VkWriteDescriptorSet write_set = {};
+    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_set.pNext = nullptr;
+    write_set.dstSet = _desc_set;
+    write_set.dstBinding = 0;
+    write_set.descriptorCount = 1;
+    write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    write_set.pBufferInfo = &desc_buffer_info;
+
+    vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 }
 
 void vk_engine::upload_meshes(mesh *meshes, size_t size)
@@ -462,8 +472,8 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
         VkExtent3D extent = {};
-        extent.width = 512;
-        extent.height = 512;
+        extent.width = mesh->texture_buffer.width;
+        extent.height = mesh->texture_buffer.height;
         extent.depth = 1;
 
         mesh->texture_buffer =
@@ -634,12 +644,13 @@ void vk_engine::draw_nodes(frame *frame)
 
         void *data;
         vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
-        std::memcpy(data, &mat, sizeof(render_mat));
+        std::memcpy((char *)data + i * pad_uniform_buffer_size(sizeof(render_mat)), &mat,
+                    sizeof(render_mat));
         vmaUnmapMemory(_allocator, _mat_buffer.allocation);
 
-        // offset = _frame_index * pad_uniform_buffer_size(sizeof(render_mat));
+        uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
         vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                _gfx_pipeline_layout, 0, 1, &_desc_set, 0, nullptr);
+                                _gfx_pipeline_layout, 0, 1, &_desc_set, 1, &doffset);
 
         // mesh_push_constants push_constants;
         // push_constants.render_mat = mat.proj * mat.view * mat.model;

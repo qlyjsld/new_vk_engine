@@ -18,6 +18,8 @@ struct allocated_buffer {
 };
 
 struct allocated_img {
+    uint32_t width;
+    uint32_t height;
     VkImage img;
     VmaAllocation allocation;
     VkImageView img_view;
