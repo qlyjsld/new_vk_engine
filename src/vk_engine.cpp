@@ -358,15 +358,6 @@ void vk_engine::load_meshes()
                              "glTF-Binary/Duck.glb",
                              _nodes);
 
-    node node;
-    node.mesh_id = 0;
-    node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f));
-    _nodes.push_back(node);
-    node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(256.f, -64.f, -128.f));
-    _nodes.push_back(node);
-    node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(-256.f, -64.f, -128.f));
-    _nodes.push_back(node);
-
     _mat_buffer = create_buffer(
         _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
@@ -461,89 +452,93 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         mesh *mesh = &meshes[i];
         allocated_buffer staging_buffer;
 
-        staging_buffer = create_buffer(mesh->texture.size() * sizeof(unsigned char),
-                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+        if (mesh->texture.size() != 0) {
+            staging_buffer = create_buffer(mesh->texture.size() * sizeof(unsigned char),
+                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
-        void *data;
-        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
-        std::memcpy(data, mesh->texture.data(),
-                    mesh->texture.size() * sizeof(unsigned char));
-        vmaUnmapMemory(_allocator, staging_buffer.allocation);
+            void *data;
+            vmaMapMemory(_allocator, staging_buffer.allocation, &data);
+            std::memcpy(data, mesh->texture.data(),
+                        mesh->texture.size() * sizeof(unsigned char));
+            vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
-        VkExtent3D extent = {};
-        extent.width = mesh->texture_buffer.width;
-        extent.height = mesh->texture_buffer.height;
-        extent.depth = 1;
+            VkExtent3D extent = {};
+            extent.width = mesh->texture_buffer.width;
+            extent.height = mesh->texture_buffer.height;
+            extent.depth = 1;
 
-        mesh->texture_buffer =
-            create_img(mesh->texture_buffer.format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                       VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+            mesh->texture_buffer = create_img(
+                mesh->texture_buffer.format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 
-        _deletion_queue.push_back([=]() {
-            vkDestroyImageView(_device, _meshes[i].texture_buffer.img_view, nullptr);
-            vmaDestroyImage(_allocator, _meshes[i].texture_buffer.img,
-                            _meshes[i].texture_buffer.allocation);
-        });
+            _deletion_queue.push_back([=]() {
+                vkDestroyImageView(_device, _meshes[i].texture_buffer.img_view, nullptr);
+                vmaDestroyImage(_allocator, _meshes[i].texture_buffer.img,
+                                _meshes[i].texture_buffer.allocation);
+            });
 
-        immediate_submit([=](VkCommandBuffer cmd_buffer) {
-            vk_cmd::vk_img_layout_transition(
-                cmd_buffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+            immediate_submit([=](VkCommandBuffer cmd_buffer) {
+                vk_cmd::vk_img_layout_transition(
+                    cmd_buffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
 
-            VkBufferImageCopy region = {};
-            region.bufferOffset = 0;
-            region.bufferRowLength = 0;
-            region.bufferImageHeight = 0;
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = 0;
-            region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
-            region.imageOffset = VkOffset3D{0, 0, 0};
-            region.imageExtent = extent;
+                VkBufferImageCopy region = {};
+                region.bufferOffset = 0;
+                region.bufferRowLength = 0;
+                region.bufferImageHeight = 0;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel = 0;
+                region.imageSubresource.baseArrayLayer = 0;
+                region.imageSubresource.layerCount = 1;
+                region.imageOffset = VkOffset3D{0, 0, 0};
+                region.imageExtent = extent;
 
-            vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
-                                   mesh->texture_buffer.img,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+                vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
+                                       mesh->texture_buffer.img,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-            vk_cmd::vk_img_layout_transition(cmd_buffer, mesh->texture_buffer.img,
-                                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                             _transfer_queue_family_index);
-        });
+                vk_cmd::vk_img_layout_transition(cmd_buffer, mesh->texture_buffer.img,
+                                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                 _transfer_queue_family_index);
+            });
 
-        vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
+            vmaDestroyBuffer(_allocator, staging_buffer.buffer,
+                             staging_buffer.allocation);
 
-        VkSamplerCreateInfo sampler_info = {};
-        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.pNext = nullptr;
-        sampler_info.magFilter = VK_FILTER_NEAREST;
-        sampler_info.minFilter = VK_FILTER_NEAREST;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            VkSamplerCreateInfo sampler_info = {};
+            sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            sampler_info.pNext = nullptr;
+            sampler_info.magFilter = VK_FILTER_NEAREST;
+            sampler_info.minFilter = VK_FILTER_NEAREST;
+            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 
-        VkSampler sampler;
+            VkSampler sampler;
 
-        VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &sampler));
+            VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &sampler));
 
-        _deletion_queue.push_back([=]() { vkDestroySampler(_device, sampler, nullptr); });
+            _deletion_queue.push_back(
+                [=]() { vkDestroySampler(_device, sampler, nullptr); });
 
-        VkDescriptorImageInfo desc_img_info = {};
-        desc_img_info.sampler = sampler;
-        desc_img_info.imageView = mesh->texture_buffer.img_view;
-        desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkDescriptorImageInfo desc_img_info = {};
+            desc_img_info.sampler = sampler;
+            desc_img_info.imageView = mesh->texture_buffer.img_view;
+            desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-        VkWriteDescriptorSet write_set = {};
-        write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_set.pNext = nullptr;
-        write_set.dstSet = _desc_set;
-        write_set.dstBinding = 1;
-        write_set.descriptorCount = 1;
-        write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_set.pImageInfo = &desc_img_info;
+            VkWriteDescriptorSet write_set = {};
+            write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_set.pNext = nullptr;
+            write_set.dstSet = _desc_set;
+            write_set.dstBinding = 1;
+            write_set.descriptorCount = 1;
+            write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_set.pImageInfo = &desc_img_info;
 
-        vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        }
     }
 }
 

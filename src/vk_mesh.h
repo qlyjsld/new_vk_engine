@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -49,7 +50,7 @@ struct material {
 };
 
 struct node {
-    char *names;
+    std::string names;
     uint32_t mesh_id;
     glm::mat4 transform_mat;
     // material material;

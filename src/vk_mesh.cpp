@@ -61,30 +61,33 @@ buffer_view retreive_buffer(Model *model, Primitive *primitive,
                             uint32_t accessor_index = -1, const char *attr = nullptr)
 {
     buffer_view buffer_view;
-    Accessor accessor;
+    Accessor *accessor;
     if (attr != nullptr) {
         auto attribute = primitive->attributes.find(attr);
-        accessor = model->accessors[attribute->second];
+        accessor = &model->accessors[attribute->second];
     } else
-        accessor = model->accessors[accessor_index];
-    auto bufferview = model->bufferViews[accessor.bufferView];
-    auto buffer = model->buffers[bufferview.buffer];
-    buffer_view.data = buffer.data.data() + bufferview.byteOffset + accessor.byteOffset;
-    buffer_view.stride = bufferview.byteStride;
-    buffer_view.count = accessor.count;
+        accessor = &model->accessors[accessor_index];
+    auto *bufferview = &model->bufferViews[accessor->bufferView];
+    auto *buffer = &model->buffers[bufferview->buffer];
+    buffer_view.data =
+        buffer->data.data() + bufferview->byteOffset + accessor->byteOffset;
+    buffer_view.stride = bufferview->byteStride;
+    buffer_view.count = accessor->count;
     return buffer_view;
 }
 
 texture_view retreive_texture(Model *model, uint32_t material_index = -1)
 {
     texture_view texture_view;
-    auto material = model->materials[material_index];
-    auto base_color_texture = material.pbrMetallicRoughness.baseColorTexture;
-    auto texture = model->textures[base_color_texture.index];
-    auto img = model->images[texture.source];
-    texture_view.width = img.width;
-    texture_view.height = img.height;
-    texture_view.img = img.image;
+    auto *material = &model->materials[material_index];
+    auto *base_color_texture = &material->pbrMetallicRoughness.baseColorTexture;
+    if (base_color_texture->index != -1) {
+        auto *texture = &model->textures[base_color_texture->index];
+        auto *img = &model->images[texture->source];
+        texture_view.width = img->width;
+        texture_view.height = img->height;
+        texture_view.img = img->image;
+    }
     return texture_view;
 }
 
@@ -110,19 +113,30 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         return meshes;
     }
 
+    for (auto n = model.nodes.cbegin(); n != model.nodes.cend(); ++n) {
+        node node;
+
+        if (n->mesh != -1) {
+            node.names = n->name;
+            node.mesh_id = n->mesh;
+            node.transform_mat =
+                glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f));
+            nodes.push_back(node);
+        }
+    }
+
     for (auto m = model.meshes.cbegin(); m != model.meshes.cend(); ++m) {
         mesh mesh;
         auto primitive = m->primitives[0];
 
         /* POSITION */
         buffer_view pos = retreive_buffer(&model, &primitive, -1, "POSITION");
+        mesh.vertices.resize(pos.count);
         unsigned char *data = pos.data;
         for (uint32_t i = 0; i < pos.count; ++i) {
-            vertex v;
-            v.pos = glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
-                              *(float *)(data + 2 * sizeof(float)));
-
-            mesh.vertices.push_back(v);
+            mesh.vertices[i].pos =
+                glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
+                          *(float *)(data + 2 * sizeof(float)));
             data += pos.stride;
         }
 
@@ -149,7 +163,6 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         if (primitive.indices != -1) {
             buffer_view index = retreive_buffer(&model, &primitive, primitive.indices);
             data = index.data;
-
             for (uint32_t i = 0; i < index.count; ++i) {
                 mesh.indices.push_back(*(uint16_t *)data);
                 data += index.stride + sizeof(uint16_t);
