@@ -1,15 +1,18 @@
 #pragma once
 
-#include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
 
 class vk_camera
 {
 public:
-    glm::vec4 pos;
-    glm::vec4 right;
-    glm::vec4 dir;
+    glm::vec3 pos;
+    glm::vec3 right;
+    glm::vec3 dir;
 
     float fov;
+    float speed;
+    float sensitivity;
 
     void init();
+    void move(glm::vec3 velocity, float time) { pos += velocity * time; }
 };

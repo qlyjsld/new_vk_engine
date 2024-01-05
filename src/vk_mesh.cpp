@@ -119,8 +119,12 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         if (n->mesh != -1) {
             node.names = n->name;
             node.mesh_id = n->mesh;
-            node.transform_mat =
-                glm::translate(glm::mat4(1.f), glm::vec3(0.f, -64.f, -128.f));
+            if (n->translation.size() != 0)
+                node.transform_mat = glm::translate(
+                    glm::mat4(1.f),
+                    glm::vec3(n->translation[0], n->translation[1], n->translation[2]));
+            else
+                node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(0.f));
             nodes.push_back(node);
         }
     }

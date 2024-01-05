@@ -608,7 +608,7 @@ void vk_engine::draw()
 
     VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
 
-    _last_frame = SDL_GetTicks();
+    _last_frame = SDL_GetTicksNS();
     _frame_number++;
 }
 
@@ -630,12 +630,13 @@ void vk_engine::draw_nodes(frame *frame)
                              VK_INDEX_TYPE_UINT16);
 
         render_mat mat;
-        mat.view = glm::translate(glm::mat4(1.f), -glm::vec3(_cam.pos));
-        mat.proj = glm::perspective(glm::radians(68.f), 1600.f / 900.f, 0.1f, 1024.0f);
+        mat.view = glm::inverse(glm::translate(glm::mat4(1.f), _cam.pos));
+        mat.proj =
+            glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, 0.1f, 1024.0f);
         mat.proj[1][1] *= -1;
-        mat.model = *transform_mat * glm::rotate(glm::mat4(1.0f),
+        mat.model = *transform_mat; /* glm::rotate(glm::mat4(1.0f),
                                                  glm::radians(_frame_number * 0.01f),
-                                                 glm::vec3(0.f, 1.f, 0.f));
+                                                 glm::vec3(0.f, 1.f, 0.f)); */
 
         void *data;
         vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
@@ -672,14 +673,53 @@ void vk_engine::run()
     bool bquit = false;
 
     while (!bquit) {
+        const uint8_t *state = SDL_GetKeyboardState(NULL);
+
+        if (state[SDL_SCANCODE_W]) {
+            glm::vec3 v = _cam.dir * _cam.speed;
+            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+        }
+
+        if (state[SDL_SCANCODE_A]) {
+            glm::vec3 v = -_cam.right * _cam.speed;
+            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+        }
+
+        if (state[SDL_SCANCODE_S]) {
+            glm::vec3 v = -_cam.dir * _cam.speed;
+            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+        }
+
+        if (state[SDL_SCANCODE_D]) {
+            glm::vec3 v = _cam.right * _cam.speed;
+            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+        }
+
+        if (state[SDL_SCANCODE_Q]) {
+            // rotate
+        }
+
+        if (state[SDL_SCANCODE_E]) {
+            // rotate
+        }
+
+        if (state[SDL_SCANCODE_SPACE]) {
+            glm::vec3 v = glm::cross(_cam.right, _cam.dir) * _cam.speed;
+            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+        }
+
+        if (state[SDL_SCANCODE_LCTRL]) {
+            glm::vec3 v = -glm::cross(_cam.right, _cam.dir) * _cam.speed;
+            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+        }
+
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_EVENT_QUIT)
                 bquit = true;
-            if (e.type == SDL_EVENT_KEY_DOWN) {
+
+            if (e.type == SDL_EVENT_KEY_DOWN)
                 if (e.key.keysym.sym == SDLK_ESCAPE)
                     bquit = true;
-                std::cout << SDL_GetKeyName(e.key.keysym.sym) << " pressed " << std::endl;
-            }
         }
 
         draw();
