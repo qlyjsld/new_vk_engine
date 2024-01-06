@@ -6,6 +6,13 @@
 class vk_camera
 {
 public:
+    vk_camera()
+        : pos(glm::vec3(0.f, 0.f, 3.f)), right(glm::vec3(1.f, 0.f, 0.f)),
+          dir(glm::vec3(0.f, 0.f, -1.f)), up(glm::vec3(0.f, 1.f, 0.f)), fov(68.f),
+          speed(.3f), sensitivity(.4f), yaw(90.f)
+    {
+    }
+
     glm::vec3 pos;
     glm::vec3 right;
     glm::vec3 dir;
@@ -16,7 +23,6 @@ public:
     float sensitivity;
     float yaw;
 
-    void init();
     void move(glm::vec3 velocity, float time) { pos += velocity * time; }
     void rotate_yaw(float angle)
     {

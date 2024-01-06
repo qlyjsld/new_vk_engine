@@ -103,7 +103,6 @@ private:
     void swapchain_init();
     void command_init();
     void sync_init();
-    void camera_init() { _cam.init(); }
     void descriptor_init();
     void pipeline_init();
 

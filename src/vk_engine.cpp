@@ -44,7 +44,6 @@ void vk_engine::init()
     command_init();
     sync_init();
 
-    camera_init();
     descriptor_init();
     pipeline_init();
 
