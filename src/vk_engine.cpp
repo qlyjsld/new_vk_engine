@@ -630,13 +630,10 @@ void vk_engine::draw_nodes(frame *frame)
                              VK_INDEX_TYPE_UINT16);
 
         render_mat mat;
-        mat.view = glm::inverse(glm::translate(glm::mat4(1.f), _cam.pos));
-        mat.proj =
-            glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, 0.1f, 1024.0f);
+        mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
+        mat.proj = glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, .1f, 1024.0f);
         mat.proj[1][1] *= -1;
-        mat.model = *transform_mat; /* glm::rotate(glm::mat4(1.0f),
-                                                 glm::radians(_frame_number * 0.01f),
-                                                 glm::vec3(0.f, 1.f, 0.f)); */
+        mat.model = *transform_mat;
 
         void *data;
         vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
@@ -696,20 +693,20 @@ void vk_engine::run()
         }
 
         if (state[SDL_SCANCODE_Q]) {
-            // rotate
+            _cam.rotate_yaw(_cam.sensitivity / 1000.f);
         }
 
         if (state[SDL_SCANCODE_E]) {
-            // rotate
+            _cam.rotate_yaw(-_cam.sensitivity / 1000.f);
         }
 
         if (state[SDL_SCANCODE_SPACE]) {
-            glm::vec3 v = glm::cross(_cam.right, _cam.dir) * _cam.speed;
+            glm::vec3 v = _cam.up * _cam.speed;
             _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
         }
 
         if (state[SDL_SCANCODE_LCTRL]) {
-            glm::vec3 v = -glm::cross(_cam.right, _cam.dir) * _cam.speed;
+            glm::vec3 v = -_cam.up * _cam.speed;
             _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
         }
 
