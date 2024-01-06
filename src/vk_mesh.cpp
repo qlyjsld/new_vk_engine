@@ -71,7 +71,65 @@ buffer_view retreive_buffer(Model *model, Primitive *primitive,
     auto *buffer = &model->buffers[bufferview->buffer];
     buffer_view.data =
         buffer->data.data() + bufferview->byteOffset + accessor->byteOffset;
-    buffer_view.stride = bufferview->byteStride;
+
+    auto componentType = accessor->componentType;
+    switch (componentType) {
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+        buffer_view.stride = sizeof(uint8_t);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_BYTE:
+        buffer_view.stride = sizeof(int8_t);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+        buffer_view.stride = sizeof(uint16_t);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_SHORT:
+        buffer_view.stride = sizeof(int16_t);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_INT:
+        buffer_view.stride = sizeof(int32_t);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+        buffer_view.stride = sizeof(uint32_t);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_FLOAT:
+        buffer_view.stride = sizeof(float);
+        break;
+    case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+        buffer_view.stride = sizeof(double);
+        break;
+    default:
+        break;
+    }
+
+    auto type = accessor->type;
+    switch (type) {
+    case TINYGLTF_TYPE_SCALAR:
+        buffer_view.stride *= 1;
+        break;
+    case TINYGLTF_TYPE_VEC2:
+        buffer_view.stride *= 2;
+        break;
+    case TINYGLTF_TYPE_VEC3:
+        buffer_view.stride *= 3;
+        break;
+    case TINYGLTF_TYPE_VEC4:
+        buffer_view.stride *= 4;
+        break;
+    case TINYGLTF_TYPE_MAT2:
+        buffer_view.stride *= 4;
+        break;
+    case TINYGLTF_TYPE_MAT3:
+        buffer_view.stride *= 9;
+        break;
+    case TINYGLTF_TYPE_MAT4:
+        buffer_view.stride *= 16;
+        break;
+    }
+
+    if (bufferview->byteStride != 0)
+        buffer_view.stride = bufferview->byteStride;
+
     buffer_view.count = accessor->count;
     return buffer_view;
 }
@@ -169,7 +227,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             data = index.data;
             for (uint32_t i = 0; i < index.count; ++i) {
                 mesh.indices.push_back(*(uint16_t *)data);
-                data += index.stride + sizeof(uint16_t);
+                data += index.stride;
             }
         }
 
