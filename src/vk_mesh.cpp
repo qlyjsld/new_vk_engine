@@ -1,6 +1,8 @@
 #include "vk_mesh.h"
 
+#include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <iostream>
 #include <vector>
 
@@ -173,18 +175,38 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
     for (auto n = model.nodes.cbegin(); n != model.nodes.cend(); ++n) {
         node node;
+        node.name = n->name;
+        node.mesh_id = n->mesh;
+        node.children = n->children;
 
-        if (n->mesh != -1) {
-            node.names = n->name;
-            node.mesh_id = n->mesh;
-            if (n->translation.size() != 0)
-                node.transform_mat = glm::translate(
-                    glm::mat4(1.f),
-                    glm::vec3(n->translation[0], n->translation[1], n->translation[2]));
-            else
-                node.transform_mat = glm::translate(glm::mat4(1.f), glm::vec3(0.f));
-            nodes.push_back(node);
+        glm::mat4 t = glm::translate(glm::mat4(1.f), glm::vec3(0.f));
+        glm::mat4 r = glm::translate(glm::mat4(1.f), glm::vec3(0.f));
+        glm::mat4 s = glm::scale(t, glm::vec3(1.f));
+
+        if (n->translation.size() != 0)
+            t = glm::translate(
+                glm::mat4(1.f),
+                glm::vec3(n->translation[0], n->translation[1], n->translation[2]));
+
+        if (n->rotation.size() != 0)
+            r = glm::toMat4(glm::quat(n->rotation[3], n->rotation[0], n->rotation[1],
+                                      n->rotation[2]));
+
+        if (n->scale.size() != 0)
+            s = glm::scale(glm::mat4(1.f),
+                           glm::vec3(n->scale[0], n->scale[1], n->scale[2]));
+
+        node.transform_mat = t * r * s;
+
+        if (n->matrix.size() != 0) {
+            node.transform_mat =
+                glm::mat4(n->matrix[0], n->matrix[1], n->matrix[2], n->matrix[3],
+                          n->matrix[4], n->matrix[5], n->matrix[6], n->matrix[7],
+                          n->matrix[8], n->matrix[9], n->matrix[10], n->matrix[11],
+                          n->matrix[12], n->matrix[13], n->matrix[14], n->matrix[15]);
         }
+
+        nodes.push_back(node);
     }
 
     for (auto m = model.meshes.cbegin(); m != model.meshes.cend(); ++m) {

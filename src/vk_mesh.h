@@ -50,9 +50,10 @@ struct material {
 };
 
 struct node {
-    std::string names;
+    std::string name;
     uint32_t mesh_id;
     glm::mat4 transform_mat;
+    std::vector<int> children;
     // material material;
 };
 

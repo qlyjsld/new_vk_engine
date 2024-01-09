@@ -353,9 +353,7 @@ void vk_engine::pipeline_init()
 
 void vk_engine::load_meshes()
 {
-    _meshes = load_from_gltf("../assets/glTF-Sample-Assets/Models/Duck/"
-                             "glTF-Binary/Duck.glb",
-                             _nodes);
+    _meshes = load_from_gltf("/home/jay/Downloads/victorian_hallway.glb", _nodes);
 
     _mat_buffer = create_buffer(
         _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
@@ -613,45 +611,52 @@ void vk_engine::draw()
 
 void vk_engine::draw_nodes(frame *frame)
 {
-    for (uint32_t i = 0; i < _nodes.size(); ++i) {
-        node *node = &_nodes[i];
-        mesh *mesh = &_meshes[node->mesh_id];
-        glm::mat4 *transform_mat = &node->transform_mat;
+    std::vector<node> nodes(_nodes);
 
-        vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          _gfx_pipeline);
+    for (uint32_t i = 0; i < nodes.size(); ++i) {
+        node *node = &nodes[i];
 
-        VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(frame->cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer,
-                               &offset);
+        for (auto c = node->children.cbegin(); c != node->children.cend(); ++c)
+            nodes[*c].transform_mat = node->transform_mat * nodes[*c].transform_mat;
 
-        vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer, 0,
-                             VK_INDEX_TYPE_UINT16);
+        if (node->mesh_id != -1) {
+            mesh *mesh = &_meshes[node->mesh_id];
+            vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              _gfx_pipeline);
 
-        render_mat mat;
-        mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
-        mat.proj = glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, .1f, 1024.0f);
-        mat.proj[1][1] *= -1;
-        mat.model = *transform_mat;
+            VkDeviceSize offset = 0;
+            vkCmdBindVertexBuffers(frame->cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer,
+                                   &offset);
 
-        void *data;
-        vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
-        std::memcpy((char *)data + i * pad_uniform_buffer_size(sizeof(render_mat)), &mat,
-                    sizeof(render_mat));
-        vmaUnmapMemory(_allocator, _mat_buffer.allocation);
+            vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer, 0,
+                                 VK_INDEX_TYPE_UINT16);
 
-        uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
-        vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                _gfx_pipeline_layout, 0, 1, &_desc_set, 1, &doffset);
+            render_mat mat;
+            mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
+            mat.proj =
+                glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, .1f, 1024.0f);
+            mat.proj[1][1] *= -1;
+            mat.model = node->transform_mat;
 
-        // mesh_push_constants push_constants;
-        // push_constants.render_mat = mat.proj * mat.view * mat.model;
+            void *data;
+            vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
+            std::memcpy((char *)data + i * pad_uniform_buffer_size(sizeof(render_mat)),
+                        &mat, sizeof(render_mat));
+            vmaUnmapMemory(_allocator, _mat_buffer.allocation);
 
-        // vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
-        //                    VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mesh_push_constants),
-        //                    &push_constants);
+            uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
+            vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    _gfx_pipeline_layout, 0, 1, &_desc_set, 1, &doffset);
 
-        vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
+            // mesh_push_constants push_constants;
+            // push_constants.render_mat = mat.proj * mat.view * mat.model;
+
+            // vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
+            //                    VK_SHADER_STAGE_VERTEX_BIT, 0,
+            //                    sizeof(mesh_push_constants), &push_constants);
+
+            vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
+        }
     }
 }
 
@@ -667,6 +672,14 @@ void vk_engine::run()
 {
     SDL_Event e;
     bool bquit = false;
+
+    uint32_t triangles = 0;
+    for (uint32_t i = 0; i < _nodes.size(); ++i) {
+        if (_nodes[i].mesh_id != -1)
+            triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
+    }
+
+    std::cout << "draw " << triangles << " triangels" << std::endl;
 
     while (!bquit) {
         const uint8_t *state = SDL_GetKeyboardState(NULL);
