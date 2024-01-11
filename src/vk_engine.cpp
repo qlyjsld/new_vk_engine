@@ -51,7 +51,6 @@ void vk_engine::init()
 void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32}};
 
@@ -69,7 +68,6 @@ void vk_engine::descriptor_init()
     node_data_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     node_data_layout_binding_0.descriptorCount = 1;
     node_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // node_data_layout_binding_0.pImmutableSamplers = ;
 
     std::vector<VkDescriptorSetLayoutBinding> node_data_layout_bindings = {
         node_data_layout_binding_0,
@@ -97,7 +95,6 @@ void vk_engine::descriptor_init()
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     texture_data_layout_binding_0.descriptorCount = 1;
     texture_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    // texture_data_layout_binding_0.pImmutableSamplers = ;
 
     std::vector<VkDescriptorSetLayoutBinding> texture_data_layout_bindings = {
         texture_data_layout_binding_0,
@@ -154,23 +151,12 @@ void vk_engine::pipeline_init()
     vertex_input_description description = vertex::get_vertex_input_description();
     graphics_pipeline_builder.customize(_window_extent, &description);
 
-    VkPipelineLayoutCreateInfo pipeline_layout_info =
-        vk_init::vk_create_pipeline_layout_info();
-
-    // VkPushConstantRange push_constant_range = {};
-    // push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // push_constant_range.offset = 0;
-    // push_constant_range.size = sizeof(mesh_push_constants);
-
     std::vector<VkDescriptorSetLayout> layouts = {
         _node_data_layout,
         _texture_layout,
     };
-
-    pipeline_layout_info.setLayoutCount = layouts.size();
-    pipeline_layout_info.pSetLayouts = layouts.data();
-    // pipeline_layout_info.pushConstantRangeCount = 1;
-    // pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+    VkPipelineLayoutCreateInfo pipeline_layout_info =
+        vk_init::vk_create_pipeline_layout_info(layouts);
 
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
                                     &graphics_pipeline_builder._pipeline_layout));
@@ -188,26 +174,9 @@ void vk_engine::pipeline_init()
 
 void vk_engine::load_meshes()
 {
-    std::vector<mesh> a =
-        load_from_gltf("/home/jay/Desktop/new_vk_engine/assets/glTF-Sample-Assets/"
-                       "Models/ABeautifulGame/glTF-Binary/ABeautifulGame.glb",
-                       _nodes);
+    std::vector<mesh> example = load_from_gltf("/path/to/.glb", _nodes);
 
-    _meshes.insert(_meshes.end(), a.begin(), a.end());
-
-    std::vector<mesh> b =
-        load_from_gltf("/home/jay/Desktop/new_vk_engine/assets/glTF-Sample-Assets/"
-                       "Models/Duck/glTF-Binary/Duck.glb",
-                       _nodes);
-
-    _meshes.insert(_meshes.end(), b.begin(), b.end());
-
-    std::vector<mesh> c =
-        load_from_gltf("/home/jay/Desktop/new_vk_engine/assets/glTF-Sample-Assets/"
-                       "Models/Avocado/glTF-Binary/Avocado.glb",
-                       _nodes);
-
-    _meshes.insert(_meshes.end(), c.begin(), c.end());
+    _meshes.insert(_meshes.end(), example.begin(), example.end());
 
     _node_data_buffer = create_buffer(
         _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
@@ -513,13 +482,6 @@ void vk_engine::draw_nodes(frame *frame)
             vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     _gfx_pipeline_layout, 0, sets.size(), sets.data(), 1,
                                     &doffset);
-
-            // mesh_push_constants push_constants;
-            // push_constants.render_mat = mat.proj * mat.view * mat.model;
-
-            // vkCmdPushConstants(frame->cmd_buffer, _gfx_pipeline_layout,
-            //                    VK_SHADER_STAGE_VERTEX_BIT, 0,
-            //                    sizeof(mesh_push_constants), &push_constants);
 
             vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
         }

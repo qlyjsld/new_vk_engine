@@ -245,14 +245,15 @@ VkPipelineMultisampleStateCreateInfo vk_init::vk_create_multisample_state_info()
     return multisample_state_info;
 }
 
-VkPipelineLayoutCreateInfo vk_init::vk_create_pipeline_layout_info()
+VkPipelineLayoutCreateInfo
+vk_init::vk_create_pipeline_layout_info(std::vector<VkDescriptorSetLayout> &layouts)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.pNext = nullptr;
     // pipeline_layout_info.flags = ;
-    pipeline_layout_info.setLayoutCount = 0;
-    pipeline_layout_info.pSetLayouts = nullptr;
+    pipeline_layout_info.setLayoutCount = layouts.size();
+    pipeline_layout_info.pSetLayouts = layouts.data();
     pipeline_layout_info.pushConstantRangeCount = 0;
     pipeline_layout_info.pPushConstantRanges = nullptr;
     return pipeline_layout_info;

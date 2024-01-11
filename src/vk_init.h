@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 #include "vk_type.h"
@@ -50,7 +51,8 @@ VkPipelineColorBlendAttachmentState vk_create_color_blend_attachment_state();
 
 VkPipelineMultisampleStateCreateInfo vk_create_multisample_state_info();
 
-VkPipelineLayoutCreateInfo vk_create_pipeline_layout_info();
+VkPipelineLayoutCreateInfo
+vk_create_pipeline_layout_info(std::vector<VkDescriptorSetLayout> &layouts);
 
 VkImageCreateInfo vk_create_image_info(VkFormat format, VkExtent3D extent,
                                        VkImageUsageFlags usage);
