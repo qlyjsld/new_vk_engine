@@ -1,6 +1,11 @@
 ﻿#include "vk_init.h"
+#include "vk_engine.h"
 
-#include <vulkan/vulkan_core.h>
+#include <iostream>
+
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+#include <VkBootstrap.h>
 
 VkCommandPoolCreateInfo vk_init::vk_create_cmd_pool_info(uint32_t queue_family_index)
 {
@@ -347,4 +352,186 @@ vk_init::vk_allocate_descriptor_set_info(VkDescriptorPool desc_pool,
     desc_set_allocate_info.descriptorSetCount = 1;
     desc_set_allocate_info.pSetLayouts = desc_set_layout;
     return desc_set_allocate_info;
+}
+
+void vk_engine::device_init()
+{
+    /* create vulkan instance */
+    vkb::InstanceBuilder vkb_instance_builder;
+    vkb_instance_builder.set_app_name("vk_engine")
+        .require_api_version(VKB_VK_API_VERSION_1_3)
+        .request_validation_layers(true)
+        .use_default_debug_messenger();
+
+    auto vkb_instance_build_ret = vkb_instance_builder.build();
+
+    if (!vkb_instance_build_ret) {
+        std::cerr << "instance build failed: " << vkb_instance_build_ret.error().message()
+                  << std::endl;
+        abort();
+    }
+
+    vkb::Instance vkb_instance = vkb_instance_build_ret.value();
+    _instance = vkb_instance.instance;
+    _debug_utils_messenger = vkb_instance.debug_messenger;
+
+    _deletion_queue.push_back([=]() {
+        vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
+        vkDestroyInstance(_instance, nullptr);
+    });
+
+    SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
+
+    _deletion_queue.push_back(
+        [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
+
+    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
+    dynamic_rendering_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+    dynamic_rendering_features.pNext = nullptr;
+    dynamic_rendering_features.dynamicRendering = VK_TRUE;
+
+    /* select vulkan physical device, defaulted to discrete GPU */
+    vkb::PhysicalDeviceSelector vkb_physical_device_selector{vkb_instance};
+    vkb::PhysicalDevice vkb_physical_device =
+        vkb_physical_device_selector
+            .add_required_extension_features(dynamic_rendering_features)
+            .set_surface(_surface)
+            .select()
+            .value();
+    _physical_device = vkb_physical_device.physical_device;
+
+    std::cout << "minUniformBufferOffsetAlignment "
+              << vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment
+              << std::endl;
+
+    _minUniformBufferOffsetAlignment =
+        vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment;
+
+    /* create vulkan device */
+    vkb::DeviceBuilder vkb_device_builder{vkb_physical_device};
+    vkb::Device vkb_device = vkb_device_builder.build().value();
+    _device = vkb_device.device;
+
+    _deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
+
+    /* get queue for commands */
+    _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
+    _gfx_queue_family_index =
+        vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
+    _transfer_queue = vkb_device.get_queue(vkb::QueueType::transfer).value();
+    _transfer_queue_family_index =
+        vkb_device.get_queue_index(vkb::QueueType::transfer).value();
+}
+
+void vk_engine::swapchain_init()
+{
+    vkb::SwapchainBuilder vkb_swapchain_builder{_physical_device, _device, _surface};
+    vkb::Swapchain vkb_swapchain =
+        vkb_swapchain_builder.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
+            .set_desired_extent(_window_extent.width, _window_extent.height)
+            .build()
+            .value();
+
+    _swapchain = vkb_swapchain.swapchain;
+    _swapchain_format = vkb_swapchain.image_format;
+    _swapchain_imgs = vkb_swapchain.get_images().value();
+    _swapchain_img_views = vkb_swapchain.get_image_views().value();
+
+    _deletion_queue.push_back(
+        [=]() { vkDestroySwapchainKHR(_device, _swapchain, nullptr); });
+
+    for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)
+        _deletion_queue.push_back(
+            [=]() { vkDestroyImageView(_device, _swapchain_img_views[i], nullptr); });
+
+    _depth_img.format = VK_FORMAT_D32_SFLOAT;
+
+    VkImageCreateInfo img_info = vk_init::vk_create_image_info(
+        _depth_img.format, VkExtent3D{_window_extent.width, _window_extent.height, 1},
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+    VmaAllocationCreateInfo alloc_info = {};
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VK_CHECK(vmaCreateImage(_allocator, &img_info, &alloc_info, &_depth_img.img,
+                            &_depth_img.allocation, nullptr));
+
+    _deletion_queue.push_back(
+        [=]() { vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation); });
+
+    VkImageViewCreateInfo img_view_info = vk_init::vk_create_image_view_info(
+        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img, _depth_img.format);
+
+    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img.img_view));
+
+    _deletion_queue.push_back(
+        [=]() { vkDestroyImageView(_device, _depth_img.img_view, nullptr); });
+}
+
+void vk_engine::command_init()
+{
+    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
+        VkCommandPoolCreateInfo cmd_pool_info =
+            vk_init::vk_create_cmd_pool_info(_gfx_queue_family_index);
+
+        VK_CHECK(
+            vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_frames[i].cmd_pool));
+
+        _deletion_queue.push_back(
+            [=]() { vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr); });
+
+        VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+            vk_init::vk_create_cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
+
+        VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                          &_frames[i].cmd_buffer));
+    }
+
+    VkCommandPoolCreateInfo cmd_pool_info =
+        vk_init::vk_create_cmd_pool_info(_transfer_queue_family_index);
+
+    VK_CHECK(
+        vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_upload_context.cmd_pool));
+
+    _deletion_queue.push_back(
+        [=]() { vkDestroyCommandPool(_device, _upload_context.cmd_pool, nullptr); });
+
+    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+        vk_init::vk_create_cmd_buffer_allocate_info(1, _upload_context.cmd_pool);
+
+    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                      &_upload_context.cmd_buffer));
+}
+
+void vk_engine::sync_init()
+{
+    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
+        VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(true);
+
+        VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_frames[i].fence));
+
+        _deletion_queue.push_back(
+            [=]() { vkDestroyFence(_device, _frames[i].fence, nullptr); });
+
+        VkSemaphoreCreateInfo sem_info = vk_init::vk_create_sem_info();
+
+        VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].sumbit_sem));
+
+        _deletion_queue.push_back(
+            [=]() { vkDestroySemaphore(_device, _frames[i].sumbit_sem, nullptr); });
+
+        VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].present_sem));
+
+        _deletion_queue.push_back(
+            [=]() { vkDestroySemaphore(_device, _frames[i].present_sem, nullptr); });
+    }
+
+    VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(false);
+
+    VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_upload_context.fence));
+
+    _deletion_queue.push_back(
+        [=]() { vkDestroyFence(_device, _upload_context.fence, nullptr); });
 }

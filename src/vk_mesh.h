@@ -31,6 +31,7 @@ struct mesh {
 
     std::vector<unsigned char> texture;
     allocated_img texture_buffer;
+    VkDescriptorSet desc_set;
 };
 
 struct mesh_push_constants {

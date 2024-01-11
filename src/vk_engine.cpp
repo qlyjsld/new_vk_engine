@@ -1,24 +1,18 @@
 ﻿#include "vk_engine.h"
 
-#include <fstream>
 #include <iostream>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include <VkBootstrap.h>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <vulkan/vulkan_core.h>
-
+#include <glm/gtc/matrix_transform.hpp>
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
 #include "vk_cmd.h"
 #include "vk_init.h"
-#include "vk_mesh.h"
 #include "vk_pipeline_builder.h"
-#include "vk_type.h"
 
 void vk_engine::init()
 {
@@ -54,194 +48,12 @@ void vk_engine::init()
     _is_initialized = true;
 }
 
-void vk_engine::device_init()
-{
-    /* create vulkan instance */
-    vkb::InstanceBuilder vkb_instance_builder;
-    vkb_instance_builder.set_app_name("vk_engine")
-        .require_api_version(VKB_VK_API_VERSION_1_3)
-        .request_validation_layers(true)
-        .use_default_debug_messenger();
-
-    auto vkb_instance_build_ret = vkb_instance_builder.build();
-
-    if (!vkb_instance_build_ret) {
-        std::cerr << "instance build failed: " << vkb_instance_build_ret.error().message()
-                  << std::endl;
-        abort();
-    }
-
-    vkb::Instance vkb_instance = vkb_instance_build_ret.value();
-    _instance = vkb_instance.instance;
-    _debug_utils_messenger = vkb_instance.debug_messenger;
-
-    _deletion_queue.push_back([=]() {
-        vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
-        vkDestroyInstance(_instance, nullptr);
-    });
-
-    SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
-
-    _deletion_queue.push_back(
-        [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
-
-    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
-    dynamic_rendering_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-    dynamic_rendering_features.pNext = nullptr;
-    dynamic_rendering_features.dynamicRendering = VK_TRUE;
-
-    /* select vulkan physical device, defaulted to discrete GPU */
-    vkb::PhysicalDeviceSelector vkb_physical_device_selector{vkb_instance};
-    vkb::PhysicalDevice vkb_physical_device =
-        vkb_physical_device_selector
-            .add_required_extension_features(dynamic_rendering_features)
-            .set_surface(_surface)
-            .select()
-            .value();
-    _physical_device = vkb_physical_device.physical_device;
-
-    std::cout << "minUniformBufferOffsetAlignment "
-              << vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment
-              << std::endl;
-
-    _minUniformBufferOffsetAlignment =
-        vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment;
-
-    /* create vulkan device */
-    vkb::DeviceBuilder vkb_device_builder{vkb_physical_device};
-    vkb::Device vkb_device = vkb_device_builder.build().value();
-    _device = vkb_device.device;
-
-    _deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
-
-    /* get queue for commands */
-    _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
-    _gfx_queue_family_index =
-        vkb_device.get_queue_index(vkb::QueueType::graphics).value();
-
-    _transfer_queue = vkb_device.get_queue(vkb::QueueType::transfer).value();
-    _transfer_queue_family_index =
-        vkb_device.get_queue_index(vkb::QueueType::transfer).value();
-}
-
-void vk_engine::swapchain_init()
-{
-    vkb::SwapchainBuilder vkb_swapchain_builder{_physical_device, _device, _surface};
-    vkb::Swapchain vkb_swapchain =
-        vkb_swapchain_builder.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
-            .set_desired_extent(_window_extent.width, _window_extent.height)
-            .build()
-            .value();
-
-    _swapchain = vkb_swapchain.swapchain;
-    _swapchain_format = vkb_swapchain.image_format;
-    _swapchain_imgs = vkb_swapchain.get_images().value();
-    _swapchain_img_views = vkb_swapchain.get_image_views().value();
-
-    _deletion_queue.push_back(
-        [=]() { vkDestroySwapchainKHR(_device, _swapchain, nullptr); });
-
-    for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)
-        _deletion_queue.push_back(
-            [=]() { vkDestroyImageView(_device, _swapchain_img_views[i], nullptr); });
-
-    _depth_img.format = VK_FORMAT_D32_SFLOAT;
-
-    VkImageCreateInfo img_info = vk_init::vk_create_image_info(
-        _depth_img.format, VkExtent3D{_window_extent.width, _window_extent.height, 1},
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-    VmaAllocationCreateInfo alloc_info = {};
-    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-
-    VK_CHECK(vmaCreateImage(_allocator, &img_info, &alloc_info, &_depth_img.img,
-                            &_depth_img.allocation, nullptr));
-
-    _deletion_queue.push_back(
-        [=]() { vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation); });
-
-    VkImageViewCreateInfo img_view_info = vk_init::vk_create_image_view_info(
-        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img, _depth_img.format);
-
-    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img.img_view));
-
-    _deletion_queue.push_back(
-        [=]() { vkDestroyImageView(_device, _depth_img.img_view, nullptr); });
-}
-
-void vk_engine::command_init()
-{
-    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
-        VkCommandPoolCreateInfo cmd_pool_info =
-            vk_init::vk_create_cmd_pool_info(_gfx_queue_family_index);
-
-        VK_CHECK(
-            vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_frames[i].cmd_pool));
-
-        _deletion_queue.push_back(
-            [=]() { vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr); });
-
-        VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-            vk_init::vk_create_cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
-
-        VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
-                                          &_frames[i].cmd_buffer));
-    }
-
-    VkCommandPoolCreateInfo cmd_pool_info =
-        vk_init::vk_create_cmd_pool_info(_transfer_queue_family_index);
-
-    VK_CHECK(
-        vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_upload_context.cmd_pool));
-
-    _deletion_queue.push_back(
-        [=]() { vkDestroyCommandPool(_device, _upload_context.cmd_pool, nullptr); });
-
-    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-        vk_init::vk_create_cmd_buffer_allocate_info(1, _upload_context.cmd_pool);
-
-    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
-                                      &_upload_context.cmd_buffer));
-}
-
-void vk_engine::sync_init()
-{
-    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
-        VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(true);
-
-        VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_frames[i].fence));
-
-        _deletion_queue.push_back(
-            [=]() { vkDestroyFence(_device, _frames[i].fence, nullptr); });
-
-        VkSemaphoreCreateInfo sem_info = vk_init::vk_create_sem_info();
-
-        VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].sumbit_sem));
-
-        _deletion_queue.push_back(
-            [=]() { vkDestroySemaphore(_device, _frames[i].sumbit_sem, nullptr); });
-
-        VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].present_sem));
-
-        _deletion_queue.push_back(
-            [=]() { vkDestroySemaphore(_device, _frames[i].present_sem, nullptr); });
-    }
-
-    VkFenceCreateInfo fence_info = vk_init::vk_create_fence_info(false);
-
-    VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_upload_context.fence));
-
-    _deletion_queue.push_back(
-        [=]() { vkDestroyFence(_device, _upload_context.fence, nullptr); });
-}
-
 void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 8},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 8},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8}};
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 32},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32}};
 
     VkDescriptorPoolCreateInfo desc_pool_info = vk_init::vk_create_descriptor_pool_info(
         desc_pool_sizes.size(), desc_pool_sizes.data());
@@ -251,37 +63,55 @@ void vk_engine::descriptor_init()
     _deletion_queue.push_back(
         [=]() { vkDestroyDescriptorPool(_device, _desc_pool, nullptr); });
 
-    VkDescriptorSetLayoutBinding desc_set_layout_binding_0 = {};
-    desc_set_layout_binding_0.binding = 0;
-    desc_set_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    desc_set_layout_binding_0.descriptorCount = 1;
-    desc_set_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // desc_set_layout_binding.pImmutableSamplers = ;
+    /* node data layout and set */
+    VkDescriptorSetLayoutBinding node_data_layout_binding_0 = {};
+    node_data_layout_binding_0.binding = 0;
+    node_data_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    node_data_layout_binding_0.descriptorCount = 1;
+    node_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // node_data_layout_binding_0.pImmutableSamplers = ;
 
-    VkDescriptorSetLayoutBinding desc_set_layout_binding_1 = {};
-    desc_set_layout_binding_1.binding = 1;
-    desc_set_layout_binding_1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    desc_set_layout_binding_1.descriptorCount = 1;
-    desc_set_layout_binding_1.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    // desc_set_layout_binding.pImmutableSamplers = ;
+    std::vector<VkDescriptorSetLayoutBinding> node_data_layout_bindings = {
+        node_data_layout_binding_0,
+    };
 
-    std::vector<VkDescriptorSetLayoutBinding> desc_set_layout_bindings = {
-        desc_set_layout_binding_0, desc_set_layout_binding_1};
+    VkDescriptorSetLayoutCreateInfo node_data_layout_info =
+        vk_init::vk_create_descriptor_set_layout_info(node_data_layout_bindings.size(),
+                                                      node_data_layout_bindings.data());
 
-    VkDescriptorSetLayoutCreateInfo desc_set_layout_info =
-        vk_init::vk_create_descriptor_set_layout_info(desc_set_layout_bindings.size(),
-                                                      desc_set_layout_bindings.data());
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &desc_set_layout_info, nullptr,
-                                         &_desc_set_layout));
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &node_data_layout_info, nullptr,
+                                         &_node_data_layout));
 
     _deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorSetLayout(_device, _desc_set_layout, nullptr); });
+        [=]() { vkDestroyDescriptorSetLayout(_device, _node_data_layout, nullptr); });
 
     VkDescriptorSetAllocateInfo desc_set_allocate_info =
-        vk_init::vk_allocate_descriptor_set_info(_desc_pool, &_desc_set_layout);
+        vk_init::vk_allocate_descriptor_set_info(_desc_pool, &_node_data_layout);
 
-    VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_desc_set));
+    VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_node_data_set));
+
+    /* texture layout */
+    VkDescriptorSetLayoutBinding texture_data_layout_binding_0 = {};
+    texture_data_layout_binding_0.binding = 0;
+    texture_data_layout_binding_0.descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    texture_data_layout_binding_0.descriptorCount = 1;
+    texture_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    // texture_data_layout_binding_0.pImmutableSamplers = ;
+
+    std::vector<VkDescriptorSetLayoutBinding> texture_data_layout_bindings = {
+        texture_data_layout_binding_0,
+    };
+
+    VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
+        vk_init::vk_create_descriptor_set_layout_info(
+            texture_data_layout_bindings.size(), texture_data_layout_bindings.data());
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info, nullptr,
+                                         &_texture_layout));
+
+    _deletion_queue.push_back(
+        [=]() { vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr); });
 }
 
 void vk_engine::pipeline_init()
@@ -332,8 +162,13 @@ void vk_engine::pipeline_init()
     // push_constant_range.offset = 0;
     // push_constant_range.size = sizeof(mesh_push_constants);
 
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &_desc_set_layout;
+    std::vector<VkDescriptorSetLayout> layouts = {
+        _node_data_layout,
+        _texture_layout,
+    };
+
+    pipeline_layout_info.setLayoutCount = layouts.size();
+    pipeline_layout_info.pSetLayouts = layouts.data();
     // pipeline_layout_info.pushConstantRangeCount = 1;
     // pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
@@ -353,25 +188,45 @@ void vk_engine::pipeline_init()
 
 void vk_engine::load_meshes()
 {
-    _meshes = load_from_gltf("/home/jay/Downloads/victorian_hallway.glb", _nodes);
+    std::vector<mesh> a =
+        load_from_gltf("/home/jay/Desktop/new_vk_engine/assets/glTF-Sample-Assets/"
+                       "Models/ABeautifulGame/glTF-Binary/ABeautifulGame.glb",
+                       _nodes);
 
-    _mat_buffer = create_buffer(
+    _meshes.insert(_meshes.end(), a.begin(), a.end());
+
+    std::vector<mesh> b =
+        load_from_gltf("/home/jay/Desktop/new_vk_engine/assets/glTF-Sample-Assets/"
+                       "Models/Duck/glTF-Binary/Duck.glb",
+                       _nodes);
+
+    _meshes.insert(_meshes.end(), b.begin(), b.end());
+
+    std::vector<mesh> c =
+        load_from_gltf("/home/jay/Desktop/new_vk_engine/assets/glTF-Sample-Assets/"
+                       "Models/Avocado/glTF-Binary/Avocado.glb",
+                       _nodes);
+
+    _meshes.insert(_meshes.end(), c.begin(), c.end());
+
+    _node_data_buffer = create_buffer(
         _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
     _deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(_allocator, _mat_buffer.buffer, _mat_buffer.allocation);
+        vmaDestroyBuffer(_allocator, _node_data_buffer.buffer,
+                         _node_data_buffer.allocation);
     });
 
     VkDescriptorBufferInfo desc_buffer_info = {};
-    desc_buffer_info.buffer = _mat_buffer.buffer;
+    desc_buffer_info.buffer = _node_data_buffer.buffer;
     desc_buffer_info.offset = 0;
     desc_buffer_info.range = sizeof(render_mat);
 
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_set.pNext = nullptr;
-    write_set.dstSet = _desc_set;
+    write_set.dstSet = _node_data_set;
     write_set.dstBinding = 0;
     write_set.descriptorCount = 1;
     write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -520,6 +375,12 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             _deletion_queue.push_back(
                 [=]() { vkDestroySampler(_device, sampler, nullptr); });
 
+            VkDescriptorSetAllocateInfo desc_set_allocate_info =
+                vk_init::vk_allocate_descriptor_set_info(_desc_pool, &_texture_layout);
+
+            VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
+                                              &mesh->desc_set));
+
             VkDescriptorImageInfo desc_img_info = {};
             desc_img_info.sampler = sampler;
             desc_img_info.imageView = mesh->texture_buffer.img_view;
@@ -528,8 +389,8 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             VkWriteDescriptorSet write_set = {};
             write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write_set.pNext = nullptr;
-            write_set.dstSet = _desc_set;
-            write_set.dstBinding = 1;
+            write_set.dstSet = mesh->desc_set;
+            write_set.dstBinding = 0;
             write_set.descriptorCount = 1;
             write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             write_set.pImageInfo = &desc_img_info;
@@ -639,14 +500,19 @@ void vk_engine::draw_nodes(frame *frame)
             mat.model = node->transform_mat;
 
             void *data;
-            vmaMapMemory(_allocator, _mat_buffer.allocation, &data);
+            vmaMapMemory(_allocator, _node_data_buffer.allocation, &data);
             std::memcpy((char *)data + i * pad_uniform_buffer_size(sizeof(render_mat)),
                         &mat, sizeof(render_mat));
-            vmaUnmapMemory(_allocator, _mat_buffer.allocation);
+            vmaUnmapMemory(_allocator, _node_data_buffer.allocation);
 
+            std::vector<VkDescriptorSet> sets = {
+                _node_data_set,
+                mesh->desc_set,
+            };
             uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    _gfx_pipeline_layout, 0, 1, &_desc_set, 1, &doffset);
+                                    _gfx_pipeline_layout, 0, sets.size(), sets.data(), 1,
+                                    &doffset);
 
             // mesh_push_constants push_constants;
             // push_constants.render_mat = mat.proj * mat.view * mat.model;
@@ -733,107 +599,4 @@ void vk_engine::run()
 
         draw();
     }
-}
-
-void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
-{
-    /* prepare command buffer */
-    VkCommandBufferBeginInfo cmd_buffer_begin_info =
-        vk_init::vk_create_cmd_buffer_begin_info();
-
-    /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(_upload_context.cmd_buffer, &cmd_buffer_begin_info));
-
-    fs(_upload_context.cmd_buffer);
-
-    VK_CHECK(vkEndCommandBuffer(_upload_context.cmd_buffer));
-
-    VkSubmitInfo submit_info = vk_init::vk_create_submit_info(&_upload_context.cmd_buffer,
-                                                              nullptr, nullptr, nullptr);
-
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.signalSemaphoreCount = 0;
-
-    VK_CHECK(vkQueueSubmit(_transfer_queue, 1, &submit_info, _upload_context.fence));
-    VK_CHECK(vkWaitForFences(_device, 1, &_upload_context.fence, VK_TRUE, UINT64_MAX));
-    VK_CHECK(vkResetFences(_device, 1, &_upload_context.fence));
-}
-
-bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_module)
-{
-    std::ifstream f(filename, std::ios::ate | std::ios::binary);
-
-    if (!f.is_open()) {
-        std::cerr << "shader: " << filename << " not exist" << std::endl;
-        return false;
-    }
-
-    size_t size = f.tellg();
-    std::vector<uint32_t> buffer(size / sizeof(uint32_t));
-
-    f.seekg(0);
-    f.read((char *)buffer.data(), size);
-    f.close();
-
-    VkShaderModuleCreateInfo shader_module_info = {};
-    shader_module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_module_info.pNext = nullptr;
-    shader_module_info.codeSize = buffer.size() * sizeof(uint32_t);
-    shader_module_info.pCode = buffer.data();
-
-    VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module));
-
-    return true;
-}
-
-allocated_buffer vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                                          VmaAllocationCreateFlags flags)
-{
-    VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    buffer_info.size = size;
-    buffer_info.usage = usage;
-
-    VmaAllocationCreateInfo vma_allocation_info = {};
-    vma_allocation_info.flags = flags;
-    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-
-    allocated_buffer buffer;
-
-    VK_CHECK(vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
-                             &buffer.buffer, &buffer.allocation, nullptr));
-
-    return buffer;
-}
-
-allocated_img vk_engine::create_img(VkFormat format, VkExtent3D extent,
-                                    VkImageAspectFlags aspect, VkImageUsageFlags usage,
-                                    VmaAllocationCreateFlags flags)
-{
-    VkImageCreateInfo img_info = vk_init::vk_create_image_info(format, extent, usage);
-
-    VmaAllocationCreateInfo vma_allocation_info = {};
-    vma_allocation_info.flags = flags;
-    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-
-    allocated_img img;
-    img.format = format;
-
-    VK_CHECK(vmaCreateImage(_allocator, &img_info, &vma_allocation_info, &img.img,
-                            &img.allocation, nullptr));
-
-    VkImageViewCreateInfo img_view_info =
-        vk_init::vk_create_image_view_info(aspect, img.img, format);
-
-    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &img.img_view));
-
-    return img;
-}
-
-size_t vk_engine::pad_uniform_buffer_size(size_t original_size)
-{
-    size_t aligned_size = original_size;
-    if (_minUniformBufferOffsetAlignment > 0)
-        aligned_size = (aligned_size + _minUniformBufferOffsetAlignment - 1) &
-                       ~(_minUniformBufferOffsetAlignment - 1);
-    return aligned_size;
 }

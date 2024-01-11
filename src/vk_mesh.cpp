@@ -1,17 +1,19 @@
 #include "vk_mesh.h"
 
-#include <glm/ext/matrix_float4x4.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
 #include <iostream>
 #include <vector>
 
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/mat4x4.hpp>
 #include <tiny_gltf.h>
 
 using namespace tinygltf;
+
+static uint32_t mesh_base = 0;
 
 struct buffer_view {
     unsigned char *data;
@@ -176,7 +178,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
     for (auto n = model.nodes.cbegin(); n != model.nodes.cend(); ++n) {
         node node;
         node.name = n->name;
-        node.mesh_id = n->mesh;
+        node.mesh_id = mesh_base + n->mesh;
         node.children = n->children;
 
         glm::mat4 t = glm::translate(glm::mat4(1.f), glm::vec3(0.f));
@@ -263,6 +265,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         }
 
         meshes.push_back(mesh);
+        ++mesh_base;
     }
 
     std::cout << filename << " loaded" << std::endl;

@@ -4,11 +4,11 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "vk_mem_alloc.h"
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
 #include "vk_camera.h"
-#include "vk_mem_alloc.h"
 #include "vk_mesh.h"
 #include "vk_type.h"
 
@@ -79,9 +79,12 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
     VkDescriptorPool _desc_pool;
-    VkDescriptorSetLayout _desc_set_layout;
-    VkDescriptorSet _desc_set;
-    allocated_buffer _mat_buffer;
+
+    VkDescriptorSetLayout _node_data_layout;
+    VkDescriptorSet _node_data_set;
+    allocated_buffer _node_data_buffer;
+
+    VkDescriptorSetLayout _texture_layout;
 
     allocated_img _depth_img;
 

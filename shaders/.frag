@@ -4,7 +4,7 @@ layout (location = 0) in vec2 texcrood;
 
 layout (location = 0) out vec4 out_color;
 
-layout (set = 0, binding = 1) uniform sampler2D tex1;
+layout (set = 1, binding = 0) uniform sampler2D tex1;
 
 void main()
 {
