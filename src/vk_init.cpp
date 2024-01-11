@@ -355,6 +355,64 @@ vk_init::vk_allocate_descriptor_set_info(VkDescriptorPool desc_pool,
     return desc_set_allocate_info;
 }
 
+VkWriteDescriptorSet
+vk_init::vk_create_write_descriptor_set(VkDescriptorBufferInfo *desc_buffer_info,
+                                        VkDescriptorSet set, VkDescriptorType type)
+{
+    VkWriteDescriptorSet write_set = {};
+    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_set.pNext = nullptr;
+    write_set.dstSet = set;
+    write_set.dstBinding = 0;
+    write_set.descriptorCount = 1;
+    write_set.descriptorType = type;
+    write_set.pBufferInfo = desc_buffer_info;
+    return write_set;
+}
+
+VkWriteDescriptorSet
+vk_init::vk_create_write_descriptor_set(VkDescriptorImageInfo *desc_buffer_info,
+                                        VkDescriptorSet set, VkDescriptorType type)
+{
+    VkWriteDescriptorSet write_set = {};
+    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_set.pNext = nullptr;
+    write_set.dstSet = set;
+    write_set.dstBinding = 0;
+    write_set.descriptorCount = 1;
+    write_set.descriptorType = type;
+    write_set.pImageInfo = desc_buffer_info;
+    return write_set;
+}
+
+VkBufferImageCopy vk_init::vk_create_buffer_image_copy(VkExtent3D extent)
+{
+    VkBufferImageCopy region = {};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = VkOffset3D{0, 0, 0};
+    region.imageExtent = extent;
+    return region;
+}
+
+VkSamplerCreateInfo vk_init::vk_create_sampler_info()
+{
+    VkSamplerCreateInfo sampler_info{};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.pNext = nullptr;
+    sampler_info.magFilter = VK_FILTER_NEAREST;
+    sampler_info.minFilter = VK_FILTER_NEAREST;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    return sampler_info;
+}
+
 void vk_engine::device_init()
 {
     /* create vulkan instance */

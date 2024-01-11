@@ -192,14 +192,8 @@ void vk_engine::load_meshes()
     desc_buffer_info.offset = 0;
     desc_buffer_info.range = sizeof(render_mat);
 
-    VkWriteDescriptorSet write_set = {};
-    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_set.pNext = nullptr;
-    write_set.dstSet = _node_data_set;
-    write_set.dstBinding = 0;
-    write_set.descriptorCount = 1;
-    write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    write_set.pBufferInfo = &desc_buffer_info;
+    VkWriteDescriptorSet write_set = vk_init::vk_create_write_descriptor_set(
+        &desc_buffer_info, _node_data_set, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 }
@@ -304,16 +298,7 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                     cmd_buffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
 
-                VkBufferImageCopy region = {};
-                region.bufferOffset = 0;
-                region.bufferRowLength = 0;
-                region.bufferImageHeight = 0;
-                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                region.imageSubresource.mipLevel = 0;
-                region.imageSubresource.baseArrayLayer = 0;
-                region.imageSubresource.layerCount = 1;
-                region.imageOffset = VkOffset3D{0, 0, 0};
-                region.imageExtent = extent;
+                VkBufferImageCopy region = vk_init::vk_create_buffer_image_copy(extent);
 
                 vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
                                        mesh->texture_buffer.img,
@@ -328,14 +313,7 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             vmaDestroyBuffer(_allocator, staging_buffer.buffer,
                              staging_buffer.allocation);
 
-            VkSamplerCreateInfo sampler_info = {};
-            sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            sampler_info.pNext = nullptr;
-            sampler_info.magFilter = VK_FILTER_NEAREST;
-            sampler_info.minFilter = VK_FILTER_NEAREST;
-            sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            VkSamplerCreateInfo sampler_info = vk_init::vk_create_sampler_info();
 
             VkSampler sampler;
 
@@ -355,14 +333,9 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             desc_img_info.imageView = mesh->texture_buffer.img_view;
             desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            VkWriteDescriptorSet write_set = {};
-            write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write_set.pNext = nullptr;
-            write_set.dstSet = mesh->desc_set;
-            write_set.dstBinding = 0;
-            write_set.descriptorCount = 1;
-            write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write_set.pImageInfo = &desc_img_info;
+            VkWriteDescriptorSet write_set = vk_init::vk_create_write_descriptor_set(
+                &desc_img_info, mesh->desc_set,
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
             vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
         }

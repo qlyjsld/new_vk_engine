@@ -73,4 +73,16 @@ VkDescriptorSetAllocateInfo
 vk_allocate_descriptor_set_info(VkDescriptorPool desc_pool,
                                 VkDescriptorSetLayout *desc_set_layout);
 
+VkWriteDescriptorSet
+vk_create_write_descriptor_set(VkDescriptorBufferInfo *desc_buffer_info,
+                               VkDescriptorSet set, VkDescriptorType type);
+
+VkWriteDescriptorSet
+vk_create_write_descriptor_set(VkDescriptorImageInfo *desc_buffer_info,
+                               VkDescriptorSet set, VkDescriptorType type);
+
+VkBufferImageCopy vk_create_buffer_image_copy(VkExtent3D extent);
+
+VkSamplerCreateInfo vk_create_sampler_info();
+
 } // namespace vk_init
