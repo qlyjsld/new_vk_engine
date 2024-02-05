@@ -24,7 +24,7 @@ void PipelineBuilder::customize(VkExtent2D window_extent,
         description->attributes.data();
 }
 
-void PipelineBuilder::build(VkDevice device, VkFormat *format, VkFormat depth_format)
+void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format)
 {
     VkPipelineViewportStateCreateInfo viewport_state_info = {};
     viewport_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

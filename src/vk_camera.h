@@ -12,6 +12,7 @@ public:
     {
         dir = glm::vec3(cos(yaw), 0.f, -sin(yaw));
         right = -glm::cross(up, dir);
+        init();
     }
 
     glm::vec3 pos;
@@ -24,6 +25,7 @@ public:
     float sensitivity;
     float yaw;
 
+    void init();
     void move(glm::vec3 velocity, float time) { pos += velocity * time; }
     void rotate_yaw(float angle, float time)
     {

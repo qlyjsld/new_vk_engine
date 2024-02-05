@@ -21,6 +21,7 @@ public:
     VkPipeline _pipeline;
 
     void customize(VkExtent2D window_extent, vertex_input_description *description);
-    void build(VkDevice device, VkFormat *format, VkFormat depth_format);
+    void build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format);
+    void build_comp(VkDevice device);
     VkPipeline value() { return _pipeline; };
 };
