@@ -324,7 +324,7 @@ vk_init::vk_create_descriptor_pool_info(uint32_t pool_size_count,
     desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     desc_pool_info.pNext = nullptr;
     // desc_pool_info.flags = ;
-    desc_pool_info.maxSets = 16;
+    desc_pool_info.maxSets = 1024;
     desc_pool_info.poolSizeCount = pool_size_count;
     desc_pool_info.pPoolSizes = desc_pool_sizes;
     return desc_pool_info;

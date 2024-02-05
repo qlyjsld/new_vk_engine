@@ -42,6 +42,7 @@ void vk_engine::init()
     pipeline_init();
 
     load_meshes();
+    std::cout << "meshes size " << _meshes.size() << std::endl;
     upload_meshes(_meshes.data(), _meshes.size());
     upload_textures(_meshes.data(), _meshes.size());
 
@@ -51,8 +52,8 @@ void vk_engine::init()
 void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 32},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 32}};
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256}};
 
     VkDescriptorPoolCreateInfo desc_pool_info = vk_init::vk_create_descriptor_pool_info(
         desc_pool_sizes.size(), desc_pool_sizes.data());
@@ -174,7 +175,9 @@ void vk_engine::pipeline_init()
 
 void vk_engine::load_meshes()
 {
-    std::vector<mesh> example = load_from_gltf("/path/to/.glb", _nodes);
+    std::vector<mesh> example = load_from_gltf("../assets/glTF-Sample-Assets/Models/"
+                                               "Duck/glTF-Binary/Duck.glb",
+                                               _nodes);
 
     _meshes.insert(_meshes.end(), example.begin(), example.end());
 
@@ -437,7 +440,7 @@ void vk_engine::draw_nodes(frame *frame)
             render_mat mat;
             mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
             mat.proj =
-                glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, .1f, 1024.0f);
+                glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, .01f, 65536.0f);
             mat.proj[1][1] *= -1;
             mat.model = node->transform_mat;
 
@@ -506,11 +509,13 @@ void vk_engine::run()
         }
 
         if (state[SDL_SCANCODE_Q]) {
-            _cam.rotate_yaw(_cam.sensitivity / 1000.f);
+            float angle = _cam.sensitivity;
+            _cam.rotate_yaw(angle, (SDL_GetTicksNS() - _last_frame) / 1000.f);
         }
 
         if (state[SDL_SCANCODE_E]) {
-            _cam.rotate_yaw(-_cam.sensitivity / 1000.f);
+            float angle = -_cam.sensitivity;
+            _cam.rotate_yaw(angle, (SDL_GetTicksNS() - _last_frame) / 1000.f);
         }
 
         if (state[SDL_SCANCODE_SPACE]) {

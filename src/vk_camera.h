@@ -7,10 +7,11 @@ class vk_camera
 {
 public:
     vk_camera()
-        : pos(glm::vec3(0.f, 0.f, 3.f)), right(glm::vec3(1.f, 0.f, 0.f)),
-          dir(glm::vec3(0.f, 0.f, -1.f)), up(glm::vec3(0.f, 1.f, 0.f)), fov(68.f),
-          speed(.03f), sensitivity(.6f), yaw(90.f)
+        : pos(glm::vec3(0.f, 0.f, 3.f)), up(glm::vec3(0.f, 1.f, 0.f)), fov(68.f),
+          speed(.003f), sensitivity(.003f), yaw(90.f)
     {
+        dir = glm::vec3(cos(yaw), 0.f, -sin(yaw));
+        right = -glm::cross(up, dir);
     }
 
     glm::vec3 pos;
@@ -24,9 +25,9 @@ public:
     float yaw;
 
     void move(glm::vec3 velocity, float time) { pos += velocity * time; }
-    void rotate_yaw(float angle)
+    void rotate_yaw(float angle, float time)
     {
-        yaw += angle;
+        yaw += angle * time;
         dir = glm::vec3(cos(yaw), 0.f, -sin(yaw));
         right = -glm::cross(up, dir);
     };

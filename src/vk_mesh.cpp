@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/mat4x4.hpp>
@@ -199,7 +200,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             s = glm::scale(glm::mat4(1.f),
                            glm::vec3(n->scale[0], n->scale[1], n->scale[2]));
 
-        node.transform_mat = t * r * s;
+        node.transform_mat = s * r * t;
 
         if (n->matrix.size() != 0) {
             node.transform_mat =
