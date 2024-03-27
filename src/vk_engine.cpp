@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -10,8 +10,8 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
+#include "vk_boiler.h"
 #include "vk_cmd.h"
-#include "vk_init.h"
 #include "vk_pipeline_builder.h"
 
 void vk_engine::init()
@@ -25,15 +25,7 @@ void vk_engine::init()
     _deletion_queue.push_back([=]() { SDL_DestroyWindow(_window); });
 
     device_init();
-
-    VmaAllocatorCreateInfo vma_allocator_info = {};
-    vma_allocator_info.physicalDevice = _physical_device;
-    vma_allocator_info.device = _device;
-    vma_allocator_info.instance = _instance;
-    vmaCreateAllocator(&vma_allocator_info, &_allocator);
-
-    _deletion_queue.push_back([=]() { vmaDestroyAllocator(_allocator); });
-
+    vma_init();
     swapchain_init();
     command_init();
     sync_init();
@@ -55,8 +47,8 @@ void vk_engine::descriptor_init()
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256}};
 
-    VkDescriptorPoolCreateInfo desc_pool_info = vk_init::vk_create_descriptor_pool_info(
-        desc_pool_sizes.size(), desc_pool_sizes.data());
+    VkDescriptorPoolCreateInfo desc_pool_info =
+        vk_boiler::desc_pool_create_info(desc_pool_sizes.size(), desc_pool_sizes.data());
 
     VK_CHECK(vkCreateDescriptorPool(_device, &desc_pool_info, nullptr, &_desc_pool));
 
@@ -75,8 +67,8 @@ void vk_engine::descriptor_init()
     };
 
     VkDescriptorSetLayoutCreateInfo node_data_layout_info =
-        vk_init::vk_create_descriptor_set_layout_info(node_data_layout_bindings.size(),
-                                                      node_data_layout_bindings.data());
+        vk_boiler::desc_set_layout_create_info(node_data_layout_bindings.size(),
+                                               node_data_layout_bindings.data());
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &node_data_layout_info, nullptr,
                                          &_node_data_layout));
@@ -85,7 +77,7 @@ void vk_engine::descriptor_init()
         [=]() { vkDestroyDescriptorSetLayout(_device, _node_data_layout, nullptr); });
 
     VkDescriptorSetAllocateInfo desc_set_allocate_info =
-        vk_init::vk_allocate_descriptor_set_info(_desc_pool, &_node_data_layout);
+        vk_boiler::desc_set_allocate_info(_desc_pool, &_node_data_layout);
 
     VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_node_data_set));
 
@@ -102,8 +94,8 @@ void vk_engine::descriptor_init()
     };
 
     VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
-        vk_init::vk_create_descriptor_set_layout_info(
-            texture_data_layout_bindings.size(), texture_data_layout_bindings.data());
+        vk_boiler::desc_set_layout_create_info(texture_data_layout_bindings.size(),
+                                               texture_data_layout_bindings.data());
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info, nullptr,
                                          &_texture_layout));
@@ -124,7 +116,7 @@ void vk_engine::pipeline_init()
     _deletion_queue.push_back([=]() { vkDestroyShaderModule(_device, _vert, nullptr); });
 
     gfx_pipeline_builder._shader_stage_infos.push_back(
-        vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
 
     if (!load_shader_module("../shaders/.frag.spv", &_frag))
         std::cerr << "load frag failed" << std::endl;
@@ -134,30 +126,48 @@ void vk_engine::pipeline_init()
     _deletion_queue.push_back([=]() { vkDestroyShaderModule(_device, _frag, nullptr); });
 
     gfx_pipeline_builder._shader_stage_infos.push_back(
-        vk_init::vk_create_shader_stage_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
 
     gfx_pipeline_builder._vertex_input_state_info =
-        vk_init::vk_create_vertex_input_state_info();
+        vk_boiler::vertex_input_state_create_info();
     gfx_pipeline_builder._input_asm_state_info =
-        vk_init::vk_create_input_asm_state_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        vk_boiler::input_asm_state_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
     gfx_pipeline_builder._rasterization_state_info =
-        vk_init::vk_create_rasterization_state_info(VK_POLYGON_MODE_FILL);
+        vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     gfx_pipeline_builder._color_blend_attachment_state =
-        vk_init::vk_create_color_blend_attachment_state();
+        vk_boiler::color_blend_attachment_state();
     gfx_pipeline_builder._multisample_state_info =
-        vk_init::vk_create_multisample_state_info();
+        vk_boiler::multisample_state_create_info();
     gfx_pipeline_builder._depth_stencil_state_info =
-        vk_init::vk_create_depth_stencil_state_info();
+        vk_boiler::depth_stencil_state_create_info();
 
     vertex_input_description description = vertex::get_vertex_input_description();
-    gfx_pipeline_builder.customize(_window_extent, &description);
+
+    gfx_pipeline_builder._viewport.x = 0.f;
+    gfx_pipeline_builder._viewport.y = 0.f;
+    gfx_pipeline_builder._viewport.width = _window_extent.width;
+    gfx_pipeline_builder._viewport.height = _window_extent.height;
+    gfx_pipeline_builder._viewport.minDepth = 0.f;
+    gfx_pipeline_builder._viewport.maxDepth = 1.f;
+
+    gfx_pipeline_builder._scissor.offset = VkOffset2D{0, 0};
+    gfx_pipeline_builder._scissor.extent = _window_extent;
+
+    gfx_pipeline_builder._vertex_input_state_info.vertexBindingDescriptionCount =
+        description.bindings.size();
+    gfx_pipeline_builder._vertex_input_state_info.pVertexBindingDescriptions =
+        description.bindings.data();
+    gfx_pipeline_builder._vertex_input_state_info.vertexAttributeDescriptionCount =
+        description.attributes.size();
+    gfx_pipeline_builder._vertex_input_state_info.pVertexAttributeDescriptions =
+        description.attributes.data();
 
     std::vector<VkDescriptorSetLayout> layouts = {
         _node_data_layout,
         _texture_layout,
     };
     VkPipelineLayoutCreateInfo pipeline_layout_info =
-        vk_init::vk_create_pipeline_layout_info(layouts);
+        vk_boiler::pipeline_layout_create_info(layouts);
 
     VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
                                     &gfx_pipeline_builder._pipeline_layout));
@@ -185,8 +195,7 @@ void vk_engine::draw()
                                    VK_NULL_HANDLE, &_img_index));
 
     /* prepare command buffer and dynamic rendering functions */
-    VkCommandBufferBeginInfo cmd_buffer_begin_info =
-        vk_init::vk_create_cmd_buffer_begin_info();
+    VkCommandBufferBeginInfo cmd_buffer_begin_info = vk_boiler::cmd_buffer_begin_info();
 
     /* begin command buffer recording */
     VK_CHECK(vkBeginCommandBuffer(frame->cmd_buffer, &cmd_buffer_begin_info));
@@ -197,19 +206,17 @@ void vk_engine::draw()
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_queue_family_index);
 
     /* frame attachment info */
-    VkRenderingAttachmentInfo color_attachment =
-        vk_init::vk_create_rendering_attachment_info(
-            _swapchain_img_views[_img_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VkClearValue{1.f, 1.f, 1.f});
+    VkRenderingAttachmentInfo color_attachment = vk_boiler::rendering_attachment_info(
+        _swapchain_img_views[_img_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VkClearValue{1.f, 1.f, 1.f});
 
-    VkRenderingAttachmentInfo depth_attachment =
-        vk_init::vk_create_rendering_attachment_info(
-            _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-            VkClearValue{1.f, 1.f, 1.f});
+    VkRenderingAttachmentInfo depth_attachment = vk_boiler::rendering_attachment_info(
+        _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        VkClearValue{1.f, 1.f, 1.f});
 
     /* start drawing */
-    VkRenderingInfo rendering_info = vk_init::vk_create_rendering_info(
-        &color_attachment, &depth_attachment, _window_extent);
+    VkRenderingInfo rendering_info =
+        vk_boiler::rendering_info(&color_attachment, &depth_attachment, _window_extent);
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
@@ -229,13 +236,13 @@ void vk_engine::draw()
     VkPipelineStageFlags pipeline_stage_flags = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
 
     VkSubmitInfo submit_info =
-        vk_init::vk_create_submit_info(&frame->cmd_buffer, &frame->present_sem,
-                                       &frame->sumbit_sem, &pipeline_stage_flags);
+        vk_boiler::submit_info(&frame->cmd_buffer, &frame->present_sem,
+                               &frame->sumbit_sem, &pipeline_stage_flags);
 
     VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, frame->fence));
 
     VkPresentInfoKHR present_info =
-        vk_init::vk_create_present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
+        vk_boiler::present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
 
     VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
 

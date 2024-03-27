@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>

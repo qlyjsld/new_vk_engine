@@ -3,14 +3,13 @@
 #include <fstream>
 #include <iostream>
 
-#include "vk_init.h"
+#include "vk_boiler.h"
 #include "vk_type.h"
 
 void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
 {
     /* prepare command buffer */
-    VkCommandBufferBeginInfo cmd_buffer_begin_info =
-        vk_init::vk_create_cmd_buffer_begin_info();
+    VkCommandBufferBeginInfo cmd_buffer_begin_info = vk_boiler::cmd_buffer_begin_info();
 
     /* begin command buffer recording */
     VK_CHECK(vkBeginCommandBuffer(_upload_context.cmd_buffer, &cmd_buffer_begin_info));
@@ -19,8 +18,8 @@ void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
 
     VK_CHECK(vkEndCommandBuffer(_upload_context.cmd_buffer));
 
-    VkSubmitInfo submit_info = vk_init::vk_create_submit_info(&_upload_context.cmd_buffer,
-                                                              nullptr, nullptr, nullptr);
+    VkSubmitInfo submit_info =
+        vk_boiler::submit_info(&_upload_context.cmd_buffer, nullptr, nullptr, nullptr);
 
     submit_info.waitSemaphoreCount = 0;
     submit_info.signalSemaphoreCount = 0;
@@ -80,7 +79,7 @@ allocated_img vk_engine::create_img(VkFormat format, VkExtent3D extent,
                                     VkImageAspectFlags aspect, VkImageUsageFlags usage,
                                     VmaAllocationCreateFlags flags)
 {
-    VkImageCreateInfo img_info = vk_init::vk_create_image_info(format, extent, usage);
+    VkImageCreateInfo img_info = vk_boiler::img_create_info(format, extent, usage);
 
     VmaAllocationCreateInfo vma_allocation_info = {};
     vma_allocation_info.flags = flags;
@@ -93,7 +92,7 @@ allocated_img vk_engine::create_img(VkFormat format, VkExtent3D extent,
                             &img.allocation, nullptr));
 
     VkImageViewCreateInfo img_view_info =
-        vk_init::vk_create_image_view_info(aspect, img.img, format);
+        vk_boiler::img_view_create_info(aspect, img.img, format);
 
     VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &img.img_view));
 

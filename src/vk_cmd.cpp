@@ -1,14 +1,14 @@
 #include "vk_cmd.h"
 
-#include "vk_init.h"
+#include "vk_boiler.h"
 
 void vk_cmd::vk_img_layout_transition(VkCommandBuffer cmd_buffer, VkImage img,
                                       VkImageLayout old_layout, VkImageLayout new_layout,
                                       uint32_t family_index)
 {
     VkImageSubresourceRange subresource_range =
-        vk_init::vk_create_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-    VkImageMemoryBarrier img_mem_barrier = vk_init::vk_create_img_mem_barrier();
+        vk_boiler::img_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+    VkImageMemoryBarrier img_mem_barrier = vk_boiler::img_mem_barrier();
     img_mem_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     img_mem_barrier.pNext = nullptr;
     // img_mem_barrier.srcAccessMask = ;

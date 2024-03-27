@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vk_type.h"
+#include <vulkan/vulkan.h>
 
 namespace vk_cmd
 {

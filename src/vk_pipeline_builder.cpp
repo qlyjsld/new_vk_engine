@@ -1,28 +1,9 @@
 #include "vk_pipeline_builder.h"
 
 #include <iostream>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
-void PipelineBuilder::customize(VkExtent2D window_extent,
-                                vertex_input_description *description)
-{
-    _viewport.x = 0.f;
-    _viewport.y = 0.f;
-    _viewport.width = window_extent.width;
-    _viewport.height = window_extent.height;
-    _viewport.minDepth = 0.f;
-    _viewport.maxDepth = 1.f;
-
-    _scissor.offset = VkOffset2D{0, 0};
-    _scissor.extent = window_extent;
-
-    _vertex_input_state_info.vertexBindingDescriptionCount = description->bindings.size();
-    _vertex_input_state_info.pVertexBindingDescriptions = description->bindings.data();
-    _vertex_input_state_info.vertexAttributeDescriptionCount =
-        description->attributes.size();
-    _vertex_input_state_info.pVertexAttributeDescriptions =
-        description->attributes.data();
-}
+#include "vk_type.h"
 
 void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format)
 {
@@ -79,3 +60,5 @@ void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat dept
     VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_info,
                                        nullptr, &_pipeline));
 }
+
+void PipelineBuilder::build_comp(VkDevice device) {}

@@ -2,7 +2,7 @@
 
 #include <functional>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 #include "vk_mem_alloc.h"
 #include <glm/mat4x4.hpp>
@@ -103,6 +103,7 @@ public:
 
 private:
     void device_init();
+    void vma_init();
     void swapchain_init();
     void command_init();
     void sync_init();
