@@ -16,8 +16,6 @@ constexpr int FRAME_OVERLAP = 2;
 
 struct deletion_queue {
 public:
-    std::vector<std::function<void()>> fs;
-
     void push_back(std::function<void()> &&f) { fs.push_back(f); }
 
     void flush()
@@ -27,6 +25,9 @@ public:
 
         fs.clear();
     };
+
+private:
+    std::vector<std::function<void()>> fs;
 };
 
 struct frame {
@@ -42,6 +43,17 @@ struct upload_context {
     VkCommandBuffer cmd_buffer;
 };
 
+struct mesh_push_constants {
+    glm::vec4 data;
+    glm::mat4 render_mat;
+};
+
+struct render_mat {
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 model;
+};
+
 class vk_engine
 {
 public:
@@ -50,6 +62,7 @@ public:
     uint64_t _last_frame{0};
     uint64_t _frame_index{0};
     VkExtent2D _window_extent{1600, 900};
+    VkExtent2D _resolution{3840, 2160};
     struct SDL_Window *_window{nullptr};
 
     VkInstance _instance;
@@ -65,12 +78,20 @@ public:
     std::vector<VkImageView> _swapchain_img_views;
     uint32_t _img_index;
 
-    VkQueue _gfx_queue;
-    uint32_t _gfx_queue_family_index;
     frame _frames[FRAME_OVERLAP];
 
-    VkShaderModule _vert;
-    VkShaderModule _frag;
+    VkDescriptorPool _descriptor_pool;
+    VkDescriptorSetLayout _node_data_layout;
+    VkDescriptorSet _node_data_set;
+    allocated_buffer _node_data_buffer;
+    VkDescriptorSetLayout _texture_layout;
+
+    VkQueue _gfx_queue;
+    uint32_t _gfx_queue_family_index;
+    VkQueue _transfer_queue;
+    uint32_t _transfer_queue_family_index;
+    VkQueue _comp_queue;
+    uint32_t _comp_queue_family_index;
 
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
@@ -78,23 +99,19 @@ public:
 
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
-    VkDescriptorPool _desc_pool;
 
-    VkDescriptorSetLayout _node_data_layout;
-    VkDescriptorSet _node_data_set;
-    allocated_buffer _node_data_buffer;
+    VkPipeline _comp_pipeline;
+    VkPipelineLayout _comp_pipeline_layout;
 
-    VkDescriptorSetLayout _texture_layout;
-
+    allocated_img _target;
+    allocated_img _copy_to_swapchain;
     allocated_img _depth_img;
 
-    VkQueue _transfer_queue;
-    uint32_t _transfer_queue_family_index;
+    vk_camera _cam;
+    inline static deletion_queue _deletion_queue;
+
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
-
-    vk_camera _cam;
-    deletion_queue _deletion_queue;
 
     void init();
     void cleanup();
@@ -108,13 +125,14 @@ private:
     void command_init();
     void sync_init();
     void descriptor_init();
-    void pipeline_init();
 
     bool load_shader_module(const char *file, VkShaderModule *shader_module);
+    void pipeline_init();
 
     void load_meshes();
     void upload_meshes(mesh *meshes, size_t size);
     void upload_textures(mesh *meshes, size_t size);
+
     void draw_nodes(frame *frame);
 
     frame *get_current_frame()

@@ -53,6 +53,9 @@ bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_
 
     VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module));
 
+    _deletion_queue.push_back(
+        [=]() { vkDestroyShaderModule(_device, *shader_module, nullptr); });
+
     return true;
 }
 

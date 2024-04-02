@@ -1,8 +1,9 @@
-#include "vk_pipeline_builder.h"
+#include "vk_pipeline.h"
 
 #include <iostream>
 #include <vulkan/vulkan.h>
 
+#include "vk_engine.h"
 #include "vk_type.h"
 
 void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format)
@@ -59,6 +60,25 @@ void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat dept
 
     VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_info,
                                        nullptr, &_pipeline));
+
+    vk_engine::_deletion_queue.push_back(
+        [=]() { vkDestroyPipeline(device, _pipeline, nullptr); });
 }
 
-void PipelineBuilder::build_comp(VkDevice device) {}
+void PipelineBuilder::build_comp(VkDevice device)
+{
+    VkComputePipelineCreateInfo comp_pipeline_info = {};
+    comp_pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    comp_pipeline_info.pNext = nullptr;
+    // comp_pipeline_info.flags = ;
+    comp_pipeline_info.stage = _shader_stage_infos[0];
+    comp_pipeline_info.layout = _pipeline_layout;
+    comp_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+    // comp_pipeline_info.basePipelineIndex = ;
+
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &comp_pipeline_info,
+                                      nullptr, &_pipeline));
+
+    vk_engine::_deletion_queue.push_back(
+        [=]() { vkDestroyPipeline(device, _pipeline, nullptr); });
+}

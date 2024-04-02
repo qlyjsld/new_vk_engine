@@ -69,7 +69,7 @@ void vk_engine::device_init()
 
     _deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
 
-    /* get queue for commands */
+    /* get queues for commands */
     _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
     _gfx_queue_family_index =
         vkb_device.get_queue_index(vkb::QueueType::graphics).value();
@@ -77,6 +77,10 @@ void vk_engine::device_init()
     _transfer_queue = vkb_device.get_queue(vkb::QueueType::transfer).value();
     _transfer_queue_family_index =
         vkb_device.get_queue_index(vkb::QueueType::transfer).value();
+
+    _comp_queue = vkb_device.get_queue(vkb::QueueType::compute).value();
+    _comp_queue_family_index =
+        vkb_device.get_queue_index(vkb::QueueType::compute).value();
 }
 
 void vk_engine::vma_init()
@@ -133,6 +137,39 @@ void vk_engine::swapchain_init()
 
     _deletion_queue.push_back(
         [=]() { vkDestroyImageView(_device, _depth_img.img_view, nullptr); });
+
+    /* create img target for rendering and copying */
+    {
+        VkExtent3D extent = {};
+        extent.width = _resolution.width;
+        extent.height = _resolution.height;
+        extent.depth = 1;
+
+        _target = create_img(_swapchain_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0);
+
+        _deletion_queue.push_back([=]() {
+            vkDestroyImageView(_device, _target.img_view, nullptr);
+            vmaDestroyImage(_allocator, _target.img, _target.allocation);
+        });
+    }
+
+    {
+        VkExtent3D extent = {};
+        extent.width = _window_extent.width;
+        extent.height = _window_extent.height;
+        extent.depth = 1;
+
+        _copy_to_swapchain =
+            create_img(_swapchain_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                       VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+
+        _deletion_queue.push_back([=]() {
+            vkDestroyImageView(_device, _copy_to_swapchain.img_view, nullptr);
+            vmaDestroyImage(_allocator, _copy_to_swapchain.img,
+                            _copy_to_swapchain.allocation);
+        });
+    }
 }
 
 void vk_engine::command_init()

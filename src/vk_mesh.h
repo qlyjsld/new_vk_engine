@@ -31,18 +31,7 @@ struct mesh {
 
     std::vector<unsigned char> texture;
     allocated_img texture_buffer;
-    VkDescriptorSet desc_set;
-};
-
-struct mesh_push_constants {
-    glm::vec4 data;
-    glm::mat4 render_mat;
-};
-
-struct render_mat {
-    glm::mat4 view;
-    glm::mat4 proj;
-    glm::mat4 model;
+    VkDescriptorSet descriptor_set;
 };
 
 struct material {

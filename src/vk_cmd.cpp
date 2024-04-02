@@ -24,3 +24,19 @@ void vk_cmd::vk_img_layout_transition(VkCommandBuffer cmd_buffer, VkImage img,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
                          &img_mem_barrier);
 }
+
+void vk_cmd::vk_img_copy(VkCommandBuffer cmd_buffer, VkExtent3D extent, VkImage src,
+                         VkImage dst)
+{
+    VkImageSubresourceLayers img_subresorce_layers = {};
+
+    VkImageCopy img_copy = {};
+    img_copy.srcSubresource = img_subresorce_layers;
+    img_copy.srcOffset = VkOffset3D{0, 0, 0};
+    img_copy.dstSubresource = img_subresorce_layers;
+    img_copy.dstOffset = VkOffset3D{0, 0, 0};
+    img_copy.extent = extent;
+
+    vkCmdCopyImage(cmd_buffer, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst,
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &img_copy);
+}

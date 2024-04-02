@@ -3,6 +3,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vk_mesh.h"
+
 namespace vk_boiler
 {
 VkCommandPoolCreateInfo cmd_pool_create_info(uint32_t queue_family_index);
@@ -37,7 +39,8 @@ VkPresentInfoKHR present_info(VkSwapchainKHR *swapchain, VkSemaphore *sem,
 VkPipelineShaderStageCreateInfo shader_stage_create_info(VkShaderStageFlagBits stage,
                                                          VkShaderModule shader_module);
 
-VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info();
+VkPipelineVertexInputStateCreateInfo
+vertex_input_state_create_info(vertex_input_description *description);
 
 VkPipelineInputAssemblyStateCreateInfo
 input_asm_state_create_info(VkPrimitiveTopology topology);
@@ -60,25 +63,27 @@ VkImageViewCreateInfo img_view_create_info(VkImageAspectFlags aspect, VkImage im
 
 VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info();
 
-VkDescriptorPoolCreateInfo desc_pool_create_info(uint32_t pool_size_count,
-                                                 VkDescriptorPoolSize *desc_pool_sizes);
+VkDescriptorPoolCreateInfo descriptor_pool_create_info(uint32_t pool_size_count,
+                                                       VkDescriptorPoolSize *pool_sizes);
 
 VkDescriptorSetLayoutCreateInfo
-desc_set_layout_create_info(uint32_t binding_count,
-                            VkDescriptorSetLayoutBinding *desc_set_layout_bindings);
+descriptor_set_layout_create_info(uint32_t binding_count,
+                                  VkDescriptorSetLayoutBinding *bindings);
 
-VkDescriptorSetAllocateInfo
-desc_set_allocate_info(VkDescriptorPool desc_pool,
-                       VkDescriptorSetLayout *desc_set_layout);
+VkDescriptorSetAllocateInfo descriptor_set_allocate_info(VkDescriptorPool pool,
+                                                         VkDescriptorSetLayout *layouts);
 
-VkWriteDescriptorSet write_desc_set(VkDescriptorBufferInfo *desc_buffer_info,
-                                    VkDescriptorSet set, VkDescriptorType type);
+VkWriteDescriptorSet write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
+                                          VkDescriptorSet set, VkDescriptorType type);
 
-VkWriteDescriptorSet write_desc_set(VkDescriptorImageInfo *desc_img_info,
-                                    VkDescriptorSet set, VkDescriptorType type);
+VkWriteDescriptorSet write_descriptor_set(VkDescriptorImageInfo *img_info,
+                                          VkDescriptorSet set, VkDescriptorType type);
 
 VkBufferImageCopy buffer_img_copy(VkExtent3D extent);
 
 VkSamplerCreateInfo sampler_create_info();
 
+VkViewport viewport(VkExtent2D extent);
+
+VkRect2D scissor(VkExtent2D extent);
 } // namespace vk_boiler

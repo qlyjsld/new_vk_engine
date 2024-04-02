@@ -12,7 +12,7 @@
 
 #include "vk_boiler.h"
 #include "vk_cmd.h"
-#include "vk_pipeline_builder.h"
+#include "vk_pipeline.h"
 
 void vk_engine::init()
 {
@@ -43,17 +43,17 @@ void vk_engine::init()
 
 void vk_engine::descriptor_init()
 {
-    std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
+    std::vector<VkDescriptorPoolSize> pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256}};
 
-    VkDescriptorPoolCreateInfo desc_pool_info =
-        vk_boiler::desc_pool_create_info(desc_pool_sizes.size(), desc_pool_sizes.data());
+    VkDescriptorPoolCreateInfo pool_info =
+        vk_boiler::descriptor_pool_create_info(pool_sizes.size(), pool_sizes.data());
 
-    VK_CHECK(vkCreateDescriptorPool(_device, &desc_pool_info, nullptr, &_desc_pool));
+    VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptor_pool));
 
     _deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorPool(_device, _desc_pool, nullptr); });
+        [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
 
     /* node data layout and set */
     VkDescriptorSetLayoutBinding node_data_layout_binding_0 = {};
@@ -67,8 +67,8 @@ void vk_engine::descriptor_init()
     };
 
     VkDescriptorSetLayoutCreateInfo node_data_layout_info =
-        vk_boiler::desc_set_layout_create_info(node_data_layout_bindings.size(),
-                                               node_data_layout_bindings.data());
+        vk_boiler::descriptor_set_layout_create_info(node_data_layout_bindings.size(),
+                                                     node_data_layout_bindings.data());
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &node_data_layout_info, nullptr,
                                          &_node_data_layout));
@@ -76,10 +76,11 @@ void vk_engine::descriptor_init()
     _deletion_queue.push_back(
         [=]() { vkDestroyDescriptorSetLayout(_device, _node_data_layout, nullptr); });
 
-    VkDescriptorSetAllocateInfo desc_set_allocate_info =
-        vk_boiler::desc_set_allocate_info(_desc_pool, &_node_data_layout);
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
+        vk_boiler::descriptor_set_allocate_info(_descriptor_pool, &_node_data_layout);
 
-    VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info, &_node_data_set));
+    VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
+                                      &_node_data_set));
 
     /* texture layout */
     VkDescriptorSetLayoutBinding texture_data_layout_binding_0 = {};
@@ -94,8 +95,8 @@ void vk_engine::descriptor_init()
     };
 
     VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
-        vk_boiler::desc_set_layout_create_info(texture_data_layout_bindings.size(),
-                                               texture_data_layout_bindings.data());
+        vk_boiler::descriptor_set_layout_create_info(texture_data_layout_bindings.size(),
+                                                     texture_data_layout_bindings.data());
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info, nullptr,
                                          &_texture_layout));
@@ -106,81 +107,79 @@ void vk_engine::descriptor_init()
 
 void vk_engine::pipeline_init()
 {
-    PipelineBuilder gfx_pipeline_builder = {};
+    { /* build graphics pipeline */
+        VkShaderModule _vert;
+        load_shader_module("../shaders/.vert.spv", &_vert);
 
-    if (!load_shader_module("../shaders/.vert.spv", &_vert))
-        std::cerr << "load vert failed" << std::endl;
-    else
-        std::cout << "vert loaded" << std::endl;
+        VkShaderModule _frag;
+        load_shader_module("../shaders/.frag.spv", &_frag);
 
-    _deletion_queue.push_back([=]() { vkDestroyShaderModule(_device, _vert, nullptr); });
+        PipelineBuilder gfx_pipeline_builder = {};
+        gfx_pipeline_builder._shader_stage_infos.push_back(
+            vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
+        gfx_pipeline_builder._shader_stage_infos.push_back(
+            vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
 
-    gfx_pipeline_builder._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
+        gfx_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
+        gfx_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
 
-    if (!load_shader_module("../shaders/.frag.spv", &_frag))
-        std::cerr << "load frag failed" << std::endl;
-    else
-        std::cout << "frag loaded" << std::endl;
+        vertex_input_description description = vertex::get_vertex_input_description();
+        gfx_pipeline_builder._vertex_input_state_info =
+            vk_boiler::vertex_input_state_create_info(&description);
+        gfx_pipeline_builder._input_asm_state_info =
+            vk_boiler::input_asm_state_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        gfx_pipeline_builder._rasterization_state_info =
+            vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+        gfx_pipeline_builder._color_blend_attachment_state =
+            vk_boiler::color_blend_attachment_state();
+        gfx_pipeline_builder._multisample_state_info =
+            vk_boiler::multisample_state_create_info();
+        gfx_pipeline_builder._depth_stencil_state_info =
+            vk_boiler::depth_stencil_state_create_info();
 
-    _deletion_queue.push_back([=]() { vkDestroyShaderModule(_device, _frag, nullptr); });
+        std::vector<VkDescriptorSetLayout> layouts = {
+            _node_data_layout,
+            _texture_layout,
+        };
 
-    gfx_pipeline_builder._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
+        VkPipelineLayoutCreateInfo pipeline_layout_info =
+            vk_boiler::pipeline_layout_create_info(layouts);
 
-    gfx_pipeline_builder._vertex_input_state_info =
-        vk_boiler::vertex_input_state_create_info();
-    gfx_pipeline_builder._input_asm_state_info =
-        vk_boiler::input_asm_state_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    gfx_pipeline_builder._rasterization_state_info =
-        vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-    gfx_pipeline_builder._color_blend_attachment_state =
-        vk_boiler::color_blend_attachment_state();
-    gfx_pipeline_builder._multisample_state_info =
-        vk_boiler::multisample_state_create_info();
-    gfx_pipeline_builder._depth_stencil_state_info =
-        vk_boiler::depth_stencil_state_create_info();
+        VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
+                                        &gfx_pipeline_builder._pipeline_layout));
 
-    vertex_input_description description = vertex::get_vertex_input_description();
+        _deletion_queue.push_back(
+            [=]() { vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr); });
 
-    gfx_pipeline_builder._viewport.x = 0.f;
-    gfx_pipeline_builder._viewport.y = 0.f;
-    gfx_pipeline_builder._viewport.width = _window_extent.width;
-    gfx_pipeline_builder._viewport.height = _window_extent.height;
-    gfx_pipeline_builder._viewport.minDepth = 0.f;
-    gfx_pipeline_builder._viewport.maxDepth = 1.f;
+        gfx_pipeline_builder.build_gfx(_device, &_swapchain_format, _depth_img.format);
+        _gfx_pipeline = gfx_pipeline_builder.value();
+        _gfx_pipeline_layout = gfx_pipeline_builder._pipeline_layout;
+    }
 
-    gfx_pipeline_builder._scissor.offset = VkOffset2D{0, 0};
-    gfx_pipeline_builder._scissor.extent = _window_extent;
+    { /* build compute pipeline */
+        VkShaderModule _comp;
+        load_shader_module("../shaders/.comp.spv", &_comp);
 
-    gfx_pipeline_builder._vertex_input_state_info.vertexBindingDescriptionCount =
-        description.bindings.size();
-    gfx_pipeline_builder._vertex_input_state_info.pVertexBindingDescriptions =
-        description.bindings.data();
-    gfx_pipeline_builder._vertex_input_state_info.vertexAttributeDescriptionCount =
-        description.attributes.size();
-    gfx_pipeline_builder._vertex_input_state_info.pVertexAttributeDescriptions =
-        description.attributes.data();
+        PipelineBuilder comp_pipeline_builder = {};
 
-    std::vector<VkDescriptorSetLayout> layouts = {
-        _node_data_layout,
-        _texture_layout,
-    };
-    VkPipelineLayoutCreateInfo pipeline_layout_info =
-        vk_boiler::pipeline_layout_create_info(layouts);
+        std::vector<VkDescriptorSetLayout> layouts = {};
 
-    VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
-                                    &gfx_pipeline_builder._pipeline_layout));
+        VkPipelineLayoutCreateInfo pipeline_layout_info =
+            vk_boiler::pipeline_layout_create_info(layouts);
 
-    _deletion_queue.push_back(
-        [=]() { vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr); });
+        VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
+                                        &comp_pipeline_builder._pipeline_layout));
 
-    gfx_pipeline_builder.build_gfx(_device, &_swapchain_format, _depth_img.format);
-    _gfx_pipeline = gfx_pipeline_builder.value();
-    _gfx_pipeline_layout = gfx_pipeline_builder._pipeline_layout;
+        _deletion_queue.push_back(
+            [=]() { vkDestroyPipelineLayout(_device, _comp_pipeline_layout, nullptr); });
 
-    _deletion_queue.push_back(
-        [=]() { vkDestroyPipeline(_device, _gfx_pipeline, nullptr); });
+        comp_pipeline_builder._shader_stage_infos.push_back(
+            vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, _comp));
+
+        comp_pipeline_builder.build_comp(_device);
+        _comp_pipeline = comp_pipeline_builder.value();
+        _comp_pipeline_layout = comp_pipeline_builder._pipeline_layout;
+    }
 }
 
 void vk_engine::draw()
@@ -202,12 +201,12 @@ void vk_engine::draw()
 
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
-        frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
+        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_queue_family_index);
 
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment = vk_boiler::rendering_attachment_info(
-        _swapchain_img_views[_img_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VkClearValue{1.f, 1.f, 1.f});
 
     VkRenderingAttachmentInfo depth_attachment = vk_boiler::rendering_attachment_info(
@@ -224,9 +223,26 @@ void vk_engine::draw()
 
     vkCmdEndRendering(frame->cmd_buffer);
 
+    /* downsampling to window */
+    vkCmdDispatch(frame->cmd_buffer, 1, 1, 1);
+
+    /* transition image format for transfering and copy to swapchain*/
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _copy_to_swapchain.img,
+                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                     _transfer_queue_family_index);
+
+    vk_cmd::vk_img_layout_transition(
+        frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+
+    vk_cmd::vk_img_copy(frame->cmd_buffer,
+                        VkExtent3D{_window_extent.width, _window_extent.height, 1},
+                        _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
+
     /* transition image format for presenting */
     vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _swapchain_imgs[_img_index],
-                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                      VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                      _gfx_queue_family_index);
 
@@ -287,7 +303,7 @@ void vk_engine::draw_nodes(frame *frame)
 
             std::vector<VkDescriptorSet> sets = {
                 _node_data_set,
-                mesh->desc_set,
+                mesh->descriptor_set,
             };
             uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,

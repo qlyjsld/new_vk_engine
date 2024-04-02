@@ -155,17 +155,19 @@ vk_boiler::shader_stage_create_info(VkShaderStageFlagBits stage,
     return shader_stage_info;
 }
 
-VkPipelineVertexInputStateCreateInfo vk_boiler::vertex_input_state_create_info()
+VkPipelineVertexInputStateCreateInfo
+vk_boiler::vertex_input_state_create_info(vertex_input_description *description)
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_state_info = {};
     vertex_input_state_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_info.pNext = nullptr;
     // vertex_input_state_info.flags = ;
-    vertex_input_state_info.vertexBindingDescriptionCount = 0;
-    vertex_input_state_info.pVertexBindingDescriptions = nullptr;
-    vertex_input_state_info.vertexAttributeDescriptionCount = 0;
-    vertex_input_state_info.pVertexAttributeDescriptions = nullptr;
+    vertex_input_state_info.vertexBindingDescriptionCount = description->bindings.size();
+    vertex_input_state_info.pVertexBindingDescriptions = description->bindings.data();
+    vertex_input_state_info.vertexAttributeDescriptionCount =
+        description->attributes.size();
+    vertex_input_state_info.pVertexAttributeDescriptions = description->attributes.data();
     return vertex_input_state_info;
 }
 
@@ -307,46 +309,49 @@ VkPipelineDepthStencilStateCreateInfo vk_boiler::depth_stencil_state_create_info
 }
 
 VkDescriptorPoolCreateInfo
-vk_boiler::desc_pool_create_info(uint32_t pool_size_count,
-                                 VkDescriptorPoolSize *desc_pool_sizes)
+vk_boiler::descriptor_pool_create_info(uint32_t pool_size_count,
+                                       VkDescriptorPoolSize *pool_sizes)
 {
-    VkDescriptorPoolCreateInfo desc_pool_info = {};
-    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    desc_pool_info.pNext = nullptr;
-    // desc_pool_info.flags = ;
-    desc_pool_info.maxSets = 1024;
-    desc_pool_info.poolSizeCount = pool_size_count;
-    desc_pool_info.pPoolSizes = desc_pool_sizes;
-    return desc_pool_info;
+    VkDescriptorPoolCreateInfo descriptor_pool_info = {};
+    descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_info.pNext = nullptr;
+    // descriptor_pool_info.flags = ;
+    descriptor_pool_info.maxSets = 1024;
+    descriptor_pool_info.poolSizeCount = pool_size_count;
+    descriptor_pool_info.pPoolSizes = pool_sizes;
+    return descriptor_pool_info;
 }
 
-VkDescriptorSetLayoutCreateInfo vk_boiler::desc_set_layout_create_info(
-    uint32_t binding_count, VkDescriptorSetLayoutBinding *desc_set_layout_bindings)
+VkDescriptorSetLayoutCreateInfo
+vk_boiler::descriptor_set_layout_create_info(uint32_t binding_count,
+                                             VkDescriptorSetLayoutBinding *bindings)
 {
-    VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
-    desc_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    desc_set_layout_info.pNext = nullptr;
-    // desc_set_layout_info.flags = ;
-    desc_set_layout_info.bindingCount = binding_count;
-    desc_set_layout_info.pBindings = desc_set_layout_bindings;
-    return desc_set_layout_info;
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info = {};
+    descriptor_set_layout_info.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_set_layout_info.pNext = nullptr;
+    // descriptor_set_layout_info.flags = ;
+    descriptor_set_layout_info.bindingCount = binding_count;
+    descriptor_set_layout_info.pBindings = bindings;
+    return descriptor_set_layout_info;
 }
 
 VkDescriptorSetAllocateInfo
-vk_boiler::desc_set_allocate_info(VkDescriptorPool desc_pool,
-                                  VkDescriptorSetLayout *desc_set_layout)
+vk_boiler::descriptor_set_allocate_info(VkDescriptorPool pool,
+                                        VkDescriptorSetLayout *layouts)
 {
-    VkDescriptorSetAllocateInfo desc_set_allocate_info = {};
-    desc_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    desc_set_allocate_info.pNext = nullptr;
-    desc_set_allocate_info.descriptorPool = desc_pool;
-    desc_set_allocate_info.descriptorSetCount = 1;
-    desc_set_allocate_info.pSetLayouts = desc_set_layout;
-    return desc_set_allocate_info;
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
+    descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptor_set_allocate_info.pNext = nullptr;
+    descriptor_set_allocate_info.descriptorPool = pool;
+    descriptor_set_allocate_info.descriptorSetCount = 1;
+    descriptor_set_allocate_info.pSetLayouts = layouts;
+    return descriptor_set_allocate_info;
 }
 
-VkWriteDescriptorSet vk_boiler::write_desc_set(VkDescriptorBufferInfo *desc_buffer_info,
-                                               VkDescriptorSet set, VkDescriptorType type)
+VkWriteDescriptorSet vk_boiler::write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
+                                                     VkDescriptorSet set,
+                                                     VkDescriptorType type)
 {
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -355,12 +360,13 @@ VkWriteDescriptorSet vk_boiler::write_desc_set(VkDescriptorBufferInfo *desc_buff
     write_set.dstBinding = 0;
     write_set.descriptorCount = 1;
     write_set.descriptorType = type;
-    write_set.pBufferInfo = desc_buffer_info;
+    write_set.pBufferInfo = buffer_info;
     return write_set;
 }
 
-VkWriteDescriptorSet vk_boiler::write_desc_set(VkDescriptorImageInfo *desc_img_info,
-                                               VkDescriptorSet set, VkDescriptorType type)
+VkWriteDescriptorSet vk_boiler::write_descriptor_set(VkDescriptorImageInfo *img_info,
+                                                     VkDescriptorSet set,
+                                                     VkDescriptorType type)
 {
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -369,7 +375,7 @@ VkWriteDescriptorSet vk_boiler::write_desc_set(VkDescriptorImageInfo *desc_img_i
     write_set.dstBinding = 0;
     write_set.descriptorCount = 1;
     write_set.descriptorType = type;
-    write_set.pImageInfo = desc_img_info;
+    write_set.pImageInfo = img_info;
     return write_set;
 }
 
@@ -399,4 +405,24 @@ VkSamplerCreateInfo vk_boiler::sampler_create_info()
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
     return sampler_info;
+}
+
+VkViewport vk_boiler::viewport(VkExtent2D extent)
+{
+    VkViewport viewport = {};
+    viewport.x = 0.f;
+    viewport.y = 0.f;
+    viewport.width = extent.width;
+    viewport.height = extent.height;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+    return viewport;
+}
+
+VkRect2D vk_boiler::scissor(VkExtent2D extent)
+{
+    VkRect2D scissor = {};
+    scissor.offset = VkOffset2D{0, 0};
+    scissor.extent = extent;
+    return scissor;
 }
