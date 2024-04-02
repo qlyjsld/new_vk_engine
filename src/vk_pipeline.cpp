@@ -3,8 +3,22 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 
+#include "vk_boiler.h"
 #include "vk_engine.h"
 #include "vk_type.h"
+
+void PipelineBuilder::build_layout(VkDevice device,
+                                   std::vector<VkDescriptorSetLayout> layouts)
+{
+    VkPipelineLayoutCreateInfo pipeline_layout_info =
+        vk_boiler::pipeline_layout_create_info(layouts);
+
+    VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr,
+                                    &_pipeline_layout));
+
+    vk_engine::_deletion_queue.push_back(
+        [=]() { vkDestroyPipelineLayout(device, _pipeline_layout, nullptr); });
+}
 
 void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format)
 {

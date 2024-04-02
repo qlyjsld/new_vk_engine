@@ -142,15 +142,7 @@ void vk_engine::pipeline_init()
             _texture_layout,
         };
 
-        VkPipelineLayoutCreateInfo pipeline_layout_info =
-            vk_boiler::pipeline_layout_create_info(layouts);
-
-        VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
-                                        &gfx_pipeline_builder._pipeline_layout));
-
-        _deletion_queue.push_back(
-            [=]() { vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr); });
-
+        gfx_pipeline_builder.build_layout(_device, layouts);
         gfx_pipeline_builder.build_gfx(_device, &_swapchain_format, _depth_img.format);
         _gfx_pipeline = gfx_pipeline_builder.value();
         _gfx_pipeline_layout = gfx_pipeline_builder._pipeline_layout;
@@ -161,21 +153,11 @@ void vk_engine::pipeline_init()
         load_shader_module("../shaders/.comp.spv", &_comp);
 
         PipelineBuilder comp_pipeline_builder = {};
-
-        std::vector<VkDescriptorSetLayout> layouts = {};
-
-        VkPipelineLayoutCreateInfo pipeline_layout_info =
-            vk_boiler::pipeline_layout_create_info(layouts);
-
-        VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr,
-                                        &comp_pipeline_builder._pipeline_layout));
-
-        _deletion_queue.push_back(
-            [=]() { vkDestroyPipelineLayout(_device, _comp_pipeline_layout, nullptr); });
-
         comp_pipeline_builder._shader_stage_infos.push_back(
             vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, _comp));
 
+        std::vector<VkDescriptorSetLayout> layouts = {};
+        comp_pipeline_builder.build_layout(_device, layouts);
         comp_pipeline_builder.build_comp(_device);
         _comp_pipeline = comp_pipeline_builder.value();
         _comp_pipeline_layout = comp_pipeline_builder._pipeline_layout;
