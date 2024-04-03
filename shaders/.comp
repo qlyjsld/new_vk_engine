@@ -1,8 +1,17 @@
 #version 460
 
-layout (local_size_x = 32) in;
+layout (local_size_x = 256) in;
+
+layout (set = 0, binding = 0, readonly) uniform image2D input;
+layout (set = 0, binding = 1, writeonly) uniform image2D output;
+
+layout (set = 0, binding = 2, readonly) {
+    vec3 input_extent;
+    vec3 output_extent;
+} extent;
 
 void main()
 {
-
+    for input_extent / output_extent sth loop:
+        output[] = input[] + input[] + input[] / 3.f
 }

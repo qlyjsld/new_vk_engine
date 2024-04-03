@@ -294,22 +294,23 @@ void vk_engine::load_meshes()
 
     _meshes.insert(_meshes.end(), example.begin(), example.end());
 
-    _node_data_buffer = create_buffer(
+    _render_mat_buffer = create_buffer(
         _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
     _deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(_allocator, _node_data_buffer.buffer,
-                         _node_data_buffer.allocation);
+        vmaDestroyBuffer(_allocator, _render_mat_buffer.buffer,
+                         _render_mat_buffer.allocation);
     });
 
-    VkDescriptorBufferInfo desc_buffer_info = {};
-    desc_buffer_info.buffer = _node_data_buffer.buffer;
-    desc_buffer_info.offset = 0;
-    desc_buffer_info.range = sizeof(render_mat);
+    VkDescriptorBufferInfo descriptor_buffer_info = {};
+    descriptor_buffer_info.buffer = _render_mat_buffer.buffer;
+    descriptor_buffer_info.offset = 0;
+    descriptor_buffer_info.range = sizeof(render_mat);
 
-    VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-        &desc_buffer_info, _node_data_set, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+    VkWriteDescriptorSet write_set =
+        vk_boiler::write_descriptor_set(&descriptor_buffer_info, _render_mat_set,
+                                        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 }
@@ -438,20 +439,20 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             _deletion_queue.push_back(
                 [=]() { vkDestroySampler(_device, sampler, nullptr); });
 
-            VkDescriptorSetAllocateInfo desc_set_allocate_info =
+            VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
                 vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
                                                         &_texture_layout);
 
-            VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
-                                              &mesh->descriptor_set));
+            VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
+                                              &mesh->texture_set));
 
-            VkDescriptorImageInfo desc_img_info = {};
-            desc_img_info.sampler = sampler;
-            desc_img_info.imageView = mesh->texture_buffer.img_view;
-            desc_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkDescriptorImageInfo descriptor_img_info = {};
+            descriptor_img_info.sampler = sampler;
+            descriptor_img_info.imageView = mesh->texture_buffer.img_view;
+            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &desc_img_info, mesh->descriptor_set,
+                &descriptor_img_info, mesh->texture_set,
                 VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
             vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);

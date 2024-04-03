@@ -81,10 +81,12 @@ public:
     frame _frames[FRAME_OVERLAP];
 
     VkDescriptorPool _descriptor_pool;
-    VkDescriptorSetLayout _node_data_layout;
-    VkDescriptorSet _node_data_set;
-    allocated_buffer _node_data_buffer;
+    VkDescriptorSetLayout _render_mat_layout;
+    VkDescriptorSet _render_mat_set;
+    allocated_buffer _render_mat_buffer;
     VkDescriptorSetLayout _texture_layout;
+    VkDescriptorSetLayout _comp_layout;
+    VkDescriptorSet _comp_set;
 
     VkQueue _gfx_queue;
     uint32_t _gfx_queue_family_index;

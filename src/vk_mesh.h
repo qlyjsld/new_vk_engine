@@ -31,7 +31,7 @@ struct mesh {
 
     std::vector<unsigned char> texture;
     allocated_img texture_buffer;
-    VkDescriptorSet descriptor_set;
+    VkDescriptorSet texture_set;
 };
 
 struct material {

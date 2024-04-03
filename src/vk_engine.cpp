@@ -55,54 +55,98 @@ void vk_engine::descriptor_init()
     _deletion_queue.push_back(
         [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
 
-    /* node data layout and set */
-    VkDescriptorSetLayoutBinding node_data_layout_binding_0 = {};
-    node_data_layout_binding_0.binding = 0;
-    node_data_layout_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    node_data_layout_binding_0.descriptorCount = 1;
-    node_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    { /* render mat layout and set */
+        VkDescriptorSetLayoutBinding render_mat_layout_binding_0 = {};
+        render_mat_layout_binding_0.binding = 0;
+        render_mat_layout_binding_0.descriptorType =
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        render_mat_layout_binding_0.descriptorCount = 1;
+        render_mat_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    std::vector<VkDescriptorSetLayoutBinding> node_data_layout_bindings = {
-        node_data_layout_binding_0,
-    };
+        std::vector<VkDescriptorSetLayoutBinding> render_mat_layout_bindings = {
+            render_mat_layout_binding_0,
+        };
 
-    VkDescriptorSetLayoutCreateInfo node_data_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(node_data_layout_bindings.size(),
-                                                     node_data_layout_bindings.data());
+        VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
+            vk_boiler::descriptor_set_layout_create_info(
+                render_mat_layout_bindings.size(), render_mat_layout_bindings.data());
 
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &node_data_layout_info, nullptr,
-                                         &_node_data_layout));
+        VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info, nullptr,
+                                             &_render_mat_layout));
 
-    _deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorSetLayout(_device, _node_data_layout, nullptr); });
+        _deletion_queue.push_back([=]() {
+            vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
+        });
 
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(_descriptor_pool, &_node_data_layout);
+        VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
+            vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+                                                    &_render_mat_layout);
 
-    VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
-                                      &_node_data_set));
+        VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
+                                          &_render_mat_set));
+    }
 
-    /* texture layout */
-    VkDescriptorSetLayoutBinding texture_data_layout_binding_0 = {};
-    texture_data_layout_binding_0.binding = 0;
-    texture_data_layout_binding_0.descriptorType =
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    texture_data_layout_binding_0.descriptorCount = 1;
-    texture_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    { /* texture layout */
+        VkDescriptorSetLayoutBinding texture_data_layout_binding_0 = {};
+        texture_data_layout_binding_0.binding = 0;
+        texture_data_layout_binding_0.descriptorType =
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        texture_data_layout_binding_0.descriptorCount = 1;
+        texture_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::vector<VkDescriptorSetLayoutBinding> texture_data_layout_bindings = {
-        texture_data_layout_binding_0,
-    };
+        std::vector<VkDescriptorSetLayoutBinding> texture_data_layout_bindings = {
+            texture_data_layout_binding_0,
+        };
 
-    VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(texture_data_layout_bindings.size(),
-                                                     texture_data_layout_bindings.data());
+        VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
+            vk_boiler::descriptor_set_layout_create_info(
+                texture_data_layout_bindings.size(), texture_data_layout_bindings.data());
 
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info, nullptr,
-                                         &_texture_layout));
+        VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info, nullptr,
+                                             &_texture_layout));
 
-    _deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr); });
+        _deletion_queue.push_back(
+            [=]() { vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr); });
+    }
+
+    { /* compute shader layout*/
+        VkDescriptorSetLayoutBinding comp_binding_0 = {};
+        comp_binding_0.binding = 0;
+        comp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        comp_binding_0.descriptorCount = 1;
+        comp_binding_0.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding comp_binding_1 = {};
+        comp_binding_1.binding = 1;
+        comp_binding_1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        comp_binding_1.descriptorCount = 1;
+        comp_binding_1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutBinding comp_binding_2 = {};
+        comp_binding_2.binding = 2;
+        comp_binding_2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        comp_binding_2.descriptorCount = 1;
+        comp_binding_2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        std::vector<VkDescriptorSetLayoutBinding> comp_layout_bindings = {
+            comp_binding_0, comp_binding_1, comp_binding_2};
+
+        VkDescriptorSetLayoutCreateInfo comp_layout_info =
+            vk_boiler::descriptor_set_layout_create_info(comp_layout_bindings.size(),
+                                                         comp_layout_bindings.data());
+
+        VK_CHECK(vkCreateDescriptorSetLayout(_device, &comp_layout_info, nullptr,
+                                             &_comp_layout));
+
+        _deletion_queue.push_back(
+            [=]() { vkDestroyDescriptorSetLayout(_device, _comp_layout, nullptr); });
+
+        VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
+            vk_boiler::descriptor_set_allocate_info(_descriptor_pool, &_comp_layout);
+
+        VK_CHECK(
+            vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info, &_comp_set));
+    }
 }
 
 void vk_engine::pipeline_init()
@@ -138,7 +182,7 @@ void vk_engine::pipeline_init()
             vk_boiler::depth_stencil_state_create_info();
 
         std::vector<VkDescriptorSetLayout> layouts = {
-            _node_data_layout,
+            _render_mat_layout,
             _texture_layout,
         };
 
@@ -206,6 +250,15 @@ void vk_engine::draw()
     vkCmdEndRendering(frame->cmd_buffer);
 
     /* downsampling to window */
+
+    vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _comp_pipeline);
+
+    std::vector<VkDescriptorSet> sets = {
+
+    };
+
+    vkCmdBindDescriptorSets();
+
     vkCmdDispatch(frame->cmd_buffer, 1, 1, 1);
 
     /* transition image format for transfering and copy to swapchain*/
@@ -278,14 +331,14 @@ void vk_engine::draw_nodes(frame *frame)
             mat.model = node->transform_mat;
 
             void *data;
-            vmaMapMemory(_allocator, _node_data_buffer.allocation, &data);
+            vmaMapMemory(_allocator, _render_mat_buffer.allocation, &data);
             std::memcpy((char *)data + i * pad_uniform_buffer_size(sizeof(render_mat)),
                         &mat, sizeof(render_mat));
-            vmaUnmapMemory(_allocator, _node_data_buffer.allocation);
+            vmaUnmapMemory(_allocator, _render_mat_buffer.allocation);
 
             std::vector<VkDescriptorSet> sets = {
-                _node_data_set,
-                mesh->descriptor_set,
+                _render_mat_set,
+                mesh->texture_set,
             };
             uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
