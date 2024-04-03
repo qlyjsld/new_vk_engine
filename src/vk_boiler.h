@@ -74,10 +74,12 @@ VkDescriptorSetAllocateInfo descriptor_set_allocate_info(VkDescriptorPool pool,
                                                          VkDescriptorSetLayout *layouts);
 
 VkWriteDescriptorSet write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
-                                          VkDescriptorSet set, VkDescriptorType type);
+                                          VkDescriptorSet set, uint32_t binding,
+                                          VkDescriptorType type);
 
 VkWriteDescriptorSet write_descriptor_set(VkDescriptorImageInfo *img_info,
-                                          VkDescriptorSet set, VkDescriptorType type);
+                                          VkDescriptorSet set, uint32_t binding,
+                                          VkDescriptorType type);
 
 VkBufferImageCopy buffer_img_copy(VkExtent3D extent);
 

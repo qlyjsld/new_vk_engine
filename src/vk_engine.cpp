@@ -45,7 +45,8 @@ void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256}};
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
 
     VkDescriptorPoolCreateInfo pool_info =
         vk_boiler::descriptor_pool_create_info(pool_sizes.size(), pool_sizes.data());
@@ -112,7 +113,7 @@ void vk_engine::descriptor_init()
     { /* compute shader layout*/
         VkDescriptorSetLayoutBinding comp_binding_0 = {};
         comp_binding_0.binding = 0;
-        comp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        comp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         comp_binding_0.descriptorCount = 1;
         comp_binding_0.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
@@ -122,14 +123,14 @@ void vk_engine::descriptor_init()
         comp_binding_1.descriptorCount = 1;
         comp_binding_1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        VkDescriptorSetLayoutBinding comp_binding_2 = {};
-        comp_binding_2.binding = 2;
-        comp_binding_2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        comp_binding_2.descriptorCount = 1;
-        comp_binding_2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        // VkDescriptorSetLayoutBinding comp_binding_2 = {};
+        // comp_binding_2.binding = 2;
+        // comp_binding_2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        // comp_binding_2.descriptorCount = 1;
+        // comp_binding_2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         std::vector<VkDescriptorSetLayoutBinding> comp_layout_bindings = {
-            comp_binding_0, comp_binding_1, comp_binding_2};
+            comp_binding_0, comp_binding_1, /* comp_binding_2 */};
 
         VkDescriptorSetLayoutCreateInfo comp_layout_info =
             vk_boiler::descriptor_set_layout_create_info(comp_layout_bindings.size(),
@@ -146,16 +147,50 @@ void vk_engine::descriptor_init()
 
         VK_CHECK(
             vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info, &_comp_set));
+
+        /* update compute shader's descriptor sets */
+        {
+            VkDescriptorImageInfo descriptor_img_info = {};
+            descriptor_img_info.sampler = _sampler;
+            descriptor_img_info.imageView = _target.img_view;
+            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+                &descriptor_img_info, _comp_set, 0,
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        }
+        {
+            VkDescriptorImageInfo descriptor_img_info = {};
+            descriptor_img_info.sampler = _sampler;
+            descriptor_img_info.imageView = _copy_to_swapchain.img_view;
+            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+                &descriptor_img_info, _comp_set, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+
+            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        }
+        // {
+        //     VkDescriptorBufferInfo descriptor_buffer_info = {};
+        //     descriptor_buffer_info.buffer = ;
+        //     descriptor_buffer_info.offset = ;
+        //     descriptor_buffer_info.range = ;
+
+        //     VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+        //         &descriptor_buffer_info, _comp_set, 2,
+        //         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+
+        //     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        // }
     }
 }
 
 void vk_engine::pipeline_init()
 {
     { /* build graphics pipeline */
-        VkShaderModule _vert;
         load_shader_module("../shaders/.vert.spv", &_vert);
-
-        VkShaderModule _frag;
         load_shader_module("../shaders/.frag.spv", &_frag);
 
         PipelineBuilder gfx_pipeline_builder = {};
@@ -187,24 +222,33 @@ void vk_engine::pipeline_init()
         };
 
         gfx_pipeline_builder.build_layout(_device, layouts);
-        gfx_pipeline_builder.build_gfx(_device, &_swapchain_format, _depth_img.format);
+        gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format);
         _gfx_pipeline = gfx_pipeline_builder.value();
         _gfx_pipeline_layout = gfx_pipeline_builder._pipeline_layout;
+
+        _deletion_queue.push_back([=]() {
+            vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
+            vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
+        });
     }
 
     { /* build compute pipeline */
-        VkShaderModule _comp;
         load_shader_module("../shaders/.comp.spv", &_comp);
 
         PipelineBuilder comp_pipeline_builder = {};
         comp_pipeline_builder._shader_stage_infos.push_back(
             vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, _comp));
 
-        std::vector<VkDescriptorSetLayout> layouts = {};
+        std::vector<VkDescriptorSetLayout> layouts = {_comp_layout};
         comp_pipeline_builder.build_layout(_device, layouts);
         comp_pipeline_builder.build_comp(_device);
         _comp_pipeline = comp_pipeline_builder.value();
         _comp_pipeline_layout = comp_pipeline_builder._pipeline_layout;
+
+        _deletion_queue.push_back([=]() {
+            vkDestroyPipelineLayout(_device, _comp_pipeline_layout, nullptr);
+            vkDestroyPipeline(_device, _comp_pipeline, nullptr);
+        });
     }
 }
 
@@ -250,22 +294,35 @@ void vk_engine::draw()
     vkCmdEndRendering(frame->cmd_buffer);
 
     /* downsampling to window */
+    vk_cmd::vk_img_layout_transition(
+        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _comp_queue_family_index);
+
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _copy_to_swapchain.img,
+                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                                     _comp_queue_family_index);
+
+    vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
+                         nullptr);
 
     vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _comp_pipeline);
 
-    std::vector<VkDescriptorSet> sets = {
+    std::vector<VkDescriptorSet> sets = {_comp_set};
 
-    };
+    vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            _comp_pipeline_layout, 0, 1, &_comp_set, 0, nullptr);
 
-    vkCmdBindDescriptorSets();
+    vkCmdDispatch(frame->cmd_buffer, 5625, 0, 0);
 
-    vkCmdDispatch(frame->cmd_buffer, 1, 1, 1);
+    vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
+                         nullptr);
 
     /* transition image format for transfering and copy to swapchain*/
-    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _copy_to_swapchain.img,
-                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                     _transfer_queue_family_index);
+    vk_cmd::vk_img_layout_transition(
+        frame->cmd_buffer, _copy_to_swapchain.img, VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transfer_queue_family_index);
 
     vk_cmd::vk_img_layout_transition(
         frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,

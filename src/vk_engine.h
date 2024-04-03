@@ -26,7 +26,6 @@ public:
         fs.clear();
     };
 
-private:
     std::vector<std::function<void()>> fs;
 };
 
@@ -43,8 +42,8 @@ struct upload_context {
     VkCommandBuffer cmd_buffer;
 };
 
-struct mesh_push_constants {
-    glm::vec4 data;
+struct push_constants {
+    glm::vec4 dummy;
     glm::mat4 render_mat;
 };
 
@@ -62,7 +61,7 @@ public:
     uint64_t _last_frame{0};
     uint64_t _frame_index{0};
     VkExtent2D _window_extent{1600, 900};
-    VkExtent2D _resolution{3840, 2160};
+    VkExtent2D _resolution{1600, 900};
     struct SDL_Window *_window{nullptr};
 
     VkInstance _instance;
@@ -79,6 +78,7 @@ public:
     uint32_t _img_index;
 
     frame _frames[FRAME_OVERLAP];
+    VkSampler _sampler;
 
     VkDescriptorPool _descriptor_pool;
     VkDescriptorSetLayout _render_mat_layout;
@@ -99,12 +99,17 @@ public:
     std::vector<mesh> _meshes;
     std::vector<node> _nodes;
 
+    VkShaderModule _vert;
+    VkShaderModule _frag;
+    VkShaderModule _comp;
+
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
     VkPipeline _comp_pipeline;
     VkPipelineLayout _comp_pipeline_layout;
 
+    VkFormat _format = {VK_FORMAT_R8G8B8A8_UNORM};
     allocated_img _target;
     allocated_img _copy_to_swapchain;
     allocated_img _depth_img;

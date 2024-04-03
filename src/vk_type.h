@@ -19,8 +19,8 @@ struct allocated_buffer {
 };
 
 struct allocated_img {
-    VkExtent3D extent;
     VkImage img;
+    VkExtent3D extent;
     VmaAllocation allocation;
     VkImageView img_view;
     VkFormat format;

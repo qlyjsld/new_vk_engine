@@ -28,12 +28,16 @@ void vk_cmd::vk_img_layout_transition(VkCommandBuffer cmd_buffer, VkImage img,
 void vk_cmd::vk_img_copy(VkCommandBuffer cmd_buffer, VkExtent3D extent, VkImage src,
                          VkImage dst)
 {
-    VkImageSubresourceLayers img_subresorce_layers = {};
-
     VkImageCopy img_copy = {};
-    img_copy.srcSubresource = img_subresorce_layers;
+    img_copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_copy.srcSubresource.mipLevel = 0;
+    img_copy.srcSubresource.baseArrayLayer = 0;
+    img_copy.srcSubresource.layerCount = 1;
     img_copy.srcOffset = VkOffset3D{0, 0, 0};
-    img_copy.dstSubresource = img_subresorce_layers;
+    img_copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_copy.dstSubresource.mipLevel = 0;
+    img_copy.dstSubresource.baseArrayLayer = 0;
+    img_copy.dstSubresource.layerCount = 1;
     img_copy.dstOffset = VkOffset3D{0, 0, 0};
     img_copy.extent = extent;
 

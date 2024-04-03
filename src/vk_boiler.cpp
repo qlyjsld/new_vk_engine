@@ -351,13 +351,14 @@ vk_boiler::descriptor_set_allocate_info(VkDescriptorPool pool,
 
 VkWriteDescriptorSet vk_boiler::write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
                                                      VkDescriptorSet set,
+                                                     uint32_t binding,
                                                      VkDescriptorType type)
 {
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_set.pNext = nullptr;
     write_set.dstSet = set;
-    write_set.dstBinding = 0;
+    write_set.dstBinding = binding;
     write_set.descriptorCount = 1;
     write_set.descriptorType = type;
     write_set.pBufferInfo = buffer_info;
@@ -366,13 +367,14 @@ VkWriteDescriptorSet vk_boiler::write_descriptor_set(VkDescriptorBufferInfo *buf
 
 VkWriteDescriptorSet vk_boiler::write_descriptor_set(VkDescriptorImageInfo *img_info,
                                                      VkDescriptorSet set,
+                                                     uint32_t binding,
                                                      VkDescriptorType type)
 {
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_set.pNext = nullptr;
     write_set.dstSet = set;
-    write_set.dstBinding = 0;
+    write_set.dstBinding = binding;
     write_set.descriptorCount = 1;
     write_set.descriptorType = type;
     write_set.pImageInfo = img_info;

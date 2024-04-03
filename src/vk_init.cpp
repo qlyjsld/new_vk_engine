@@ -100,6 +100,7 @@ void vk_engine::swapchain_init()
     vkb::Swapchain vkb_swapchain =
         vkb_swapchain_builder.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
             .set_desired_extent(_window_extent.width, _window_extent.height)
+            .set_image_usage_flags(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
             .build()
             .value();
 
@@ -145,8 +146,9 @@ void vk_engine::swapchain_init()
         extent.height = _resolution.height;
         extent.depth = 1;
 
-        _target = create_img(_swapchain_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                             VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0);
+        _target = create_img(
+            _format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
         _deletion_queue.push_back([=]() {
             vkDestroyImageView(_device, _target.img_view, nullptr);
@@ -161,8 +163,8 @@ void vk_engine::swapchain_init()
         extent.depth = 1;
 
         _copy_to_swapchain =
-            create_img(_swapchain_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                       VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+            create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                       VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0);
 
         _deletion_queue.push_back([=]() {
             vkDestroyImageView(_device, _copy_to_swapchain.img_view, nullptr);
@@ -170,6 +172,10 @@ void vk_engine::swapchain_init()
                             _copy_to_swapchain.allocation);
         });
     }
+
+    VkSamplerCreateInfo sampler_info = vk_boiler::sampler_create_info();
+    VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &_sampler));
+    _deletion_queue.push_back([=]() { vkDestroySampler(_device, _sampler, nullptr); });
 }
 
 void vk_engine::command_init()
