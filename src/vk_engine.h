@@ -115,6 +115,7 @@ public:
     allocated_img _target;
     allocated_img _copy_to_swapchain;
     allocated_img _depth_img;
+    allocated_buffer _comp_buffer;
 
     vk_camera _cam;
     inline static deletion_queue _deletion_queue;

@@ -176,6 +176,14 @@ void vk_engine::swapchain_init()
         });
     }
 
+    _comp_buffer = create_buffer(2 * pad_uniform_buffer_size(sizeof(glm::vec3)),
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+    _deletion_queue.push_back([=]() {
+        vmaDestroyBuffer(_allocator, _comp_buffer.buffer, _comp_buffer.allocation);
+    });
+
     VkSamplerCreateInfo sampler_info = vk_boiler::sampler_create_info();
     VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &_sampler));
     _deletion_queue.push_back([=]() { vkDestroySampler(_device, _sampler, nullptr); });

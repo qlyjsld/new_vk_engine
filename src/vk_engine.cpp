@@ -123,14 +123,14 @@ void vk_engine::descriptor_init()
         comp_binding_1.descriptorCount = 1;
         comp_binding_1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        // VkDescriptorSetLayoutBinding comp_binding_2 = {};
-        // comp_binding_2.binding = 2;
-        // comp_binding_2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        // comp_binding_2.descriptorCount = 1;
-        // comp_binding_2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        VkDescriptorSetLayoutBinding comp_binding_2 = {};
+        comp_binding_2.binding = 2;
+        comp_binding_2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        comp_binding_2.descriptorCount = 1;
+        comp_binding_2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         std::vector<VkDescriptorSetLayoutBinding> comp_layout_bindings = {
-            comp_binding_0, comp_binding_1, /* comp_binding_2 */};
+            comp_binding_0, comp_binding_1, comp_binding_2};
 
         VkDescriptorSetLayoutCreateInfo comp_layout_info =
             vk_boiler::descriptor_set_layout_create_info(comp_layout_bindings.size(),
@@ -169,18 +169,18 @@ void vk_engine::descriptor_init()
 
             vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
         }
-        // {
-        //     VkDescriptorBufferInfo descriptor_buffer_info = {};
-        //     descriptor_buffer_info.buffer = ;
-        //     descriptor_buffer_info.offset = ;
-        //     descriptor_buffer_info.range = ;
+        {
+            VkDescriptorBufferInfo descriptor_buffer_info = {};
+            descriptor_buffer_info.buffer = _comp_buffer.buffer;
+            descriptor_buffer_info.offset = 0;
+            descriptor_buffer_info.range = 2 * pad_uniform_buffer_size(sizeof(glm::vec3));
 
-        //     VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-        //         &descriptor_buffer_info, _comp_set, 2,
-        //         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+                &descriptor_buffer_info, _comp_set, 2,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
-        //     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
-        // }
+            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        }
     }
 }
 
@@ -307,8 +307,19 @@ void vk_engine::draw()
 
     std::vector<VkDescriptorSet> sets = {_comp_set};
 
+    glm::vec3 inputf = glm::vec3{_resolution.width, _resolution.height, 1.f};
+    glm::vec3 outputf = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
+
+    void *data;
+    vmaMapMemory(_allocator, _comp_buffer.allocation, &data);
+    std::memcpy(data, &inputf, sizeof(glm::vec3));
+    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &outputf,
+                sizeof(glm::vec3));
+    vmaUnmapMemory(_allocator, _comp_buffer.allocation);
+
+    uint32_t doffset = 0;
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            _comp_pipeline_layout, 0, 1, &_comp_set, 0, nullptr);
+                            _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
 
     vkCmdDispatch(frame->cmd_buffer, 1600, 900, 1);
 
