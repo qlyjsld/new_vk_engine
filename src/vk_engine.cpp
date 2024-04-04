@@ -46,7 +46,7 @@ void vk_engine::descriptor_init()
     std::vector<VkDescriptorPoolSize> pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 256}};
 
     VkDescriptorPoolCreateInfo pool_info =
         vk_boiler::descriptor_pool_create_info(pool_sizes.size(), pool_sizes.data());
@@ -113,7 +113,7 @@ void vk_engine::descriptor_init()
     { /* compute shader layout*/
         VkDescriptorSetLayoutBinding comp_binding_0 = {};
         comp_binding_0.binding = 0;
-        comp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        comp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         comp_binding_0.descriptorCount = 1;
         comp_binding_0.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
@@ -151,19 +151,16 @@ void vk_engine::descriptor_init()
         /* update compute shader's descriptor sets */
         {
             VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.sampler = _sampler;
             descriptor_img_info.imageView = _target.img_view;
-            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
             VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, _comp_set, 0,
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+                &descriptor_img_info, _comp_set, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
             vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
         }
         {
             VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.sampler = _sampler;
             descriptor_img_info.imageView = _copy_to_swapchain.img_view;
             descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
@@ -294,9 +291,9 @@ void vk_engine::draw()
     vkCmdEndRendering(frame->cmd_buffer);
 
     /* downsampling to window */
-    vk_cmd::vk_img_layout_transition(
-        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _comp_queue_family_index);
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _target.img,
+                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_GENERAL, _comp_queue_family_index);
 
     vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _copy_to_swapchain.img,
                                      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
@@ -313,7 +310,7 @@ void vk_engine::draw()
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             _comp_pipeline_layout, 0, 1, &_comp_set, 0, nullptr);
 
-    vkCmdDispatch(frame->cmd_buffer, 5625, 0, 0);
+    vkCmdDispatch(frame->cmd_buffer, 1600, 900, 1);
 
     vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,

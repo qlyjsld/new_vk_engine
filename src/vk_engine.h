@@ -109,7 +109,9 @@ public:
     VkPipeline _comp_pipeline;
     VkPipelineLayout _comp_pipeline_layout;
 
-    VkFormat _format = {VK_FORMAT_R8G8B8A8_UNORM};
+    VkFormat _format = {VK_FORMAT_R16G16B16A16_SFLOAT};
+    VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+
     allocated_img _target;
     allocated_img _copy_to_swapchain;
     allocated_img _depth_img;
