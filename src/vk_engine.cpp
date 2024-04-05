@@ -321,7 +321,8 @@ void vk_engine::draw()
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
 
-    vkCmdDispatch(frame->cmd_buffer, 1600, 900, 1);
+    vkCmdDispatch(frame->cmd_buffer, _window_extent.width / 2, _window_extent.height / 2,
+                  1);
 
     vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
@@ -335,6 +336,23 @@ void vk_engine::draw()
     vk_cmd::vk_img_layout_transition(
         frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+
+    // VkImageBlit region = {};
+    // region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // region.srcSubresource.mipLevel = 0;
+    // region.srcSubresource.baseArrayLayer = 0;
+    // region.srcSubresource.layerCount = 1;
+    // region.srcOffsets[1] = VkOffset3D{1600, 900, 1};
+    // region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // region.dstSubresource.mipLevel = 0;
+    // region.dstSubresource.baseArrayLayer = 0;
+    // region.dstSubresource.layerCount = 1;
+    // region.dstOffsets[1] = VkOffset3D{1600, 900, 1};
+
+    // vkCmdBlitImage(frame->cmd_buffer, _copy_to_swapchain.img,
+    //                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
+    //                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
+    //                VK_FILTER_NEAREST);
 
     vk_cmd::vk_img_copy(frame->cmd_buffer,
                         VkExtent3D{_window_extent.width, _window_extent.height, 1},
