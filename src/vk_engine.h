@@ -134,10 +134,12 @@ private:
     void swapchain_init();
     void command_init();
     void sync_init();
-    void descriptor_init();
 
+    void descriptor_init();
     bool load_shader_module(const char *file, VkShaderModule *shader_module);
     void pipeline_init();
+
+    void imgui_init();
 
     void load_meshes();
     void upload_meshes(mesh *meshes, size_t size);

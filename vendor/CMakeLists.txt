@@ -6,3 +6,20 @@ add_subdirectory(vk-bootstrap)
 add_subdirectory(SDL)
 add_subdirectory(vma)
 add_subdirectory(tinygltf)
+
+add_library(imgui STATIC)
+
+target_sources(imgui PRIVATE
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/imgui.cpp"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/imgui_demo.cpp"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/imgui_draw.cpp"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/imgui_widgets.cpp"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/imgui_tables.cpp"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_sdl3.cpp"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_vulkan.cpp")
+
+target_link_libraries(imgui Vulkan::Vulkan SDL3::SDL3)
+
+target_include_directories(imgui PRIVATE
+	"${PROJECT_SOURCE_DIR}/vendor/imgui"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends")

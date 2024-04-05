@@ -315,7 +315,7 @@ vk_boiler::descriptor_pool_create_info(uint32_t pool_size_count,
     VkDescriptorPoolCreateInfo descriptor_pool_info = {};
     descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool_info.pNext = nullptr;
-    // descriptor_pool_info.flags = ;
+    descriptor_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     descriptor_pool_info.maxSets = 1024;
     descriptor_pool_info.poolSizeCount = pool_size_count;
     descriptor_pool_info.pPoolSizes = pool_sizes;

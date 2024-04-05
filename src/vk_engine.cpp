@@ -10,6 +10,10 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
+
 #include "vk_boiler.h"
 #include "vk_cmd.h"
 #include "vk_pipeline.h"
@@ -32,6 +36,8 @@ void vk_engine::init()
 
     descriptor_init();
     pipeline_init();
+
+    imgui_init();
 
     load_meshes();
     std::cout << "meshes size " << _meshes.size() << std::endl;
@@ -288,6 +294,11 @@ void vk_engine::draw()
 
     draw_nodes(frame);
 
+    /* imgui rendering */
+    ImGui::ShowDemoWindow();
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cmd_buffer);
+
     vkCmdEndRendering(frame->cmd_buffer);
 
     /* downsampling to window */
@@ -437,6 +448,10 @@ void vk_engine::cleanup()
 {
     vkDeviceWaitIdle(_device);
 
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
     if (_is_initialized)
         _deletion_queue.flush();
 }
@@ -504,8 +519,51 @@ void vk_engine::run()
             if (e.type == SDL_EVENT_KEY_DOWN)
                 if (e.key.keysym.sym == SDLK_ESCAPE)
                     bquit = true;
+
+            ImGui_ImplSDL3_ProcessEvent(&e);
         }
+
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
 
         draw();
     }
+}
+
+void vk_engine::imgui_init()
+{
+    /* Setup Dear ImGui context */
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+    VkPipelineRenderingCreateInfo rendering_info = {};
+    rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    rendering_info.pNext = nullptr;
+    // rendering_info.viewMask = ;
+    rendering_info.colorAttachmentCount = 1;
+    rendering_info.pColorAttachmentFormats = &_format;
+    rendering_info.depthAttachmentFormat = _depth_img.format;
+    // rendering_info.stencilAttachmentFormat = ;
+
+    /* Setup Platform/Renderer backends */
+    ImGui_ImplSDL3_InitForVulkan(_window);
+    ImGui_ImplVulkan_InitInfo imgui_init_info = {};
+    imgui_init_info.Instance = _instance;
+    imgui_init_info.PhysicalDevice = _physical_device;
+    imgui_init_info.Device = _device;
+    imgui_init_info.QueueFamily = _gfx_queue_family_index;
+    imgui_init_info.Queue = _gfx_queue;
+    imgui_init_info.DescriptorPool = _descriptor_pool;
+    imgui_init_info.MinImageCount = 2;
+    imgui_init_info.ImageCount = 2;
+    imgui_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    imgui_init_info.UseDynamicRendering = true;
+    imgui_init_info.PipelineRenderingCreateInfo = rendering_info;
+    ImGui_ImplVulkan_Init(&imgui_init_info);
+    ImGui_ImplVulkan_CreateFontsTexture();
+    ImGui_ImplVulkan_DestroyFontsTexture();
 }
