@@ -1,0 +1,14 @@
+/* p stands for pre */
+
+#version 460
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout (set = 0, binding = 0, rgba16) uniform writeonly image2D outf;
+
+void main()
+{
+    vec4 color = vec4(1.f);
+    imageStore(outf, ivec2(8 * gl_WorkGroupID.x + gl_LocalInvocationID.x,
+                            8 * gl_WorkGroupID.y + gl_LocalInvocationID.y), color);
+}

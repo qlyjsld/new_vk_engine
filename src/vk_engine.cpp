@@ -277,14 +277,17 @@ void vk_engine::draw()
         frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_queue_family_index);
 
+    /* draw with comp */
+    draw_comp(frame);
+
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment = vk_boiler::rendering_attachment_info(
-        _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VkClearValue{1.f, 1.f, 1.f});
+        _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
+        VkClearValue{0.f});
 
     VkRenderingAttachmentInfo depth_attachment = vk_boiler::rendering_attachment_info(
-        _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        VkClearValue{1.f, 1.f, 1.f});
+        _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, true,
+        VkClearValue{1.f});
 
     /* start drawing */
     VkRenderingInfo rendering_info =
@@ -295,7 +298,7 @@ void vk_engine::draw()
     draw_nodes(frame);
 
     /* imgui rendering */
-    ImGui::ShowDemoWindow();
+    // ImGui::ShowDemoWindow();
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cmd_buffer);
 
@@ -332,7 +335,7 @@ void vk_engine::draw()
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
 
-    vkCmdDispatch(frame->cmd_buffer, _window_extent.width / 2, _window_extent.height / 2,
+    vkCmdDispatch(frame->cmd_buffer, _window_extent.width / 8, _window_extent.height / 8,
                   1);
 
     vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,

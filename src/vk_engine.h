@@ -124,6 +124,7 @@ public:
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
 
     void init();
+    void comp_draw_init();
     void cleanup();
     void draw();
     void run();
@@ -145,6 +146,7 @@ private:
     void upload_meshes(mesh *meshes, size_t size);
     void upload_textures(mesh *meshes, size_t size);
 
+    void draw_comp(frame *frame);
     void draw_nodes(frame *frame);
 
     frame *get_current_frame()

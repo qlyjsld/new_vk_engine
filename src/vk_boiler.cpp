@@ -43,6 +43,7 @@ VkSemaphoreCreateInfo vk_boiler::sem_create_info()
 
 VkRenderingAttachmentInfo vk_boiler::rendering_attachment_info(VkImageView img_view,
                                                                VkImageLayout layout,
+                                                               bool clear,
                                                                VkClearValue clear_value)
 {
     VkRenderingAttachmentInfo attachment_info = {};
@@ -53,7 +54,10 @@ VkRenderingAttachmentInfo vk_boiler::rendering_attachment_info(VkImageView img_v
     // attachment_info.resolveMode = ;
     // attachment_info.resolveImageView = ;
     // attachment_info.resolveImageLayout = ;
-    attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    if (clear)
+        attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    else
+        attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachment_info.clearValue = clear_value;
     return attachment_info;

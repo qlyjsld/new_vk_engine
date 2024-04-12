@@ -17,7 +17,7 @@ VkFenceCreateInfo fence_create_info(bool signaled);
 VkSemaphoreCreateInfo sem_create_info();
 
 VkRenderingAttachmentInfo rendering_attachment_info(VkImageView img_view,
-                                                    VkImageLayout layout,
+                                                    VkImageLayout layout, bool clear,
                                                     VkClearValue clear_value);
 
 VkRenderingInfo rendering_info(VkRenderingAttachmentInfo *color_attachments,

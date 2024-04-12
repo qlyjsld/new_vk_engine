@@ -1,21 +1,21 @@
 #version 460
 
-layout (local_size_x = 2, local_size_y = 2) in;
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout (set = 0, binding = 0, rgba16) uniform readonly image2D inputf;
-layout (set = 0, binding = 1, rgba16) uniform writeonly image2D outputf;
+layout (set = 0, binding = 0, rgba16) uniform readonly image2D inf;
+layout (set = 0, binding = 1, rgba16) uniform writeonly image2D outf;
 
-layout (set = 0, binding = 2) uniform readonly extent
+layout (set = 0, binding = 2) uniform readonly e
 {
-    vec3 inputf;
-    vec3 outputf;
-} f;
+    vec3 ine;
+    vec3 oute;
+};
 
 void main()
 {
-    vec4 color = imageLoad(inputf, ivec2(2 * gl_WorkGroupID.x + gl_LocalInvocationID.x,
-                                        2 * gl_WorkGroupID.y + gl_LocalInvocationID.y));
+    vec4 color = imageLoad(inf, ivec2(8 * gl_WorkGroupID.x + gl_LocalInvocationID.x,
+                                        8 * gl_WorkGroupID.y + gl_LocalInvocationID.y));
 
-    imageStore(outputf, ivec2(2 * gl_WorkGroupID.x + gl_LocalInvocationID.x,
-                            2 * gl_WorkGroupID.y + gl_LocalInvocationID.y), color);
+    imageStore(outf, ivec2(8 * gl_WorkGroupID.x + gl_LocalInvocationID.x,
+                            8 * gl_WorkGroupID.y + gl_LocalInvocationID.y), color);
 }
