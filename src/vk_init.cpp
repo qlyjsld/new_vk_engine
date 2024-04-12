@@ -120,7 +120,7 @@ void vk_engine::swapchain_init()
     _depth_img.format = VK_FORMAT_D32_SFLOAT;
 
     VkImageCreateInfo img_info = vk_boiler::img_create_info(
-        _depth_img.format, VkExtent3D{_window_extent.width, _window_extent.height, 1},
+        _depth_img.format, VkExtent3D{_resolution.width, _resolution.height, 1},
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
     VmaAllocationCreateInfo alloc_info = {};
@@ -159,8 +159,8 @@ void vk_engine::swapchain_init()
 
     {
         VkExtent3D extent = {};
-        extent.width = _window_extent.width;
-        extent.height = _window_extent.height;
+        extent.width = _resolution.width;
+        extent.height = _resolution.height;
         extent.depth = 1;
 
         _copy_to_swapchain =

@@ -283,7 +283,7 @@ void vk_engine::draw()
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment = vk_boiler::rendering_attachment_info(
         _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
-        VkClearValue{0.f});
+        VkClearValue{1.f});
 
     VkRenderingAttachmentInfo depth_attachment = vk_boiler::rendering_attachment_info(
         _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, true,
@@ -291,7 +291,7 @@ void vk_engine::draw()
 
     /* start drawing */
     VkRenderingInfo rendering_info =
-        vk_boiler::rendering_info(&color_attachment, &depth_attachment, _window_extent);
+        vk_boiler::rendering_info(&color_attachment, &depth_attachment, _resolution);
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
@@ -321,13 +321,13 @@ void vk_engine::draw()
 
     std::vector<VkDescriptorSet> sets = {_comp_set};
 
-    glm::vec3 inputf = glm::vec3{_resolution.width, _resolution.height, 1.f};
-    glm::vec3 outputf = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
+    glm::vec3 inf = glm::vec3{_resolution.width, _resolution.height, 1.f};
+    glm::vec3 outf = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
 
     void *data;
     vmaMapMemory(_allocator, _comp_buffer.allocation, &data);
-    std::memcpy(data, &inputf, sizeof(glm::vec3));
-    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &outputf,
+    std::memcpy(data, &inf, sizeof(glm::vec3));
+    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &outf,
                 sizeof(glm::vec3));
     vmaUnmapMemory(_allocator, _comp_buffer.allocation);
 
@@ -335,8 +335,7 @@ void vk_engine::draw()
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
 
-    vkCmdDispatch(frame->cmd_buffer, _window_extent.width / 8, _window_extent.height / 8,
-                  1);
+    vkCmdDispatch(frame->cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
 
     vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
@@ -351,26 +350,27 @@ void vk_engine::draw()
         frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
 
-    // VkImageBlit region = {};
-    // region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    // region.srcSubresource.mipLevel = 0;
-    // region.srcSubresource.baseArrayLayer = 0;
-    // region.srcSubresource.layerCount = 1;
-    // region.srcOffsets[1] = VkOffset3D{_resolution.width, _resolution.height, 1};
-    // region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    // region.dstSubresource.mipLevel = 0;
-    // region.dstSubresource.baseArrayLayer = 0;
-    // region.dstSubresource.layerCount = 1;
-    // region.dstOffsets[1] = VkOffset3D{_window_extent.width, _window_extent.height, 1};
+    VkImageBlit region = {};
+    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.srcSubresource.mipLevel = 0;
+    region.srcSubresource.baseArrayLayer = 0;
+    region.srcSubresource.layerCount = 1;
+    region.srcOffsets[1] = VkOffset3D{(int)_resolution.width, (int)_resolution.height, 1};
+    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.baseArrayLayer = 0;
+    region.dstSubresource.layerCount = 1;
+    region.dstOffsets[1] =
+        VkOffset3D{(int)_window_extent.width, (int)_window_extent.height, 1};
 
-    // vkCmdBlitImage(frame->cmd_buffer, _copy_to_swapchain.img,
-    //                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
-    //                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
-    //                VK_FILTER_NEAREST);
+    vkCmdBlitImage(frame->cmd_buffer, _copy_to_swapchain.img,
+                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
 
-    vk_cmd::vk_img_copy(frame->cmd_buffer,
-                        VkExtent3D{_window_extent.width, _window_extent.height, 1},
-                        _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
+    /* only apply to window extent = resolution */
+    // vk_cmd::vk_img_copy(frame->cmd_buffer,
+    //                     VkExtent3D{_window_extent.width, _window_extent.height, 1},
+    //                     _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
 
     /* transition image format for presenting */
     vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _swapchain_imgs[_img_index],
