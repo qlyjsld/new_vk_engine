@@ -87,7 +87,7 @@ void vk_engine::draw_comp(frame *frame)
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pcomp_layout, 0, 1, &pcomp_set, 0, nullptr);
 
-    vkCmdDispatch(frame->cmd_buffer, 1600 / 8, 900 / 8, 1);
+    vkCmdDispatch(frame->cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
 
     vk_cmd::vk_img_layout_transition(
         frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,

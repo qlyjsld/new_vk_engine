@@ -356,12 +356,12 @@ void vk_engine::draw()
     // region.srcSubresource.mipLevel = 0;
     // region.srcSubresource.baseArrayLayer = 0;
     // region.srcSubresource.layerCount = 1;
-    // region.srcOffsets[1] = VkOffset3D{1600, 900, 1};
+    // region.srcOffsets[1] = VkOffset3D{_resolution.width, _resolution.height, 1};
     // region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     // region.dstSubresource.mipLevel = 0;
     // region.dstSubresource.baseArrayLayer = 0;
     // region.dstSubresource.layerCount = 1;
-    // region.dstOffsets[1] = VkOffset3D{1600, 900, 1};
+    // region.dstOffsets[1] = VkOffset3D{_window_extent.width, _window_extent.height, 1};
 
     // vkCmdBlitImage(frame->cmd_buffer, _copy_to_swapchain.img,
     //                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
@@ -422,8 +422,9 @@ void vk_engine::draw_nodes(frame *frame)
 
             render_mat mat;
             mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
-            mat.proj =
-                glm::perspective(glm::radians(_cam.fov), 1600.f / 900.f, .01f, 65536.0f);
+            mat.proj = glm::perspective(glm::radians(_cam.fov),
+                                        (float)_resolution.width / _resolution.height,
+                                        .01f, 65536.0f);
             mat.proj[1][1] *= -1;
             mat.model = node->transform_mat;
 
