@@ -128,7 +128,7 @@ void vk_engine::draw_comp(frame *frame)
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pcomp_layout, 0, 1, &pcomp_set, 1, &doffset);
 
-    float u_time = _last_frame / 1000000000.f;
+    float u_time = _last_frame / 10000000000.f;
     vkCmdPushConstants(frame->cmd_buffer, pcomp_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
                        sizeof(float), &u_time);
 
