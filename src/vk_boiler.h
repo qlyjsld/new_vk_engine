@@ -53,7 +53,8 @@ VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 VkPipelineMultisampleStateCreateInfo multisample_state_create_info();
 
 VkPipelineLayoutCreateInfo
-pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts);
+pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts,
+                            std::vector<VkPushConstantRange> &push_constants);
 
 VkImageCreateInfo img_create_info(VkFormat format, VkExtent3D extent,
                                   VkImageUsageFlags usage);

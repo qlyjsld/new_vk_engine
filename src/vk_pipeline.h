@@ -18,7 +18,8 @@ public:
     VkPipelineLayout _pipeline_layout;
     VkPipeline _pipeline;
 
-    void build_layout(VkDevice device, std::vector<VkDescriptorSetLayout> layouts);
+    void build_layout(VkDevice device, std::vector<VkDescriptorSetLayout> &layouts,
+                      std::vector<VkPushConstantRange> &push_constants);
     void build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format);
     void build_comp(VkDevice device);
     VkPipeline value() { return _pipeline; };

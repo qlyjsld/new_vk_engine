@@ -242,7 +242,8 @@ VkPipelineMultisampleStateCreateInfo vk_boiler::multisample_state_create_info()
 }
 
 VkPipelineLayoutCreateInfo
-vk_boiler::pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts)
+vk_boiler::pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts,
+                                       std::vector<VkPushConstantRange> &push_constants)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -250,8 +251,8 @@ vk_boiler::pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layou
     // pipeline_layout_info.flags = ;
     pipeline_layout_info.setLayoutCount = layouts.size();
     pipeline_layout_info.pSetLayouts = layouts.data();
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = nullptr;
+    pipeline_layout_info.pushConstantRangeCount = push_constants.size();
+    pipeline_layout_info.pPushConstantRanges = push_constants.data();
     return pipeline_layout_info;
 }
 

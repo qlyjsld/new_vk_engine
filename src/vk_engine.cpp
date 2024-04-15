@@ -224,7 +224,9 @@ void vk_engine::pipeline_init()
             _texture_layout,
         };
 
-        gfx_pipeline_builder.build_layout(_device, layouts);
+        std::vector<VkPushConstantRange> push_constants = {};
+
+        gfx_pipeline_builder.build_layout(_device, layouts, push_constants);
         gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format);
         _gfx_pipeline = gfx_pipeline_builder.value();
         _gfx_pipeline_layout = gfx_pipeline_builder._pipeline_layout;
@@ -243,7 +245,8 @@ void vk_engine::pipeline_init()
             vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, _comp));
 
         std::vector<VkDescriptorSetLayout> layouts = {_comp_layout};
-        comp_pipeline_builder.build_layout(_device, layouts);
+        std::vector<VkPushConstantRange> push_constants = {};
+        comp_pipeline_builder.build_layout(_device, layouts, push_constants);
         comp_pipeline_builder.build_comp(_device);
         _comp_pipeline = comp_pipeline_builder.value();
         _comp_pipeline_layout = comp_pipeline_builder._pipeline_layout;
@@ -295,7 +298,7 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
-    draw_nodes(frame);
+    // draw_nodes(frame);
 
     /* imgui rendering */
     // ImGui::ShowDemoWindow();

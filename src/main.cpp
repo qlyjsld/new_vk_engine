@@ -92,14 +92,20 @@ void vk_engine::comp_draw_init()
 
     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 
-    load_shader_module("../shaders/pcomp.comp.spv", &pcomp);
+    load_shader_module("../shaders/perlin.comp.spv", &pcomp);
 
     PipelineBuilder pcomp_pipeline_builder = {};
     pcomp_pipeline_builder._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, pcomp));
 
+    VkPushConstantRange u_time_push_constant = {};
+    u_time_push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    u_time_push_constant.offset = 0;
+    u_time_push_constant.size = sizeof(float);
+
     std::vector<VkDescriptorSetLayout> layouts = {pcomp_set_layout};
-    pcomp_pipeline_builder.build_layout(_device, layouts);
+    std::vector<VkPushConstantRange> push_constants = {u_time_push_constant};
+    pcomp_pipeline_builder.build_layout(_device, layouts, push_constants);
     pcomp_pipeline_builder.build_comp(_device);
     pcomp_pipeline = pcomp_pipeline_builder.value();
     pcomp_layout = pcomp_pipeline_builder._pipeline_layout;
@@ -121,6 +127,10 @@ void vk_engine::draw_comp(frame *frame)
     uint32_t doffset = 0;
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             pcomp_layout, 0, 1, &pcomp_set, 1, &doffset);
+
+    float u_time = _last_frame / 1000000000.f;
+    vkCmdPushConstants(frame->cmd_buffer, pcomp_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(float), &u_time);
 
     vkCmdDispatch(frame->cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
 

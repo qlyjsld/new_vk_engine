@@ -7,10 +7,11 @@
 #include "vk_type.h"
 
 void PipelineBuilder::build_layout(VkDevice device,
-                                   std::vector<VkDescriptorSetLayout> layouts)
+                                   std::vector<VkDescriptorSetLayout> &layouts,
+                                   std::vector<VkPushConstantRange> &push_constants)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_info =
-        vk_boiler::pipeline_layout_create_info(layouts);
+        vk_boiler::pipeline_layout_create_info(layouts, push_constants);
 
     VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr,
                                     &_pipeline_layout));

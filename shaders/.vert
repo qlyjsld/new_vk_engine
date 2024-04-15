@@ -6,7 +6,7 @@ layout (location = 2) in vec2 v_texcrood;
 
 layout (location = 0) out vec2 out_texcrood;
 
-layout (set = 0, binding = 0) uniform readonly in_mat
+layout (set = 0, binding = 0) uniform readonly RENDER_MAT
 {
     mat4 view;
     mat4 proj;
