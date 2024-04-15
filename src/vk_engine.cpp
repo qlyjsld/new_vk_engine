@@ -321,13 +321,13 @@ void vk_engine::draw()
 
     std::vector<VkDescriptorSet> sets = {_comp_set};
 
-    glm::vec3 inf = glm::vec3{_resolution.width, _resolution.height, 1.f};
-    glm::vec3 outf = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
+    glm::vec3 in_frame = glm::vec3{_resolution.width, _resolution.height, 1.f};
+    glm::vec3 out_frame = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
 
     void *data;
     vmaMapMemory(_allocator, _comp_buffer.allocation, &data);
-    std::memcpy(data, &inf, sizeof(glm::vec3));
-    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &outf,
+    std::memcpy(data, &in_frame, sizeof(glm::vec3));
+    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &out_frame,
                 sizeof(glm::vec3));
     vmaUnmapMemory(_allocator, _comp_buffer.allocation);
 

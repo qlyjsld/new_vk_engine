@@ -1,5 +1,6 @@
 #include "vk_engine.h"
 
+#include <cstring>
 #include <iostream>
 
 #include "vk_boiler.h"
@@ -12,6 +13,7 @@ static VkDescriptorSetLayout pcomp_set_layout;
 static VkShaderModule pcomp;
 static VkPipelineLayout pcomp_layout;
 static VkPipeline pcomp_pipeline;
+static allocated_buffer extent_buffer;
 
 int main(int argc, char *argv[])
 {
@@ -25,13 +27,35 @@ int main(int argc, char *argv[])
 
 void vk_engine::comp_draw_init()
 {
+    extent_buffer = create_buffer(pad_uniform_buffer_size(sizeof(glm::vec2)),
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+    _deletion_queue.push_back([=]() {
+        vmaDestroyBuffer(_allocator, extent_buffer.buffer, extent_buffer.allocation);
+    });
+
+    glm::vec2 extent = glm::vec2{_resolution.width, _resolution.height};
+
+    void *data;
+    vmaMapMemory(_allocator, extent_buffer.allocation, &data);
+    std::memcpy(data, &extent, sizeof(glm::vec2));
+    vmaUnmapMemory(_allocator, extent_buffer.allocation);
+
     VkDescriptorSetLayoutBinding pcomp_binding_0 = {};
     pcomp_binding_0.binding = 0;
     pcomp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     pcomp_binding_0.descriptorCount = 1;
     pcomp_binding_0.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-    std::vector<VkDescriptorSetLayoutBinding> pcomp_layout_bindings = {pcomp_binding_0};
+    VkDescriptorSetLayoutBinding pcomp_binding_1 = {};
+    pcomp_binding_1.binding = 1;
+    pcomp_binding_1.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    pcomp_binding_1.descriptorCount = 1;
+    pcomp_binding_1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    std::vector<VkDescriptorSetLayoutBinding> pcomp_layout_bindings = {pcomp_binding_0,
+                                                                       pcomp_binding_1};
 
     VkDescriptorSetLayoutCreateInfo pcomp_layout_info =
         vk_boiler::descriptor_set_layout_create_info(pcomp_layout_bindings.size(),
@@ -55,6 +79,16 @@ void vk_engine::comp_draw_init()
 
     VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
         &descriptor_img_info, pcomp_set, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+
+    vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+
+    VkDescriptorBufferInfo descriptor_buffer_info = {};
+    descriptor_buffer_info.buffer = extent_buffer.buffer;
+    descriptor_buffer_info.offset = 0;
+    descriptor_buffer_info.range = pad_uniform_buffer_size(sizeof(glm::vec2));
+
+    write_set = vk_boiler::write_descriptor_set(
+        &descriptor_buffer_info, pcomp_set, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 
@@ -84,8 +118,9 @@ void vk_engine::draw_comp(frame *frame)
 
     vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pcomp_pipeline);
 
+    uint32_t doffset = 0;
     vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pcomp_layout, 0, 1, &pcomp_set, 0, nullptr);
+                            pcomp_layout, 0, 1, &pcomp_set, 1, &doffset);
 
     vkCmdDispatch(frame->cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
 
