@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <functional>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -13,21 +12,6 @@
 #include "vk_type.h"
 
 constexpr int FRAME_OVERLAP = 2;
-
-struct deletion_queue {
-public:
-    void push_back(std::function<void()> &&f) { fs.push_back(f); }
-
-    void flush()
-    {
-        for (auto f = fs.rbegin(); f != fs.rend(); f++)
-            (*f)();
-
-        fs.clear();
-    };
-
-    std::vector<std::function<void()>> fs;
-};
 
 struct frame {
     VkFence fence;
@@ -118,7 +102,6 @@ public:
     allocated_buffer _comp_buffer;
 
     vk_camera _cam;
-    inline static deletion_queue _deletion_queue;
 
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
@@ -155,12 +138,12 @@ private:
         return &_frames[_frame_index];
     };
 
-    allocated_buffer create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                                   VmaAllocationCreateFlags flags);
+    void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                       VmaAllocationCreateFlags flags, allocated_buffer *buffer);
 
-    allocated_img create_img(VkFormat format, VkExtent3D extent,
-                             VkImageAspectFlags aspect, VkImageUsageFlags usage,
-                             VmaAllocationCreateFlags flags);
+    void create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
+                    VkImageUsageFlags usage, VmaAllocationCreateFlags flags,
+                    allocated_img *img);
 
     size_t pad_uniform_buffer_size(size_t original_size);
 };

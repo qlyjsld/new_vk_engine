@@ -68,8 +68,8 @@ VkDescriptorPoolCreateInfo descriptor_pool_create_info(uint32_t pool_size_count,
                                                        VkDescriptorPoolSize *pool_sizes);
 
 VkDescriptorSetLayoutCreateInfo
-descriptor_set_layout_create_info(uint32_t binding_count,
-                                  VkDescriptorSetLayoutBinding *bindings);
+descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
+                                  VkShaderStageFlags stage);
 
 VkDescriptorSetAllocateInfo descriptor_set_allocate_info(VkDescriptorPool pool,
                                                          VkDescriptorSetLayout *layouts);

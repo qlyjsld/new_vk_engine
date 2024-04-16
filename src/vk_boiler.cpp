@@ -1,5 +1,7 @@
 ﻿#include "vk_boiler.h"
 
+#include "vk_type.h"
+
 VkCommandPoolCreateInfo vk_boiler::cmd_pool_create_info(uint32_t queue_family_index)
 {
     VkCommandPoolCreateInfo cmd_pool_info = {};
@@ -328,16 +330,31 @@ vk_boiler::descriptor_pool_create_info(uint32_t pool_size_count,
 }
 
 VkDescriptorSetLayoutCreateInfo
-vk_boiler::descriptor_set_layout_create_info(uint32_t binding_count,
-                                             VkDescriptorSetLayoutBinding *bindings)
+vk_boiler::descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
+                                             VkShaderStageFlags stage)
 {
+    std::vector<VkDescriptorSetLayoutBinding> *bindings =
+        new std::vector<VkDescriptorSetLayoutBinding>;
+
+    for (uint32_t i = 0; i < types.size(); ++i) {
+        VkDescriptorSetLayoutBinding binding = {};
+        binding.binding = i;
+        binding.descriptorType = types[i];
+        binding.descriptorCount = 1;
+        binding.stageFlags = stage;
+        bindings->push_back(binding);
+    }
+
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info = {};
     descriptor_set_layout_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_set_layout_info.pNext = nullptr;
     // descriptor_set_layout_info.flags = ;
-    descriptor_set_layout_info.bindingCount = binding_count;
-    descriptor_set_layout_info.pBindings = bindings;
+    descriptor_set_layout_info.bindingCount = bindings->size();
+    descriptor_set_layout_info.pBindings = bindings->data();
+
+    deletion_queue.push_back([=]() { delete bindings; });
+
     return descriptor_set_layout_info;
 }
 

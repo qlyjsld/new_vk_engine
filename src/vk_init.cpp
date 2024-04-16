@@ -1,12 +1,11 @@
 #include "vk_engine.h"
 
-#include <iostream>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
 
 #include "vk_boiler.h"
+#include "vk_type.h"
 
 void vk_engine::device_init()
 {
@@ -29,14 +28,14 @@ void vk_engine::device_init()
     _instance = vkb_instance.instance;
     _debug_utils_messenger = vkb_instance.debug_messenger;
 
-    _deletion_queue.push_back([=]() {
+    deletion_queue.push_back([=]() {
         vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
         vkDestroyInstance(_instance, nullptr);
     });
 
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
 
     VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
@@ -67,7 +66,7 @@ void vk_engine::device_init()
     vkb::Device vkb_device = vkb_device_builder.build().value();
     _device = vkb_device.device;
 
-    _deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
+    deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
 
     /* get queues for commands */
     _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
@@ -91,7 +90,7 @@ void vk_engine::vma_init()
     vma_allocator_info.instance = _instance;
     vmaCreateAllocator(&vma_allocator_info, &_allocator);
 
-    _deletion_queue.push_back([=]() { vmaDestroyAllocator(_allocator); });
+    deletion_queue.push_back([=]() { vmaDestroyAllocator(_allocator); });
 }
 
 void vk_engine::swapchain_init()
@@ -110,11 +109,11 @@ void vk_engine::swapchain_init()
     _swapchain_imgs = vkb_swapchain.get_images().value();
     _swapchain_img_views = vkb_swapchain.get_image_views().value();
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vkDestroySwapchainKHR(_device, _swapchain, nullptr); });
 
     for (uint32_t i = 0; i < _swapchain_img_views.size(); i++)
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroyImageView(_device, _swapchain_img_views[i], nullptr); });
 
     _depth_img.format = VK_FORMAT_D32_SFLOAT;
@@ -129,7 +128,7 @@ void vk_engine::swapchain_init()
     VK_CHECK(vmaCreateImage(_allocator, &img_info, &alloc_info, &_depth_img.img,
                             &_depth_img.allocation, nullptr));
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation); });
 
     VkImageViewCreateInfo img_view_info = vk_boiler::img_view_create_info(
@@ -137,7 +136,7 @@ void vk_engine::swapchain_init()
 
     VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img.img_view));
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vkDestroyImageView(_device, _depth_img.img_view, nullptr); });
 
     /* create img target for rendering and copying */
@@ -147,14 +146,9 @@ void vk_engine::swapchain_init()
         extent.height = _resolution.height;
         extent.depth = 1;
 
-        _target = create_img(
-            _format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT, 0);
-
-        _deletion_queue.push_back([=]() {
-            vkDestroyImageView(_device, _target.img_view, nullptr);
-            vmaDestroyImage(_allocator, _target.img, _target.allocation);
-        });
+        create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT, 0,
+                   &_target);
     }
 
     {
@@ -163,30 +157,19 @@ void vk_engine::swapchain_init()
         extent.height = _resolution.height;
         extent.depth = 1;
 
-        _copy_to_swapchain =
-            create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                       0);
-
-        _deletion_queue.push_back([=]() {
-            vkDestroyImageView(_device, _copy_to_swapchain.img_view, nullptr);
-            vmaDestroyImage(_allocator, _copy_to_swapchain.img,
-                            _copy_to_swapchain.allocation);
-        });
+        create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                   0, &_copy_to_swapchain);
     }
 
-    _comp_buffer = create_buffer(2 * pad_uniform_buffer_size(sizeof(glm::vec3)),
-                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                 VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-
-    _deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(_allocator, _comp_buffer.buffer, _comp_buffer.allocation);
-    });
+    create_buffer(2 * pad_uniform_buffer_size(sizeof(glm::vec3)),
+                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &_comp_buffer);
 
     VkSamplerCreateInfo sampler_info = vk_boiler::sampler_create_info();
     VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &_sampler));
-    _deletion_queue.push_back([=]() { vkDestroySampler(_device, _sampler, nullptr); });
+    deletion_queue.push_back([=]() { vkDestroySampler(_device, _sampler, nullptr); });
 }
 
 void vk_engine::command_init()
@@ -198,7 +181,7 @@ void vk_engine::command_init()
         VK_CHECK(
             vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_frames[i].cmd_pool));
 
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr); });
 
         VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
@@ -214,7 +197,7 @@ void vk_engine::command_init()
     VK_CHECK(
         vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_upload_context.cmd_pool));
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vkDestroyCommandPool(_device, _upload_context.cmd_pool, nullptr); });
 
     VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
@@ -231,19 +214,19 @@ void vk_engine::sync_init()
 
         VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_frames[i].fence));
 
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroyFence(_device, _frames[i].fence, nullptr); });
 
         VkSemaphoreCreateInfo sem_info = vk_boiler::sem_create_info();
 
         VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].sumbit_sem));
 
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroySemaphore(_device, _frames[i].sumbit_sem, nullptr); });
 
         VK_CHECK(vkCreateSemaphore(_device, &sem_info, nullptr, &_frames[i].present_sem));
 
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroySemaphore(_device, _frames[i].present_sem, nullptr); });
     }
 
@@ -251,6 +234,6 @@ void vk_engine::sync_init()
 
     VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_upload_context.fence));
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vkDestroyFence(_device, _upload_context.fence, nullptr); });
 }
