@@ -176,6 +176,7 @@ void vk_engine::pipeline_init()
         gfx_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
 
         vertex_input_description description = vertex::get_vertex_input_description();
+
         gfx_pipeline_builder._vertex_input_state_info =
             vk_boiler::vertex_input_state_create_info(&description);
         gfx_pipeline_builder._input_asm_state_info =
@@ -198,6 +199,7 @@ void vk_engine::pipeline_init()
 
         gfx_pipeline_builder.build_layout(_device, layouts, push_constants,
                                           &_gfx_pipeline_layout);
+
         gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format,
                                        &_gfx_pipeline_layout, &_gfx_pipeline);
     }
@@ -216,6 +218,7 @@ void vk_engine::pipeline_init()
         std::vector<VkPushConstantRange> push_constants = {};
         comp_pipeline_builder.build_layout(_device, layouts, push_constants,
                                            &_comp_pipeline_layout);
+
         comp_pipeline_builder.build_comp(_device, &_comp_pipeline_layout,
                                          &_comp_pipeline);
     }

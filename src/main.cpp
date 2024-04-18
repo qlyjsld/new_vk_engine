@@ -9,9 +9,7 @@
 #include "vk_pipeline.h"
 #include "vk_type.h"
 
-static VkDescriptorSet set;
-static VkPipeline pipeline;
-static VkPipelineLayout pipeline_layout;
+static std::vector<cs> css;
 
 int main(int argc, char *argv[])
 {
@@ -25,6 +23,7 @@ int main(int argc, char *argv[])
 
 void vk_engine::comp_draw_init()
 {
+    /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
     allocator.create_buffer(pad_uniform_buffer_size(sizeof(glm::vec2)),
@@ -45,6 +44,7 @@ void vk_engine::comp_draw_init()
 
     allocator.load_img("target", _target);
 
+    /* match set binding */
     std::vector<std::pair<VkDescriptorType, std::string>> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
@@ -53,10 +53,11 @@ void vk_engine::comp_draw_init()
     cs perlinworley(allocator, descriptors, "../shaders/perlinworley.comp.spv",
                     _minUniformBufferOffsetAlignment, _device);
 
+    /* start building pipeline using info from struct cs and comp_allocator */
     PipelineBuilder pcomp_pipeline_builder = {};
     pcomp_pipeline_builder._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT,
-                                            perlinworley.get_module()));
+                                            perlinworley.module));
 
     VkPushConstantRange u_time_push_constant = {};
     u_time_push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -64,20 +65,34 @@ void vk_engine::comp_draw_init()
     u_time_push_constant.size = sizeof(float);
 
     std::vector<VkDescriptorSetLayout> layouts = {
-        perlinworley.get_layout(),
+        perlinworley.layout,
     };
 
     std::vector<VkPushConstantRange> push_constants = {
         u_time_push_constant,
     };
 
-    set = perlinworley.get_set();
-    pipeline = perlinworley.get_pipeline();
-    pipeline_layout = perlinworley.get_pipeline_layout();
-
     pcomp_pipeline_builder.build_layout(_device, layouts, push_constants,
-                                        &pipeline_layout);
-    pcomp_pipeline_builder.build_comp(_device, &pipeline_layout, &pipeline);
+                                        &perlinworley.pipeline_layout);
+
+    pcomp_pipeline_builder.build_comp(_device, &perlinworley.pipeline_layout,
+                                      &perlinworley.pipeline);
+
+    perlinworley.draw = [=](VkCommandBuffer cmd_buffer, cs *cs) {
+        vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
+
+        uint32_t doffset = 0;
+        vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
+
+        float u_time = _last_frame / 1000000000.f;
+        vkCmdPushConstants(cmd_buffer, cs->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT,
+                           0, sizeof(float), &u_time);
+
+        vkCmdDispatch(cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
+    };
+
+    css.push_back(perlinworley);
 }
 
 void vk_engine::draw_comp(frame *frame)
@@ -87,17 +102,8 @@ void vk_engine::draw_comp(frame *frame)
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                      VK_IMAGE_LAYOUT_GENERAL, _comp_queue_family_index);
 
-    vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-
-    uint32_t doffset = 0;
-    vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipeline_layout, 0, 1, &set, 1, &doffset);
-
-    float u_time = _last_frame / 1000000000.f;
-    vkCmdPushConstants(frame->cmd_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                       sizeof(float), &u_time);
-
-    vkCmdDispatch(frame->cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
+    for (cs cs : css)
+        cs.draw(frame->cmd_buffer, &cs);
 
     vk_cmd::vk_img_layout_transition(
         frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,

@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "vk_boiler.h"
+
 void comp_allocator::create_new_pool()
 {
     VkDescriptorPool new_pool;
@@ -37,6 +39,8 @@ void comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
 
     VK_CHECK(vmaCreateBuffer(allocator, &buffer_info, &vma_allocation_info,
                              &buffers[name].buffer, &buffers[name].allocation, nullptr));
+
+    buffers[name].size = size;
 
     deletion_queue.push_back([=]() {
         vmaDestroyBuffer(allocator, buffers[name].buffer, buffers[name].allocation);
@@ -87,6 +91,46 @@ void comp_allocator::allocate_descriptor_set(std::vector<VkDescriptorType> types
 
     VK_CHECK(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, set));
 };
+
+void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
+                              std::vector<std::string> names)
+{
+    for (uint32_t i = 0; i < types.size(); ++i) {
+        VkDescriptorType type = types[i];
+        std::string name = names[i];
+
+        /* write descriptor sets with preset for each descriptor type */
+        switch (type) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: {
+            VkDescriptorBufferInfo descriptor_buffer_info = {};
+            descriptor_buffer_info.buffer = allocator.get_buffer(name).buffer;
+            descriptor_buffer_info.offset = 0;
+            descriptor_buffer_info.range =
+                pad_uniform_buffer_size(allocator.get_buffer(name).size);
+
+            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+                &descriptor_buffer_info, set, i,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+
+            vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
+        } break;
+
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
+            VkDescriptorImageInfo descriptor_img_info = {};
+            descriptor_img_info.imageView = allocator.get_img(name).img_view;
+            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+                &descriptor_img_info, set, i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+
+            vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
+        } break;
+
+        default:
+            break;
+        }
+    }
+}
 
 bool cs::load_shader_module(const char *filename)
 {

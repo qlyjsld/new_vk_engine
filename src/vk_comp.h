@@ -7,7 +7,6 @@
 
 #include "vk_mem_alloc.h"
 
-#include "vk_boiler.h"
 #include "vk_type.h"
 
 struct comp_allocator {
@@ -26,6 +25,7 @@ public:
                     std::string name);
 
     inline allocated_buffer get_buffer(std::string name) { return buffers[name]; };
+
     inline allocated_img get_img(std::string name) { return imgs[name]; };
 
     void load_buffer(std::string name, allocated_buffer buffer)
@@ -55,7 +55,7 @@ struct cs {
 public:
     cs(comp_allocator allocator,
        std::vector<std::pair<VkDescriptorType, std::string>> descriptors,
-       std::string file, VkDeviceSize min_uniform_buffer_offset_alignment,
+       std::string shader_file, VkDeviceSize min_uniform_buffer_offset_alignment,
        VkDevice device)
         : allocator(allocator),
           min_uniform_buffer_offset_alignment(min_uniform_buffer_offset_alignment),
@@ -71,59 +71,26 @@ public:
 
         allocator.allocate_descriptor_set(types, &layout, &set);
 
-        // for (uint32_t i = 0; i < descriptors.size(); ++i) {
-        //     switch (types[i]) {
-        //     case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        //         break;
-        //     case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-        //         break;
-        //     case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-        //         break;
-        //     default:
-        //         break;
-        //     }
-        // }
+        write_descriptor_set(types, names);
 
-        VkDescriptorImageInfo descriptor_img_info = {};
-        descriptor_img_info.imageView = allocator.get_img("target").img_view;
-        descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-        VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-            &descriptor_img_info, set, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-
-        vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
-
-        VkDescriptorBufferInfo descriptor_buffer_info = {};
-        descriptor_buffer_info.buffer = allocator.get_buffer("extent").buffer;
-        descriptor_buffer_info.offset = 0;
-        descriptor_buffer_info.range = pad_uniform_buffer_size(sizeof(glm::vec2));
-
-        write_set = vk_boiler::write_descriptor_set(
-            &descriptor_buffer_info, set, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
-
-        vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
-
-        load_shader_module(file.data());
+        load_shader_module(shader_file.data());
     };
-
-    inline VkShaderModule get_module() { return module; };
-    inline VkDescriptorSet get_set() { return set; };
-    inline VkDescriptorSetLayout get_layout() { return layout; };
-    inline VkPipeline get_pipeline() { return pipeline; };
-    inline VkPipelineLayout get_pipeline_layout() { return pipeline_layout; };
-
-    std::function<void()> draw;
-
-private:
-    VkDevice device;
-    comp_allocator allocator;
-    VkDeviceSize min_uniform_buffer_offset_alignment;
 
     VkShaderModule module;
     VkDescriptorSet set;
     VkDescriptorSetLayout layout;
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
+
+    std::function<void(VkCommandBuffer, cs *cs)> draw;
+
+private:
+    comp_allocator allocator;
+    VkDeviceSize min_uniform_buffer_offset_alignment;
+    VkDevice device;
+
+    void write_descriptor_set(std::vector<VkDescriptorType> types,
+                              std::vector<std::string> names);
 
     bool load_shader_module(const char *filename);
     size_t pad_uniform_buffer_size(size_t original_size);
