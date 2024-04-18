@@ -261,7 +261,7 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
-    // draw_nodes(frame);
+    draw_nodes(frame);
 
     /* imgui rendering */
     // ImGui::ShowDemoWindow();
