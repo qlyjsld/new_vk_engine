@@ -107,7 +107,8 @@ public:
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
 
     void init();
-    void comp_draw_init();
+    void skybox_init();
+    void texture_draw_init();
     void cleanup();
     void draw();
     void run();

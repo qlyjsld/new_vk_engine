@@ -15,13 +15,52 @@ int main(int argc, char *argv[])
 {
     vk_engine engine = {};
     engine.init();
-    engine.comp_draw_init();
+    engine.skybox_init();
+    engine.texture_draw_init();
     engine.run();
     engine.cleanup();
     return 0;
 }
 
-void vk_engine::comp_draw_init()
+void vk_engine::skybox_init()
+{
+    comp_allocator allocator(_device, _allocator);
+    allocator.load_img("target", _target);
+
+    std::vector<std::pair<VkDescriptorType, std::string>> descriptors = {
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
+    };
+
+    cs skybox(allocator, descriptors, "../shaders/skybox.comp.spv",
+              _minUniformBufferOffsetAlignment, _device);
+
+    PipelineBuilder pb = {};
+    pb._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, skybox.module));
+
+    std::vector<VkDescriptorSetLayout> layouts = {
+        skybox.layout,
+    };
+
+    std::vector<VkPushConstantRange> push_constants = {};
+
+    pb.build_layout(_device, layouts, push_constants, &skybox.pipeline_layout);
+
+    pb.build_comp(_device, &skybox.pipeline_layout, &skybox.pipeline);
+
+    skybox.draw = [=](VkCommandBuffer cmd_buffer, cs *cs) {
+        vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
+
+        vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                cs->pipeline_layout, 0, 1, &cs->set, 0, nullptr);
+
+        vkCmdDispatch(cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
+    };
+
+    css.push_back(skybox);
+}
+
+void vk_engine::texture_draw_init()
 {
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
@@ -54,10 +93,9 @@ void vk_engine::comp_draw_init()
                     _minUniformBufferOffsetAlignment, _device);
 
     /* start building pipeline using info from struct cs and comp_allocator */
-    PipelineBuilder pcomp_pipeline_builder = {};
-    pcomp_pipeline_builder._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT,
-                                            perlinworley.module));
+    PipelineBuilder pb = {};
+    pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
+        VK_SHADER_STAGE_COMPUTE_BIT, perlinworley.module));
 
     VkPushConstantRange u_time_push_constant = {};
     u_time_push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -72,11 +110,9 @@ void vk_engine::comp_draw_init()
         u_time_push_constant,
     };
 
-    pcomp_pipeline_builder.build_layout(_device, layouts, push_constants,
-                                        &perlinworley.pipeline_layout);
+    pb.build_layout(_device, layouts, push_constants, &perlinworley.pipeline_layout);
 
-    pcomp_pipeline_builder.build_comp(_device, &perlinworley.pipeline_layout,
-                                      &perlinworley.pipeline);
+    pb.build_comp(_device, &perlinworley.pipeline_layout, &perlinworley.pipeline);
 
     perlinworley.draw = [=](VkCommandBuffer cmd_buffer, cs *cs) {
         vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
@@ -92,7 +128,7 @@ void vk_engine::comp_draw_init()
         vkCmdDispatch(cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
 
-    css.push_back(perlinworley);
+    // css.push_back(perlinworley);
 }
 
 void vk_engine::draw_comp(frame *frame)
@@ -102,7 +138,7 @@ void vk_engine::draw_comp(frame *frame)
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                      VK_IMAGE_LAYOUT_GENERAL, _comp_queue_family_index);
 
-    for (cs cs : css)
+    for (cs &cs : css)
         cs.draw(frame->cmd_buffer, &cs);
 
     vk_cmd::vk_img_layout_transition(

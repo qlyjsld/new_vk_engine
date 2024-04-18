@@ -6,8 +6,8 @@ layout (set = 0, binding = 0, rgba16) uniform writeonly image2D out_frame;
 
 void main()
 {
-    uint ix = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
-    uint iy = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
+    uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
+    uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     vec4 color = vec4(1.f);
-    imageStore(out_frame, ivec2(ix, iy), color);
+    imageStore(out_frame, ivec2(x, y), color);
 }
