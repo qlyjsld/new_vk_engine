@@ -440,6 +440,8 @@ void vk_engine::run()
 
     std::cout << "draw " << triangles << " triangels" << std::endl;
 
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+
     while (!bquit) {
         const uint8_t *state = SDL_GetKeyboardState(NULL);
 
@@ -462,6 +464,10 @@ void vk_engine::run()
 
         if (state[SDL_SCANCODE_LCTRL])
             _vk_camera.ctrl(ms);
+
+        float x, y;
+        SDL_GetRelativeMouseState(&x, &y);
+        _vk_camera.motion(x, y);
 
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_EVENT_QUIT)

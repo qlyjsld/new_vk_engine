@@ -15,6 +15,22 @@ public:
     void space(float ms) { move(up, ms); };
     void ctrl(float ms) { move(-up, ms); };
 
+    void motion(float x, float y)
+    {
+        yaw += x * sensitivity / 10.f;
+        pitch -= y * sensitivity / 10.f;
+
+        if (pitch >= 89.f)
+            pitch = 89.f;
+
+        if (pitch <= -89.f)
+            pitch = -89.f;
+
+        dir.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        dir.y = sin(glm::radians(pitch));
+        dir.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    }
+
     inline glm::mat4 get_view_mat() { return glm::lookAt(pos, pos + dir, up); }
 
     inline glm::mat4 get_proj_mat()
@@ -29,7 +45,7 @@ private:
 
     float fov{68.f};
     float speed{3.f};
-    float sensitivity{3.f};
+    float sensitivity{0.3f};
     float yaw{0.f};
     float pitch{0.f};
     float aspect{16.f / 9.f};
