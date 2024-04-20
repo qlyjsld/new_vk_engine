@@ -53,7 +53,7 @@ public:
     VkPhysicalDevice _physical_device;
     VkDevice _device;
     VkSurfaceKHR _surface;
-    VkDeviceSize _minUniformBufferOffsetAlignment;
+    VkDeviceSize _min_buffer_alignment;
 
     VkSwapchainKHR _swapchain;
     VkFormat _swapchain_format;

@@ -26,6 +26,15 @@ void comp_allocator::create_new_pool()
     pools.push_back(new_pool);
 }
 
+VkDescriptorPool comp_allocator::get_pool()
+{
+    if (pools.size())
+        return pools.back();
+    else {
+        create_new_pool();
+    };
+}
+
 void comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                    VmaAllocationCreateFlags flags, std::string name)
 {
@@ -164,8 +173,8 @@ bool cs::load_shader_module(const char *filename)
 size_t cs::pad_uniform_buffer_size(size_t original_size)
 {
     size_t aligned_size = original_size;
-    if (min_uniform_buffer_offset_alignment > 0)
-        aligned_size = (aligned_size + min_uniform_buffer_offset_alignment - 1) &
-                       ~(min_uniform_buffer_offset_alignment - 1);
+    if (min_buffer_alignment > 0)
+        aligned_size =
+            (aligned_size + min_buffer_alignment - 1) & ~(min_buffer_alignment - 1);
     return aligned_size;
 }

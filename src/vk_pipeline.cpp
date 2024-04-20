@@ -79,9 +79,13 @@ void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat dept
     deletion_queue.push_back([=]() { vkDestroyPipeline(device, *pipeline, nullptr); });
 }
 
-void PipelineBuilder::build_comp(VkDevice device, VkPipelineLayout *pipeline_layout,
-                                 VkPipeline *pipeline)
+void PipelineBuilder::build_comp(VkDevice device,
+                                 std::vector<VkDescriptorSetLayout> &layouts,
+                                 std::vector<VkPushConstantRange> &push_constants,
+                                 VkPipelineLayout *pipeline_layout, VkPipeline *pipeline)
 {
+    build_layout(device, layouts, push_constants, pipeline_layout);
+
     VkComputePipelineCreateInfo comp_pipeline_info = {};
     comp_pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     comp_pipeline_info.pNext = nullptr;

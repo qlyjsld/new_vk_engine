@@ -106,8 +106,8 @@ void vk_engine::create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlag
 size_t vk_engine::pad_uniform_buffer_size(size_t original_size)
 {
     size_t aligned_size = original_size;
-    if (_minUniformBufferOffsetAlignment > 0)
-        aligned_size = (aligned_size + _minUniformBufferOffsetAlignment - 1) &
-                       ~(_minUniformBufferOffsetAlignment - 1);
+    if (_min_buffer_alignment > 0)
+        aligned_size =
+            (aligned_size + _min_buffer_alignment - 1) & ~(_min_buffer_alignment - 1);
     return aligned_size;
 }

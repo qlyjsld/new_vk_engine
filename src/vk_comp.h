@@ -9,6 +9,8 @@
 
 #include "vk_type.h"
 
+typedef std::pair<VkDescriptorType, std::string> descriptor;
+
 struct comp_allocator {
 public:
     comp_allocator(VkDevice device, VmaAllocator allocator)
@@ -42,24 +44,20 @@ private:
     VkDevice device;
     VmaAllocator allocator;
 
-    std::vector<VkDescriptorPool> pools;
-    std::vector<VkDescriptorPool> full_pools;
-    std::unordered_map<std::string, allocated_buffer> buffers;
-    std::unordered_map<std::string, allocated_img> imgs;
+    inline static std::vector<VkDescriptorPool> pools;
+    inline static std::vector<VkDescriptorPool> full_pools;
+    inline static std::unordered_map<std::string, allocated_buffer> buffers;
+    inline static std::unordered_map<std::string, allocated_img> imgs;
 
     void create_new_pool();
-    VkDescriptorPool get_pool() { return pools.back(); }
+    VkDescriptorPool get_pool();
 };
 
 struct cs {
 public:
-    cs(comp_allocator allocator,
-       std::vector<std::pair<VkDescriptorType, std::string>> descriptors,
-       std::string shader_file, VkDeviceSize min_uniform_buffer_offset_alignment,
-       VkDevice device)
-        : allocator(allocator),
-          min_uniform_buffer_offset_alignment(min_uniform_buffer_offset_alignment),
-          device(device)
+    cs(comp_allocator allocator, std::vector<descriptor> descriptors,
+       std::string shader_file, VkDeviceSize min_buffer_alignment, VkDevice device)
+        : allocator(allocator), min_buffer_alignment(min_buffer_alignment), device(device)
     {
         std::vector<VkDescriptorType> types;
         std::vector<std::string> names;
@@ -86,7 +84,7 @@ public:
 
 private:
     comp_allocator allocator;
-    VkDeviceSize min_uniform_buffer_offset_alignment;
+    VkDeviceSize min_buffer_alignment;
     VkDevice device;
 
     void write_descriptor_set(std::vector<VkDescriptorType> types,

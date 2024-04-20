@@ -58,7 +58,7 @@ void vk_engine::device_init()
               << vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment
               << std::endl;
 
-    _minUniformBufferOffsetAlignment =
+    _min_buffer_alignment =
         vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment;
 
     /* create vulkan device */

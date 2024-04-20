@@ -23,6 +23,7 @@ public:
     void build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format,
                    VkPipelineLayout *pipeline_layout, VkPipeline *pipeline);
 
-    void build_comp(VkDevice device, VkPipelineLayout *pipeline_layout,
-                    VkPipeline *pipeline);
+    void build_comp(VkDevice device, std::vector<VkDescriptorSetLayout> &layouts,
+                    std::vector<VkPushConstantRange> &push_constants,
+                    VkPipelineLayout *pipeline_layout, VkPipeline *pipeline);
 };

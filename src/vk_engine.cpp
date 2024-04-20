@@ -216,11 +216,9 @@ void vk_engine::pipeline_init()
         };
 
         std::vector<VkPushConstantRange> push_constants = {};
-        comp_pipeline_builder.build_layout(_device, layouts, push_constants,
-                                           &_comp_pipeline_layout);
 
-        comp_pipeline_builder.build_comp(_device, &_comp_pipeline_layout,
-                                         &_comp_pipeline);
+        comp_pipeline_builder.build_comp(_device, layouts, push_constants,
+                                         &_comp_pipeline_layout, &_comp_pipeline);
     }
 }
 
@@ -465,16 +463,6 @@ void vk_engine::run()
         if (state[SDL_SCANCODE_D]) {
             glm::vec3 v = _cam.right * _cam.speed;
             _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
-
-        if (state[SDL_SCANCODE_Q]) {
-            float angle = _cam.sensitivity;
-            _cam.rotate_yaw(angle, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
-
-        if (state[SDL_SCANCODE_E]) {
-            float angle = -_cam.sensitivity;
-            _cam.rotate_yaw(angle, (SDL_GetTicksNS() - _last_frame) / 1000.f);
         }
 
         if (state[SDL_SCANCODE_SPACE]) {
