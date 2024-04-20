@@ -101,7 +101,7 @@ public:
     allocated_img _depth_img;
     allocated_buffer _comp_buffer;
 
-    vk_camera _cam;
+    vk_camera _vk_camera;
 
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);

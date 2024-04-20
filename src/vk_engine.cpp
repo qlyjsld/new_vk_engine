@@ -390,10 +390,8 @@ void vk_engine::draw_nodes(frame *frame)
                                  VK_INDEX_TYPE_UINT16);
 
             render_mat mat;
-            mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
-            mat.proj = glm::perspective(glm::radians(_cam.fov),
-                                        (float)_resolution.width / _resolution.height,
-                                        .01f, 65536.0f);
+            mat.view = _vk_camera.get_view_mat();
+            mat.proj = _vk_camera.get_proj_mat();
             mat.proj[1][1] *= -1;
             mat.model = node->transform_mat;
 
@@ -445,35 +443,25 @@ void vk_engine::run()
     while (!bquit) {
         const uint8_t *state = SDL_GetKeyboardState(NULL);
 
-        if (state[SDL_SCANCODE_W]) {
-            glm::vec3 v = _cam.dir * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
 
-        if (state[SDL_SCANCODE_A]) {
-            glm::vec3 v = -_cam.right * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        if (state[SDL_SCANCODE_W])
+            _vk_camera.w(ms);
 
-        if (state[SDL_SCANCODE_S]) {
-            glm::vec3 v = -_cam.dir * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        if (state[SDL_SCANCODE_A])
+            _vk_camera.a(ms);
 
-        if (state[SDL_SCANCODE_D]) {
-            glm::vec3 v = _cam.right * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        if (state[SDL_SCANCODE_S])
+            _vk_camera.s(ms);
 
-        if (state[SDL_SCANCODE_SPACE]) {
-            glm::vec3 v = _cam.up * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        if (state[SDL_SCANCODE_D])
+            _vk_camera.d(ms);
 
-        if (state[SDL_SCANCODE_LCTRL]) {
-            glm::vec3 v = -_cam.up * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        if (state[SDL_SCANCODE_SPACE])
+            _vk_camera.space(ms);
+
+        if (state[SDL_SCANCODE_LCTRL])
+            _vk_camera.ctrl(ms);
 
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_EVENT_QUIT)

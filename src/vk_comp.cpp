@@ -28,11 +28,10 @@ void comp_allocator::create_new_pool()
 
 VkDescriptorPool comp_allocator::get_pool()
 {
-    if (pools.size())
-        return pools.back();
-    else {
+    if (!pools.size())
         create_new_pool();
-    };
+
+    return pools.back();
 }
 
 void comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,

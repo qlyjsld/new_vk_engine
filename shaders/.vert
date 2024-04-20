@@ -13,15 +13,8 @@ layout (set = 0, binding = 0) uniform readonly RENDER_MAT
     mat4 model;
 } render_mat;
 
-// layout (push_constant) uniform constants
-// {
-//     vec4 data;
-//     mat4 render_mat;
-// } push_constants;
-
 void main()
 {
     gl_Position = render_mat.proj * render_mat.view * render_mat.model * vec4(v_pos, 1.f);
-    // gl_Position = push_constants.render_mat * vec4(v_pos, 1.f);
     out_texcrood = v_texcrood;
 }
