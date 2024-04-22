@@ -11,6 +11,12 @@
 
 typedef std::pair<VkDescriptorType, std::string> descriptor;
 
+struct comp_context {
+    VkFence fence;
+    VkCommandPool cpool;
+    VkCommandBuffer cbuffer;
+};
+
 struct comp_allocator {
 public:
     comp_allocator(VkDevice device, VmaAllocator allocator)
@@ -74,6 +80,8 @@ public:
         load_shader_module(shader_file.data());
     };
 
+    comp_allocator allocator;
+
     VkShaderModule module;
     VkDescriptorSet set;
     VkDescriptorSetLayout layout;
@@ -82,10 +90,14 @@ public:
 
     std::function<void(VkCommandBuffer, cs *cs)> draw;
 
+    static void cc_init(uint32_t queue_index, VkDevice device);
+    static void comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs);
+
 private:
-    comp_allocator allocator;
     VkDeviceSize min_buffer_alignment;
     VkDevice device;
+
+    inline static comp_context cc;
 
     void write_descriptor_set(std::vector<VkDescriptorType> types,
                               std::vector<std::string> names);
@@ -93,3 +105,5 @@ private:
     bool load_shader_module(const char *filename);
     size_t pad_uniform_buffer_size(size_t original_size);
 };
+
+inline static std::vector<cs> css;

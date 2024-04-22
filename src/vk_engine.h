@@ -16,14 +16,14 @@ constexpr int FRAME_OVERLAP = 2;
 struct frame {
     VkFence fence;
     VkSemaphore sumbit_sem, present_sem;
-    VkCommandPool cmd_pool;
-    VkCommandBuffer cmd_buffer;
+    VkCommandPool cpool;
+    VkCommandBuffer cbuffer;
 };
 
 struct upload_context {
     VkFence fence;
-    VkCommandPool cmd_pool;
-    VkCommandBuffer cmd_buffer;
+    VkCommandPool cpool;
+    VkCommandBuffer cbuffer;
 };
 
 struct push_constants {
@@ -73,11 +73,11 @@ public:
     VkDescriptorSet _comp_set;
 
     VkQueue _gfx_queue;
-    uint32_t _gfx_queue_family_index;
+    uint32_t _gfx_index;
     VkQueue _transfer_queue;
-    uint32_t _transfer_queue_family_index;
+    uint32_t _transfer_index;
     VkQueue _comp_queue;
-    uint32_t _comp_queue_family_index;
+    uint32_t _comp_index;
 
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
@@ -108,7 +108,7 @@ public:
 
     void init();
     void skybox_init();
-    void texture_draw_init();
+    void texture_init();
     void cleanup();
     void draw();
     void run();

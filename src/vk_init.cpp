@@ -54,10 +54,6 @@ void vk_engine::device_init()
             .value();
     _physical_device = vkb_physical_device.physical_device;
 
-    std::cout << "minUniformBufferOffsetAlignment "
-              << vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment
-              << std::endl;
-
     _min_buffer_alignment =
         vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment;
 
@@ -70,16 +66,13 @@ void vk_engine::device_init()
 
     /* get queues for commands */
     _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
-    _gfx_queue_family_index =
-        vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+    _gfx_index = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
 
     _transfer_queue = vkb_device.get_queue(vkb::QueueType::transfer).value();
-    _transfer_queue_family_index =
-        vkb_device.get_queue_index(vkb::QueueType::transfer).value();
+    _transfer_index = vkb_device.get_queue_index(vkb::QueueType::transfer).value();
 
     _comp_queue = vkb_device.get_queue(vkb::QueueType::compute).value();
-    _comp_queue_family_index =
-        vkb_device.get_queue_index(vkb::QueueType::compute).value();
+    _comp_index = vkb_device.get_queue_index(vkb::QueueType::compute).value();
 }
 
 void vk_engine::vma_init()
@@ -132,7 +125,8 @@ void vk_engine::swapchain_init()
         [=]() { vmaDestroyImage(_allocator, _depth_img.img, _depth_img.allocation); });
 
     VkImageViewCreateInfo img_view_info = vk_boiler::img_view_create_info(
-        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img, _depth_img.format);
+        VK_IMAGE_ASPECT_DEPTH_BIT, _depth_img.img,
+        VkExtent3D{_resolution.width, _resolution.height, 1}, _depth_img.format);
 
     VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &_depth_img.img_view));
 
@@ -175,36 +169,32 @@ void vk_engine::swapchain_init()
 void vk_engine::command_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
-        VkCommandPoolCreateInfo cmd_pool_info =
-            vk_boiler::cmd_pool_create_info(_gfx_queue_family_index);
+        VkCommandPoolCreateInfo cpool_info = vk_boiler::cpool_create_info(_gfx_index);
 
-        VK_CHECK(
-            vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_frames[i].cmd_pool));
+        VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr, &_frames[i].cpool));
 
         deletion_queue.push_back(
-            [=]() { vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr); });
+            [=]() { vkDestroyCommandPool(_device, _frames[i].cpool, nullptr); });
 
-        VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-            vk_boiler::cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
+        VkCommandBufferAllocateInfo cbuffer_allocate_info =
+            vk_boiler::cbuffer_allocate_info(1, _frames[i].cpool);
 
-        VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
-                                          &_frames[i].cmd_buffer));
+        VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
+                                          &_frames[i].cbuffer));
     }
 
-    VkCommandPoolCreateInfo cmd_pool_info =
-        vk_boiler::cmd_pool_create_info(_transfer_queue_family_index);
+    VkCommandPoolCreateInfo cpool_info = vk_boiler::cpool_create_info(_transfer_index);
 
-    VK_CHECK(
-        vkCreateCommandPool(_device, &cmd_pool_info, nullptr, &_upload_context.cmd_pool));
+    VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr, &_upload_context.cpool));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyCommandPool(_device, _upload_context.cmd_pool, nullptr); });
+        [=]() { vkDestroyCommandPool(_device, _upload_context.cpool, nullptr); });
 
-    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-        vk_boiler::cmd_buffer_allocate_info(1, _upload_context.cmd_pool);
+    VkCommandBufferAllocateInfo cbuffer_allocate_info =
+        vk_boiler::cbuffer_allocate_info(1, _upload_context.cpool);
 
-    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
-                                      &_upload_context.cmd_buffer));
+    VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
+                                      &_upload_context.cbuffer));
 }
 
 void vk_engine::sync_init()

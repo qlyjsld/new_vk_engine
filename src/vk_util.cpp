@@ -8,17 +8,17 @@
 void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
 {
     /* prepare command buffer */
-    VkCommandBufferBeginInfo cmd_buffer_begin_info = vk_boiler::cmd_buffer_begin_info();
+    VkCommandBufferBeginInfo cbuffer_begin_info = vk_boiler::cbuffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(_upload_context.cmd_buffer, &cmd_buffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(_upload_context.cbuffer, &cbuffer_begin_info));
 
-    fs(_upload_context.cmd_buffer);
+    fs(_upload_context.cbuffer);
 
-    VK_CHECK(vkEndCommandBuffer(_upload_context.cmd_buffer));
+    VK_CHECK(vkEndCommandBuffer(_upload_context.cbuffer));
 
     VkSubmitInfo submit_info =
-        vk_boiler::submit_info(&_upload_context.cmd_buffer, nullptr, nullptr, nullptr);
+        vk_boiler::submit_info(&_upload_context.cbuffer, nullptr, nullptr, nullptr);
 
     submit_info.waitSemaphoreCount = 0;
     submit_info.signalSemaphoreCount = 0;
@@ -95,7 +95,7 @@ void vk_engine::create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlag
         [=]() { vmaDestroyImage(_allocator, img->img, img->allocation); });
 
     VkImageViewCreateInfo img_view_info =
-        vk_boiler::img_view_create_info(aspect, img->img, format);
+        vk_boiler::img_view_create_info(aspect, img->img, extent, format);
 
     VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &img->img_view));
 

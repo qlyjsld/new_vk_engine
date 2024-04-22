@@ -336,11 +336,11 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                              _meshes[i].vertex_buffer.allocation);
         });
 
-        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+        immediate_submit([=](VkCommandBuffer cbuffer) {
             VkBufferCopy region = {};
             region.size = mesh->vertices.size() * sizeof(vertex);
-            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, mesh->vertex_buffer.buffer,
-                            1, &region);
+            vkCmdCopyBuffer(cbuffer, staging_buffer.buffer, mesh->vertex_buffer.buffer, 1,
+                            &region);
         });
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
@@ -358,11 +358,11 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->index_buffer);
 
-        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+        immediate_submit([=](VkCommandBuffer cbuffer) {
             VkBufferCopy region = {};
             region.size = mesh->indices.size() * sizeof(uint16_t);
-            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, mesh->index_buffer.buffer,
-                            1, &region);
+            vkCmdCopyBuffer(cbuffer, staging_buffer.buffer, mesh->index_buffer.buffer, 1,
+                            &region);
         });
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
@@ -395,21 +395,21 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0,
                        &mesh->texture_buffer);
 
-            immediate_submit([=](VkCommandBuffer cmd_buffer) {
+            immediate_submit([=](VkCommandBuffer cbuffer) {
                 vk_cmd::vk_img_layout_transition(
-                    cmd_buffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+                    cbuffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
 
                 VkBufferImageCopy region = vk_boiler::buffer_img_copy(extent);
 
-                vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
+                vkCmdCopyBufferToImage(cbuffer, staging_buffer.buffer,
                                        mesh->texture_buffer.img,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-                vk_cmd::vk_img_layout_transition(cmd_buffer, mesh->texture_buffer.img,
+                vk_cmd::vk_img_layout_transition(cbuffer, mesh->texture_buffer.img,
                                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                                 _transfer_queue_family_index);
+                                                 _transfer_index);
             });
 
             vmaDestroyBuffer(_allocator, staging_buffer.buffer,

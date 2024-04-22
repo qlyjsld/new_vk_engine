@@ -74,7 +74,7 @@ void comp_allocator::create_img(VkFormat format, VkExtent3D extent,
         [=]() { vmaDestroyImage(allocator, imgs[name].img, imgs[name].allocation); });
 
     VkImageViewCreateInfo img_view_info =
-        vk_boiler::img_view_create_info(aspect, imgs[name].img, format);
+        vk_boiler::img_view_create_info(aspect, imgs[name].img, extent, format);
 
     VK_CHECK(vkCreateImageView(device, &img_view_info, nullptr, &imgs[name].img_view));
 
@@ -176,4 +176,47 @@ size_t cs::pad_uniform_buffer_size(size_t original_size)
         aligned_size =
             (aligned_size + min_buffer_alignment - 1) & ~(min_buffer_alignment - 1);
     return aligned_size;
+}
+
+void cs::cc_init(uint32_t queue_index, VkDevice device)
+{
+    VkCommandPoolCreateInfo cpool_info = vk_boiler::cpool_create_info(queue_index);
+
+    VK_CHECK(vkCreateCommandPool(device, &cpool_info, nullptr, &cc.cpool));
+
+    deletion_queue.push_back([=]() { vkDestroyCommandPool(device, cc.cpool, nullptr); });
+
+    VkCommandBufferAllocateInfo cbuffer_allocate_info =
+        vk_boiler::cbuffer_allocate_info(1, cc.cpool);
+
+    VK_CHECK(vkAllocateCommandBuffers(device, &cbuffer_allocate_info, &cc.cbuffer));
+
+    VkFenceCreateInfo fence_info = vk_boiler::fence_create_info(false);
+
+    VK_CHECK(vkCreateFence(device, &fence_info, nullptr, &cc.fence));
+
+    deletion_queue.push_back([=]() { vkDestroyFence(device, cc.fence, nullptr); });
+}
+
+void cs::comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs)
+{
+    /* prepare command buffer */
+    VkCommandBufferBeginInfo cbuffer_begin_info = vk_boiler::cbuffer_begin_info();
+
+    /* begin command buffer recording */
+    VK_CHECK(vkBeginCommandBuffer(cc.cbuffer, &cbuffer_begin_info));
+
+    cs->draw(cc.cbuffer, cs);
+
+    VK_CHECK(vkEndCommandBuffer(cc.cbuffer));
+
+    VkSubmitInfo submit_info =
+        vk_boiler::submit_info(&cc.cbuffer, nullptr, nullptr, nullptr);
+
+    submit_info.waitSemaphoreCount = 0;
+    submit_info.signalSemaphoreCount = 0;
+
+    VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, cc.fence));
+    VK_CHECK(vkWaitForFences(device, 1, &cc.fence, VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(device, 1, &cc.fence));
 }
