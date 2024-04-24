@@ -140,7 +140,8 @@ void vk_engine::marching_init()
     struct camera_data {
         float znear;
         float zfar;
-        glm::vec3 pos;
+        glm::vec4 pos;
+        glm::vec4 dir;
     };
 
     allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
@@ -176,7 +177,8 @@ void vk_engine::marching_init()
         camera_data camera_data;
         camera_data.znear = 0.1f;
         camera_data.zfar = 100.f;
-        camera_data.pos = _vk_camera.get_pos();
+        camera_data.pos = glm::vec4(_vk_camera.get_pos(), 1.f);
+        camera_data.dir = glm::vec4(_vk_camera.get_dir(), 1.f);
 
         void *data;
         vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);

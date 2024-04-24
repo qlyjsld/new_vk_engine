@@ -39,6 +39,7 @@ public:
     }
 
     inline glm::vec3 get_pos() { return pos; };
+    inline glm::vec3 get_dir() { return dir; };
 
 private:
     glm::vec3 pos{glm::vec3(0.f)};

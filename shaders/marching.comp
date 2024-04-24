@@ -15,10 +15,19 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
 {
     float znear;
     float zfar;
-    vec3 pos;
+    vec4 pos;
+    vec4 dir;
 } camera;
 
 void main()
 {
-    
+    uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
+    uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
+    vec3 o = vec3(0.f, 0.f, 0.f);
+    vec3 d = vec3(0.f, 0.f, 1.f);
+    vec3 upperleft = d - vec3(extent.value.x / 2, -extent.value.y / 2, 0.f);
+    vec3 r = upperleft + vec3(float(x) / (8 * gl_NumWorkGroups.x) * extent.value.x,
+                            -(float(y) / (8 * gl_NumWorkGroups.y) * extent.value.y), 0.f);
+    vec4 color = vec4(r, 1.f);
+    imageStore(out_frame, ivec2(x, y), color);
 }
