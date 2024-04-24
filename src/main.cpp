@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     engine.init();
     engine.skybox_init();
     engine.texture_init();
+    engine.marching_init();
     engine.run();
     engine.cleanup();
     return 0;
@@ -46,8 +47,8 @@ void vk_engine::skybox_init()
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
     };
 
-    cs skybox(allocator, descriptors, "../shaders/skybox.comp.spv", _min_buffer_alignment,
-              _device);
+    cs skybox(allocator, descriptors, "../shaders/skybox.comp.spv",
+              _min_buffer_alignment);
 
     PipelineBuilder pb = {};
     pb._shader_stage_infos.push_back(
@@ -91,7 +92,7 @@ void vk_engine::texture_init()
     };
 
     cs cloudtex(allocator, descriptors, "../shaders/cloudtex.comp.spv",
-                _min_buffer_alignment, _device);
+                _min_buffer_alignment);
 
     /* start building pipeline using info from struct cs and comp_allocator */
     PipelineBuilder pb = {};
@@ -130,6 +131,72 @@ void vk_engine::texture_init()
 
     cs::cc_init(_comp_index, _device);
     cs::comp_immediate_submit(_device, _comp_queue, &cloudtex);
+}
+
+void vk_engine::marching_init()
+{
+    comp_allocator allocator(_device, _allocator);
+
+    struct camera_data {
+        float znear;
+        float zfar;
+        glm::vec3 pos;
+    };
+
+    allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
+                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
+
+    std::vector<descriptor> descriptors = {
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloud"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
+    };
+
+    cs marching(allocator, descriptors, "../shaders/marching.comp.spv",
+                _min_buffer_alignment);
+
+    PipelineBuilder pb = {};
+    pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
+        VK_SHADER_STAGE_COMPUTE_BIT, marching.module));
+
+    std::vector<VkDescriptorSetLayout> layouts = {
+        marching.layout,
+    };
+
+    std::vector<VkPushConstantRange> push_constants = {};
+
+    pb.build_comp(_device, layouts, push_constants, &marching.pipeline_layout,
+                  &marching.pipeline);
+
+    marching.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
+
+        camera_data camera_data;
+        camera_data.znear = 0.1f;
+        camera_data.zfar = 100.f;
+        camera_data.pos = _vk_camera.get_pos();
+
+        void *data;
+        vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
+        std::memcpy(data, &camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
+        vmaUnmapMemory(cs->allocator.allocator,
+                       cs->allocator.get_buffer("camera").allocation);
+
+        std::vector<uint32_t> doffsets = {
+            0,
+            0,
+        };
+
+        vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
+                                doffsets.data());
+
+        vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
+    };
+
+    css.push_back(marching);
 }
 
 void vk_engine::draw_comp(frame *frame)

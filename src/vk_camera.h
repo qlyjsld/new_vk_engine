@@ -38,6 +38,8 @@ public:
         return glm::perspective(glm::radians(fov), aspect, .1f, 100.0f);
     }
 
+    inline glm::vec3 get_pos() { return pos; };
+
 private:
     glm::vec3 pos{glm::vec3(0.f)};
     glm::vec3 dir{glm::vec3(0.f, 0.f, -1.f)};

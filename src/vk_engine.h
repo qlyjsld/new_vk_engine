@@ -109,6 +109,7 @@ public:
     void init();
     void skybox_init();
     void texture_init();
+    void marching_init();
     void cleanup();
     void draw();
     void run();

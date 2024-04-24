@@ -13,9 +13,11 @@ void vk_engine::device_init()
     vkb::InstanceBuilder vkb_instance_builder;
     vkb_instance_builder.set_app_name("vk_engine")
         .require_api_version(VKB_VK_API_VERSION_1_3)
+#ifndef NDEBUG
         .request_validation_layers(true)
-        .use_default_debug_messenger();
-
+        .use_default_debug_messenger()
+#endif
+        ;
     auto vkb_instance_build_ret = vkb_instance_builder.build();
 
     if (!vkb_instance_build_ret) {

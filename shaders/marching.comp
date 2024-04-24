@@ -1,0 +1,24 @@
+#version 460
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout (set = 0, binding = 0, rgba16) uniform writeonly image2D out_frame;
+
+layout (set = 0, binding = 1, rgba16) uniform readonly image3D cloudtex;
+
+layout (set = 0, binding = 2) uniform readonly EXTENT
+{
+    vec2 value;
+} extent;
+
+layout (set = 0, binding = 3) uniform readonly CAMERA
+{
+    float znear;
+    float zfar;
+    vec3 pos;
+} camera;
+
+void main()
+{
+    
+}

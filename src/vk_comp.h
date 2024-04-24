@@ -19,11 +19,11 @@ struct comp_context {
 
 struct comp_allocator {
 public:
+    VkDevice device;
+    VmaAllocator allocator;
+
     comp_allocator(VkDevice device, VmaAllocator allocator)
-        : device(device), allocator(allocator)
-    {
-        create_new_pool();
-    };
+        : device(device), allocator(allocator){};
 
     void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                        VmaAllocationCreateFlags flags, std::string name);
@@ -47,9 +47,6 @@ public:
                                  VkDescriptorSetLayout *layout, VkDescriptorSet *set);
 
 private:
-    VkDevice device;
-    VmaAllocator allocator;
-
     inline static std::vector<VkDescriptorPool> pools;
     inline static std::vector<VkDescriptorPool> full_pools;
     inline static std::unordered_map<std::string, allocated_buffer> buffers;
@@ -62,9 +59,11 @@ private:
 struct cs {
 public:
     cs(comp_allocator allocator, std::vector<descriptor> descriptors,
-       std::string shader_file, VkDeviceSize min_buffer_alignment, VkDevice device)
-        : allocator(allocator), min_buffer_alignment(min_buffer_alignment), device(device)
+       std::string shader_file, VkDeviceSize min_buffer_alignment)
+        : allocator(allocator), min_buffer_alignment(min_buffer_alignment)
     {
+        device = allocator.device;
+
         std::vector<VkDescriptorType> types;
         std::vector<std::string> names;
 
