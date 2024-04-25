@@ -13,21 +13,59 @@ layout (set = 0, binding = 2) uniform readonly EXTENT
 
 layout (set = 0, binding = 3) uniform readonly CAMERA
 {
-    float znear;
-    float zfar;
-    vec4 pos;
-    vec4 dir;
+    vec3 pos;
+    vec3 dir;
+    vec3 up;
+    float fov;
 } camera;
+
+struct sphere {
+    vec3 centre;
+    float radius;
+};
+
+float hit_sphere(sphere s, vec3 o, vec3 r)
+{
+    float a = dot(r, r);
+    float b = -2 * dot(r, s.centre - o);
+    float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant >= 0)
+            return (-b - sqrt(discriminant)) / 2 * a;
+
+    return -1.f;
+}
 
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    vec3 o = vec3(0.f, 0.f, 0.f);
-    vec3 d = vec3(0.f, 0.f, 1.f);
-    vec3 upperleft = d - vec3(extent.value.x / 2, -extent.value.y / 2, 0.f);
-    vec3 r = upperleft + vec3(float(x) / (8 * gl_NumWorkGroups.x) * extent.value.x,
-                            -(float(y) / (8 * gl_NumWorkGroups.y) * extent.value.y), 0.f);
-    vec4 color = vec4(r, 1.f);
-    imageStore(out_frame, ivec2(x, y), color);
+
+    vec2 res = vec2(8 * gl_NumWorkGroups.x, 8 * gl_NumWorkGroups.y);
+
+    vec3 o = camera.pos;
+    vec3 d = camera.dir;
+
+    vec3 left = normalize(cross(camera.up, d));
+    vec3 up = normalize(cross(d, left));
+
+    float ux = float(x) / res.x * extent.value.x;
+    float uy = float(y) / res.y * extent.value.y;
+
+    float h = tan(radians(camera.fov) / 2);
+    vec3 upperleft = (o + res.y / 2 / h * d) + left * extent.value.x / 2 + up * extent.value.y / 2;
+    vec3 r = upperleft - left * ux - up * uy - o;
+
+    sphere s;
+    s.centre = vec3(0.f, 0.f, -3.f);
+    s.radius = 1.f;
+
+    float t = hit_sphere(s, o, r);
+
+    if (t >= 0) {
+        vec4 color = vec4(normalize(o + t * r - s.centre), 1.f);
+        color = .5f * (color + vec4(1.f));
+        imageStore(out_frame, ivec2(x, y), color);
+    }
 }

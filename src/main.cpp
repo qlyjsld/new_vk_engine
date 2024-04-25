@@ -138,10 +138,10 @@ void vk_engine::marching_init()
     comp_allocator allocator(_device, _allocator);
 
     struct camera_data {
-        float znear;
-        float zfar;
-        glm::vec4 pos;
-        glm::vec4 dir;
+        alignas(16) glm::vec3 pos;
+        alignas(16) glm::vec3 dir;
+        alignas(16) glm::vec3 up;
+        alignas(4) float fov;
     };
 
     allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
@@ -175,10 +175,10 @@ void vk_engine::marching_init()
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
         camera_data camera_data;
-        camera_data.znear = 0.1f;
-        camera_data.zfar = 100.f;
-        camera_data.pos = glm::vec4(_vk_camera.get_pos(), 1.f);
-        camera_data.dir = glm::vec4(_vk_camera.get_dir(), 1.f);
+        camera_data.pos = _vk_camera.get_pos();
+        camera_data.dir = _vk_camera.get_dir();
+        camera_data.up = _vk_camera.get_up();
+        camera_data.fov = _vk_camera.get_fov();
 
         void *data;
         vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
