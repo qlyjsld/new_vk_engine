@@ -14,7 +14,8 @@ int main(int argc, char *argv[])
     engine.init();
     engine.skybox_init();
     engine.texture_init();
-    engine.marching_init();
+    engine.sphere_init();
+    engine.cloud_init();
     engine.run();
     engine.cleanup();
     return 0;
@@ -133,7 +134,7 @@ void vk_engine::texture_init()
     cs::comp_immediate_submit(_device, _comp_queue, &cloudtex);
 }
 
-void vk_engine::marching_init()
+void vk_engine::sphere_init()
 {
     comp_allocator allocator(_device, _allocator);
 
@@ -150,28 +151,27 @@ void vk_engine::marching_init()
 
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloud"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
     };
 
-    cs marching(allocator, descriptors, "../shaders/marching.comp.spv",
-                _min_buffer_alignment);
+    cs sphere(allocator, descriptors, "../shaders/sphere.comp.spv",
+              _min_buffer_alignment);
 
     PipelineBuilder pb = {};
-    pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
-        VK_SHADER_STAGE_COMPUTE_BIT, marching.module));
+    pb._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, sphere.module));
 
     std::vector<VkDescriptorSetLayout> layouts = {
-        marching.layout,
+        sphere.layout,
     };
 
     std::vector<VkPushConstantRange> push_constants = {};
 
-    pb.build_comp(_device, layouts, push_constants, &marching.pipeline_layout,
-                  &marching.pipeline);
+    pb.build_comp(_device, layouts, push_constants, &sphere.pipeline_layout,
+                  &sphere.pipeline);
 
-    marching.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+    sphere.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
         camera_data camera_data;
@@ -198,8 +198,10 @@ void vk_engine::marching_init()
         vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
 
-    css.push_back(marching);
+    css.push_back(sphere);
 }
+
+void vk_engine::cloud_init() {}
 
 void vk_engine::draw_comp(frame *frame)
 {
