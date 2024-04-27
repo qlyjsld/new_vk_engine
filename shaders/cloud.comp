@@ -19,24 +19,6 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
     float fov;
 } camera;
 
-struct sphere {
-    vec3 centre;
-    float radius;
-};
-
-float hit_sphere(sphere s, vec3 o, vec3 r)
-{
-    float a = dot(r, r);
-    float b = -2 * dot(r, s.centre - o);
-    float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
-    float discriminant = b * b - 4 * a * c;
-
-    if (discriminant >= 0)
-            return (-b - sqrt(discriminant)) / 2 * a;
-
-    return -1.f;
-}
-
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
@@ -57,15 +39,6 @@ void main()
     vec3 upperleft = (o + res.y / 2 / h * d) + left * extent.value.x / 2 + up * extent.value.y / 2;
     vec3 r = upperleft - left * ux - up * uy - o;
 
-    sphere s;
-    s.centre = vec3(0.f, 0.f, -3.f);
-    s.radius = 1.f;
-
-    float t = hit_sphere(s, o, r);
-
-    if (t >= 0) {
-        vec4 color = vec4(normalize(o + t * r - s.centre), 1.f);
-        color = .5f * (color + vec4(1.f));
-        imageStore(out_frame, ivec2(x, y), color);
-    }
+    vec4 color = vec4(1.f);
+    // imageStore(out_frame, ivec2(x, y), color);
 }

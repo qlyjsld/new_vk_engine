@@ -8,6 +8,13 @@
 #include "vk_pipeline.h"
 #include "vk_type.h"
 
+struct camera_data {
+    alignas(16) glm::vec3 pos;
+    alignas(16) glm::vec3 dir;
+    alignas(16) glm::vec3 up;
+    alignas(4) float fov;
+};
+
 int main(int argc, char *argv[])
 {
     vk_engine engine = {};
@@ -138,13 +145,6 @@ void vk_engine::sphere_init()
 {
     comp_allocator allocator(_device, _allocator);
 
-    struct camera_data {
-        alignas(16) glm::vec3 pos;
-        alignas(16) glm::vec3 dir;
-        alignas(16) glm::vec3 up;
-        alignas(4) float fov;
-    };
-
     allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
@@ -201,7 +201,61 @@ void vk_engine::sphere_init()
     css.push_back(sphere);
 }
 
-void vk_engine::cloud_init() {}
+void vk_engine::cloud_init()
+{
+    comp_allocator allocator(_device, _allocator);
+
+    std::vector<descriptor> descriptors = {
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloud"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
+    };
+
+    cs cloud(allocator, descriptors, "../shaders/cloud.comp.spv", _min_buffer_alignment);
+
+    PipelineBuilder pb = {};
+    pb._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, cloud.module));
+
+    std::vector<VkDescriptorSetLayout> layouts = {
+        cloud.layout,
+    };
+
+    std::vector<VkPushConstantRange> push_constants = {};
+
+    pb.build_comp(_device, layouts, push_constants, &cloud.pipeline_layout,
+                  &cloud.pipeline);
+
+    cloud.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
+
+        camera_data camera_data;
+        camera_data.pos = _vk_camera.get_pos();
+        camera_data.dir = _vk_camera.get_dir();
+        camera_data.up = _vk_camera.get_up();
+        camera_data.fov = _vk_camera.get_fov();
+
+        void *data;
+        vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
+        std::memcpy(data, &camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
+        vmaUnmapMemory(cs->allocator.allocator,
+                       cs->allocator.get_buffer("camera").allocation);
+
+        std::vector<uint32_t> doffsets = {
+            0,
+            0,
+        };
+
+        vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
+                                doffsets.data());
+
+        vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
+    };
+
+    css.push_back(cloud);
+}
 
 void vk_engine::draw_comp(frame *frame)
 {
