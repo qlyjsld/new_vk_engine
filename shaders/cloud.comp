@@ -19,6 +19,18 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
     float fov;
 } camera;
 
+float sdfsphere(vec3 p, float r)
+{
+    return length(p) - r;
+}
+
+float map(vec3 p)
+{
+    vec3 sphere = vec3(0.f, 0.f, 3.f);
+    float s = sdfsphere(p - sphere, 1.f);
+    return s;
+}
+
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
@@ -37,8 +49,22 @@ void main()
 
     float h = tan(radians(camera.fov) / 2);
     vec3 upperleft = (o + res.y / 2 / h * d) + left * extent.value.x / 2 + up * extent.value.y / 2;
-    vec3 r = upperleft - left * ux - up * uy - o;
+    vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    vec4 color = vec4(1.f);
-    // imageStore(out_frame, ivec2(x, y), color);
+    float t = 0.f; // distance traveled
+    vec3 p = o;
+
+    // marching
+    for (int i = 0; i < 128; ++i)
+    {
+        float s = map(o + t * r);
+        t += s;
+
+        if (s < 0.01f) {
+            vec4 color = vec4(t * 0.2f);
+            imageStore(out_frame, ivec2(x, y), color);
+        }
+
+        if (t > 100.f) break;
+    }
 }
