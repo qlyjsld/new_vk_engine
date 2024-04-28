@@ -52,7 +52,6 @@ void main()
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
     float t = 0.f; // distance traveled
-    vec3 p = o;
 
     // marching
     for (int i = 0; i < 128; ++i)
