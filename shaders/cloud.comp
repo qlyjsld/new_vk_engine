@@ -24,10 +24,19 @@ float sdfsphere(vec3 p, float r)
     return length(p) - r;
 }
 
+float sdfbox(vec3 p, vec3 d)
+{
+    return length(p - min(max(vec3(0), p), d));
+}
+
 float map(vec3 p)
 {
     vec3 sphere = vec3(0.f, 0.f, 3.f);
     float s = sdfsphere(p - sphere, 1.f);
+
+    vec3 box = vec3(3.f, 0.f, 0.f);
+    s = min(sdfbox(p - box, vec3(1.f, 1.f, 1.f)), s);
+
     return s;
 }
 
