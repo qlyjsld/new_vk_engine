@@ -35,7 +35,7 @@ public:
 
     inline glm::mat4 get_proj_mat()
     {
-        return glm::perspective(glm::radians(fov), aspect, .1f, 100.0f);
+        return glm::perspective(glm::radians(fov), aspect, .01f, 100.f);
     }
 
     inline glm::vec3 get_pos() { return pos; };

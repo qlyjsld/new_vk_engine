@@ -2,7 +2,7 @@
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout (set = 0, binding = 0, rgba16) uniform writeonly image2D out_frame;
+layout (set = 0, binding = 0, rgba16) uniform image2D out_frame;
 
 layout (set = 0, binding = 1, rgba16) uniform readonly image3D cloudtex;
 
@@ -35,9 +35,27 @@ float map(vec3 p)
     float s = sdfsphere(p - sphere, 1.f);
 
     vec3 box = vec3(3.f, 0.f, 0.f);
-    s = min(sdfbox(p - box, vec3(1.f, 1.f, 1.f)), s);
+    s = min(sdfbox(p - box, vec3(3.f, 3.f, 3.f)), s);
 
     return s;
+}
+
+struct sphere {
+    vec3 centre;
+    float radius;
+};
+
+vec2 hit_sphere(sphere s, vec3 o, vec3 r)
+{
+    float a = dot(r, r);
+    float b = -2 * dot(r, s.centre - o);
+    float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant > 0)
+            return vec2((-b - sqrt(discriminant)) / 2 * a, (-b + sqrt(discriminant)) / 2 * a);
+
+    return vec2(-1.f);
 }
 
 void main()
@@ -60,19 +78,52 @@ void main()
     vec3 upperleft = (o + res.y / 2 / h * d) + left * extent.value.x / 2 + up * extent.value.y / 2;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    float t = 0.f; // distance traveled
+    vec4 background = imageLoad(out_frame, ivec2(x, y));
 
-    // marching
-    for (int i = 0; i < 128; ++i)
+    sphere sph;
+    sph.centre = vec3(0.f, 0.f, 3.f);
+    sph.radius = 1.f;
+
+    // intersect
+    vec2 t = hit_sphere(sph, o, r);
+
+    if (t.x >= 0)
     {
-        float s = map(o + t * r);
-        t += s;
+        float sigma_a = 1.3f; // absorption coefficient
+        float sigma_s = 0.3f; // scattering coefficient
+        float transmittance = 1.f;
+        float step = 0.03f;
+        uint steps = uint((t.y - t.x) / step);
+        vec3 sun_color = vec3(1.f);
+        vec3 color = vec3(0.f);
 
-        if (s < 0.01f) {
-            vec4 color = vec4(t * 0.2f);
-            imageStore(out_frame, ivec2(x, y), color);
+        for (uint i = 0; i < steps; ++i)
+        {
+            vec3 p = o + t.x * r;
+            vec2 lt = hit_sphere(sph, vec3(0.f, 9.f, 0.f), normalize(p - vec3(0.f, 9.f, 0.f)));
+            float s = length(p - vec3(0.f, 9.f, 0.f)) - lt.x;
+            vec3 li = exp(-s * (sigma_a + sigma_s)) * sun_color * step;
+            transmittance *= exp(-step * (sigma_a + sigma_s));
+            color += li * transmittance;
+            t += step;
         }
 
-        if (t > 100.f) break;
+        color += vec3(background) * transmittance;
+        imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
     }
+
+    // marching
+    // float t = 0.f; // distance traveled
+    // for (int i = 0; i < 128; ++i)
+    // {
+    //     float s = map(o + t * r);
+    //     t += s;
+
+    //     if (s < 0.01f) {
+    //         vec4 color = vec4(t * 0.2f);
+    //         imageStore(out_frame, ivec2(x, y), color);
+    //     }
+
+    //     if (t > 100.f) break;
+    // }
 }
