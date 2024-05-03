@@ -63,21 +63,21 @@ float grad(uint h, vec3 v)
 {
     switch(h & 7) {
     case 0:
-        return dot(v, vec3(0.707f, 0.707f, 0.707f));
+        return dot(v, vec3(.707f, .707f, .707f));
     case 1:
-        return dot(v, vec3(-0.707f, 0.707f, 0.707f));
+        return dot(v, vec3(-.707f, .707f, .707f));
     case 2:
-        return dot(v, vec3(0.707f, -0.707f, 0.707f));
+        return dot(v, vec3(.707f, -.707f, .707f));
     case 3:
-        return dot(v, vec3(-0.707f, -0.707f, 0.707f));
+        return dot(v, vec3(-.707f, -.707f, .707f));
     case 4:
-        return dot(v, vec3(0.707f, 0.707f, -0.707f));
+        return dot(v, vec3(.707f, .707f, -.707f));
     case 5:
-        return dot(v, vec3(-0.707f, 0.707f, -0.707f));
+        return dot(v, vec3(-.707f, .707f, -.707f));
     case 6:
-        return dot(v, vec3(0.707f, -0.707f, -0.707f));
+        return dot(v, vec3(.707f, -.707f, -.707f));
     case 7:
-        return dot(v, vec3(-0.707f, -0.707f, -0.707f));
+        return dot(v, vec3(-.707f, -.707f, -.707f));
     }
 }
 

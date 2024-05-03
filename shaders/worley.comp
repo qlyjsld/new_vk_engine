@@ -67,13 +67,13 @@ void main()
     float ux = x / extent.value.x * infreq;
     float uy = y / extent.value.x * infreq;
     // vec2 q = vec2(fbm(ux, uy, octaves, h), fbm(ux, uy, octaves, h));
-    // vec2 r = vec2(fbm(ux + 3.f * q.x + -0.3f * u_time.value, uy + 3.f * q.y + -0.3f * u_time.value, octaves, h),
-    //             fbm(ux + 3.f * q.x + 0.9f * u_time.value, uy + 3.f * q.y + 0.9f * u_time.value, octaves, h));
-    // float p = fbm(ux + 0.3f * r.x + 0.3f * u_time.value, uy + 0.3f * r.y + 0.3f * u_time.value, octaves, h);
+    // vec2 r = vec2(fbm(ux + 3.f * q.x + -.3f * u_time.value, uy + 3.f * q.y + -.3f * u_time.value, octaves, h),
+    //             fbm(ux + 3.f * q.x + .9f * u_time.value, uy + 3.f * q.y + .9f * u_time.value, octaves, h));
+    // float p = fbm(ux + .3f * r.x + .3f * u_time.value, uy + .3f * r.y + .3f * u_time.value, octaves, h);
     // vec4 color = vec4(p);
-    // color = mix(color, vec4(0.128f, 0.625f, 0.995f, 1.f), vec4(0.003f, 0.675f, 0.642f, 1.f));
-    // color = mix(color, vec4(0.996f, 0.154f, 0.129f, 1.f), vec4(0.3f, 0.4f, 0.6f, 1.f));
-    // color *= p * p * p * p * p * 0.01f + .3f * p * p + .3f * p;
+    // color = mix(color, vec4(.128f, .625f, .995f, 1.f), vec4(.003f, .675f, .642f, 1.f));
+    // color = mix(color, vec4(.996f, .154f, .129f, 1.f), vec4(.3f, .4f, .6f, 1.f));
+    // color *= p * p * p * p * p * .01f + .3f * p * p + .3f * p;
     vec4 color = vec4(fbm(ux, uy, octaves, h));
 
     imageStore(out_frame, ivec2(x, y), color);

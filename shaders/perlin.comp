@@ -63,13 +63,13 @@ float grad(uint h, vec2 v)
 {
     switch(h & 3) {
     case 0:
-        return dot(v, vec2(0.707f, 0.707f));
+        return dot(v, vec2(.707f, .707f));
     case 1:
-        return dot(v, vec2(0.707f, -0.707f));
+        return dot(v, vec2(.707f, -.707f));
     case 2:
-        return dot(v, vec2(-0.707f, 0.707f));
+        return dot(v, vec2(-.707f, .707f));
     case 3:
-        return dot(v, vec2(-0.707f, -0.707f));
+        return dot(v, vec2(-.707f, -.707f));
     }
 }
 
@@ -120,12 +120,12 @@ void main()
     float ux = x / extent.value.x * infreq;
     float uy = y / extent.value.x * infreq;
     // vec2 q = vec2(fbm(ux, uy, octaves, h), fbm(ux, uy, octaves, h));
-    // vec2 r = vec2(fbm(ux + 3.f * q.x + -0.3f * u_time.value, uy + 3.f * q.y + -0.3f * u_time.value, octaves, h),
-    //             fbm(ux + 3.f * q.x + 0.9f * u_time.value, uy + 3.f * q.y + 0.9f * u_time.value, octaves, h));
-    // float p = fbm(ux + 0.3f * r.x + 0.3f * u_time.value, uy + 0.3f * r.y + 0.3f * u_time.value, octaves, h);
+    // vec2 r = vec2(fbm(ux + 3.f * q.x + -.3f * u_time.value, uy + 3.f * q.y + -.3f * u_time.value, octaves, h),
+    //             fbm(ux + 3.f * q.x + .9f * u_time.value, uy + 3.f * q.y + .9f * u_time.value, octaves, h));
+    // float p = fbm(ux + .3f * r.x + .3f * u_time.value, uy + .3f * r.y + .3f * u_time.value, octaves, h);
     // vec4 color = vec4(p);
-    // color = mix(color, vec4(0.328f, 0.625f, 0.695f, 1.f), vec4(0.303f, 0.675f, 0.642f, 1.f));
-    // color = mix(color, vec4(0.696f, 0.654f, 0.329f, 1.f), vec4(clamp(length(q.x), 0.f, 1.f)));
+    // color = mix(color, vec4(.328f, .625f, .695f, 1.f), vec4(.303f, .675f, .642f, 1.f));
+    // color = mix(color, vec4(.696f, .654f, .329f, 1.f), vec4(clamp(length(q.x), 0.f, 1.f)));
     // color *= p * p * p + .6f * p * p + .5f * p;
     vec4 color = vec4(fbm(ux, uy, octaves, h));
 
