@@ -230,8 +230,8 @@ void vk_engine::draw()
     VK_CHECK(vkResetFences(_device, 1, &frame->fence));
 
     /* wait and acquire the next frame */
-    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, frame->present_sem,
-                                   VK_NULL_HANDLE, &_img_index));
+    vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, frame->present_sem,
+                          VK_NULL_HANDLE, &_img_index);
 
     /* prepare command buffer and dynamic rendering functions */
     VkCommandBufferBeginInfo cbuffer_begin_info = vk_boiler::cbuffer_begin_info();
@@ -359,7 +359,7 @@ void vk_engine::draw()
     VkPresentInfoKHR present_info =
         vk_boiler::present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
 
-    VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
+    vkQueuePresentKHR(_gfx_queue, &present_info);
 
     _last_frame = SDL_GetTicksNS();
     _frame_number++;

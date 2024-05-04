@@ -85,7 +85,7 @@ float perlin_noise(float x, float y, float z)
 {
     uint ix = uint(floor(x)) & 255;
     uint iy = uint(floor(y)) & 255;
-    uint iz = uint(floor(y)) & 255;
+    uint iz = uint(floor(z)) & 255;
 
     x -= floor(x);
     y -= floor(y);
@@ -122,34 +122,37 @@ float perlin_noise(float x, float y, float z)
     return lerp(alerp, blerp, w);
 }
 
-float dist (vec2 a, vec2 b)
+float dist (vec3 a, vec3 b)
 {
-    return sqrt((b.y - a.y) * (b.y - a.y) + (b.x - a.x) * (b.x - a.x));
+    return sqrt((b.z - a.z) * (b.z - a.z) + (b.y - a.y) * (b.y - a.y) + (b.x - a.x) * (b.x - a.x));
 }
 
-vec2 random2f(vec2 st)
+vec3 random3f(vec3 st)
 {
-    st = vec2(dot(st, vec2(127.1f, 311.7f)),
-            dot(st, vec2(269.5f, 183.3f)));
+    st = vec3(dot(st, vec3(127.1f, 311.7f, 256.1f)),
+            dot(st, vec3(269.5f, 183.3f, 241.3f)),
+            dot(st, vec3(246.2f, 225.6f, 296.7f)));
     return fract(sin(st) * 43758.5453123f);
 }
 
-// float worley_noise(float x, float y)
-// {
-//     int ix = int(floor(x)) - 1;
-//     int iy = int(floor(y)) - 1;
+float worley_noise(float x, float y, float z)
+{
+    int ix = int(floor(x)) - 1;
+    int iy = int(floor(y)) - 1;
+    int iz = int(floor(z)) - 1;
 
-//     float t = 1.f;
+    float t = 1.f;
 
-//     for (uint i = 0; i < 3; ++i)
-//         for (uint j = 0; j < 3; ++j) {
-//             vec2 r = random2f(vec2(ix + i, iy + j));
-//             r += vec2(i, j);
-//             t = min(t, dist(vec2(x - ix, y - iy), r));
-//         }
+    for (uint i = 0; i < 3; ++i)
+        for (uint j = 0; j < 3; ++j)
+            for (uint k = 0; k < 3; ++k) {
+                vec3 r = random3f(vec3(ix + i, iy + j, iz + k));
+                r += vec3(i, j, k);
+                t = min(t, dist(vec3(x - ix, y - iy, z - iz), r));
+            }
     
-//     return 1.f - t;
-// }
+    return 1.f - t;
+}
 
 float fbm(float x, float y, float z, uint octaves, float H)
 {
@@ -160,11 +163,11 @@ float fbm(float x, float y, float z, uint octaves, float H)
         t += a * perlin_noise(f * x, f * y, f * z);
     }
 
-    // for (uint o = 0; o < octaves; ++o) {
-    //     float f = pow(2.f, o);
-    //     float a = pow(f, -H);
-    //     t += a * (worley_noise(f * x, f * y, f * z) * 2.f - 1.f);
-    // }
+    for (uint o = 0; o < octaves; ++o) {
+        float f = pow(2.f, o);
+        float a = pow(f, -H);
+        t += a * (worley_noise(f * x, f * y, f * z) * 2.f - 1.f);
+    }
 
     return (t + 1.f) / 2.f;
 }

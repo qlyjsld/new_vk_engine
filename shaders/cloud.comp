@@ -21,7 +21,7 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
 
 float rand(float x)
 {
-    return fract(sin(x) * 3.40282e+038);
+    return fract(sin(x) * 100000.f) * .3f;
 }
 
 float sdfsphere(vec3 p, float r)
@@ -132,45 +132,11 @@ void main()
 
     box box;
     box.centre = vec3(3.f, 0.f, 0.f);
-    box.size = vec3(2.f);
+    box.size = vec3(3.f);
 
     // intersect
     vec2 t = hit_sphere(sphere, o, r);
-
-    // in sphere volume marching
-    if (t.x >= 0)
-    {
-        float sigma_a = .1f; // absorption coefficient
-        float sigma_s = .9f; // scattering coefficient
-        float density = 1.f;
-        float transmittance = 1.f;
-        float step = .03f;
-        uint steps = uint((t.y - t.x) / step);
-        vec3 sun_color = vec3(.53f, .81f, .98f);
-        vec3 sun_pos = vec3(0.f, 9.f, 0.f);
-        vec3 color = vec3(0.f);
-
-        for (uint i = 0; i < steps; ++i)
-        {
-            vec3 p = o + t.x * r;
-            // find light source to p in volume
-            vec3 ld = normalize(p - sun_pos);
-            vec2 lt = hit_sphere(sphere, sun_pos, ld);
-            float s = length(p - sun_pos) - lt.x;
-            // absorption and out-scattering from light source to p
-            vec3 li = exp(-s * (sigma_a + sigma_s)) * sun_color * step;
-            transmittance *= exp(-step * (sigma_a + sigma_s) * density);
-            // in-scattering
-            color += li * sigma_s * phase(.5f, dot(-ld, r)) * density * transmittance;
-            t += step + rand(t.y);
-            if (transmittance < (1e-3 + rand(t.y))) break;
-        }
-
-        color += vec3(background) * transmittance;
-        imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
-    }
-
-    t = hit_box(box, o, r);
+    // vec2 t = hit_box(box, o, r);
 
     // in box volume marching
     if (t.x >= 0)
@@ -188,9 +154,11 @@ void main()
         for (uint i = 0; i < steps; ++i)
         {
             vec3 p = o + t.x * r;
+            density = imageLoad(cloudtex, ivec3(uint(floor(p)) & 255)).x;
             // find light source to p in volume
             vec3 ld = normalize(p - sun_pos);
-            vec2 lt = hit_box(box, sun_pos, ld);
+            vec2 lt = hit_sphere(sphere, sun_pos, ld);
+            // vec2 lt = hit_box(box, sun_pos, ld);
             float s = length(p - sun_pos) - lt.x;
             // absorption and out-scattering from light source to p
             vec3 li = exp(-s * (sigma_a + sigma_s)) * sun_color * step;

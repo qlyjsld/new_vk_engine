@@ -7,6 +7,7 @@
 
 #include <vk_mem_alloc.h>
 
+#ifndef NDEBUG
 #define VK_CHECK(x)                                                                      \
     do {                                                                                 \
         VkResult err = x;                                                                \
@@ -15,6 +16,10 @@
             abort();                                                                     \
         }                                                                                \
     } while (0)
+
+#else
+#define VK_CHECK(x) x
+#endif
 
 struct allocated_buffer {
     VkBuffer buffer;
