@@ -39,8 +39,8 @@ float map(vec3 p)
     vec3 sphere = vec3(0.f, 0.f, 3.f);
     float s = sdfsphere(p - sphere, 1.f);
 
-    vec3 box = vec3(3.f, 0.f, 0.f);
-    s = min(sdfbox(p - box, vec3(3.f, 3.f, 3.f)), s);
+    vec3 box = vec3(-4.f, -1.f, -1.f);
+    s = min(sdfbox(p - box, vec3(2.f)), s);
 
     return s;
 }
@@ -61,6 +61,41 @@ vec2 hit_sphere(sphere s, vec3 o, vec3 r)
             return vec2((-b - sqrt(discriminant)) / 2 * a, (-b + sqrt(discriminant)) / 2 * a);
 
     return vec2(-1.f);
+}
+
+struct box {
+    vec3 centre;
+    vec3 size;
+};
+
+vec2 hit_box(box b, vec3 o, vec3 r)
+{
+    vec3 bmin = b.centre - b.size * .5f;
+    vec3 bmax = b.centre + b.size * .5f;
+
+    float tmin = (bmin.x - o.x) / r.x;
+    float tmax = (bmax.x - o.x) / r.x;
+
+    if (tmin > tmax) { float dummy = tmin; tmin = tmax; tmax = dummy; }
+
+    float tymin = (bmin.y - o.y) / r.y;
+    float tymax = (bmax.y - o.y) / r.y;
+
+    if (tymin > tymax) { float dummy = tymin; tymin = tymax; tymax = dummy; }
+
+    if ((tmin > tymax) || (tymin > tmax)) return vec2(-1.f);
+
+    tmin = max(tmin, tymin);
+    tmax = min(tmax, tymax);
+
+    float tzmin = (bmin.z - o.z) / r.z;
+    float tzmax = (bmax.z - o.z) / r.z;
+
+    if (tzmin > tzmax) { float dummy = tzmin; tzmin = tzmax; tzmax = dummy; }
+
+    if ((tmin > tzmax) || (tzmin > tmax)) return vec2(-1.f);
+
+    return vec2(max(tmin, tzmin), min(tmax, tzmax));
 }
 
 float phase(float g, float cos_theta)
@@ -91,16 +126,21 @@ void main()
 
     vec4 background = imageLoad(out_frame, ivec2(x, y));
 
-    sphere sph;
-    sph.centre = vec3(0.f, 0.f, 3.f);
-    sph.radius = 1.f;
+    sphere sphere;
+    sphere.centre = vec3(0.f, 3.f, 0.f);
+    sphere.radius = 1.f;
+
+    box box;
+    box.centre = vec3(3.f, 0.f, 0.f);
+    box.size = vec3(2.f);
 
     // intersect
-    vec2 t = hit_sphere(sph, o, r);
+    vec2 t = hit_sphere(sphere, o, r);
 
+    // in sphere volume marching
     if (t.x >= 0)
     {
-        float sigma_a = 0.f; // absorption coefficient
+        float sigma_a = .1f; // absorption coefficient
         float sigma_s = .9f; // scattering coefficient
         float density = 1.f;
         float transmittance = 1.f;
@@ -115,7 +155,7 @@ void main()
             vec3 p = o + t.x * r;
             // find light source to p in volume
             vec3 ld = normalize(p - sun_pos);
-            vec2 lt = hit_sphere(sph, sun_pos, ld);
+            vec2 lt = hit_sphere(sphere, sun_pos, ld);
             float s = length(p - sun_pos) - lt.x;
             // absorption and out-scattering from light source to p
             vec3 li = exp(-s * (sigma_a + sigma_s)) * sun_color * step;
@@ -123,24 +163,60 @@ void main()
             // in-scattering
             color += li * sigma_s * phase(.5f, dot(-ld, r)) * density * transmittance;
             t += step + rand(t.y);
+            if (transmittance < (1e-3 + rand(t.y))) break;
         }
 
         color += vec3(background) * transmittance;
         imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
     }
 
-    // marching
-    // float t = 0.f; // distance traveled
-    // for (int i = 0; i < 128; ++i)
-    // {
-    //     float s = map(o + t * r);
-    //     t += s;
+    t = hit_box(box, o, r);
 
-    //     if (s < .01f) {
-    //         vec4 color = vec4(t * .2f);
-    //         imageStore(out_frame, ivec2(x, y), color);
-    //     }
+    // in box volume marching
+    if (t.x >= 0)
+    {
+        float sigma_a = .1f; // absorption coefficient
+        float sigma_s = .9f; // scattering coefficient
+        float density = 1.f;
+        float transmittance = 1.f;
+        float step = .03f;
+        uint steps = uint((t.y - t.x) / step);
+        vec3 sun_color = vec3(.53f, .81f, .98f);
+        vec3 sun_pos = vec3(0.f, 9.f, 0.f);
+        vec3 color = vec3(0.f);
 
-    //     if (t > 100.f) break;
-    // }
+        for (uint i = 0; i < steps; ++i)
+        {
+            vec3 p = o + t.x * r;
+            // find light source to p in volume
+            vec3 ld = normalize(p - sun_pos);
+            vec2 lt = hit_box(box, sun_pos, ld);
+            float s = length(p - sun_pos) - lt.x;
+            // absorption and out-scattering from light source to p
+            vec3 li = exp(-s * (sigma_a + sigma_s)) * sun_color * step;
+            transmittance *= exp(-step * (sigma_a + sigma_s) * density);
+            // in-scattering
+            color += li * sigma_s * phase(.5f, dot(-ld, r)) * density * transmittance;
+            t += step + rand(t.y);
+            if (transmittance < (1e-3 + rand(t.y))) break;
+        }
+
+        color += vec3(background) * transmittance;
+        imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
+    }
+
+    // sdf marching
+    t.x = 0.f; // distance traveled
+    for (int i = 0; i < 128; ++i)
+    {
+        float s = map(o + t.x * r);
+        t.x += s;
+
+        if (s < .01f) {
+            vec4 color = vec4(t.x * .2f);
+            imageStore(out_frame, ivec2(x, y), color);
+        }
+
+        if (t.x > 100.f) break;
+    }
 }
