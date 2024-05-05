@@ -104,6 +104,11 @@ float phase(float g, float cos_theta)
     return 1.f / (4.f * 3.14f) * (1.f - g * g) / (denom * sqrt(denom));
 }
 
+float eval_density(vec3 p)
+{
+    return imageLoad(cloudtex, ivec3(p)).x;
+}
+
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
@@ -126,23 +131,24 @@ void main()
 
     vec4 background = imageLoad(out_frame, ivec2(x, y));
 
-    sphere sphere;
-    sphere.centre = vec3(0.f, 3.f, 0.f);
-    sphere.radius = 1.f;
+    // sphere sphere;
+    // sphere.centre = vec3(0.f, 0.f, 3.f);
+    // sphere.radius = 1.f;
 
     box box;
     box.centre = vec3(3.f, 0.f, 0.f);
-    box.size = vec3(3.f);
+    box.size = vec3(2.f);
 
     // intersect
-    vec2 t = hit_sphere(sphere, o, r);
-    // vec2 t = hit_box(box, o, r);
+    // vec2 t = hit_sphere(sphere, o, r);
+    vec2 t = hit_box(box, o, r);
 
     // in box volume marching
     if (t.x >= 0)
     {
         float sigma_a = .1f; // absorption coefficient
         float sigma_s = .9f; // scattering coefficient
+        float sigma_t = sigma_a + sigma_s;
         float density = 1.f;
         float transmittance = 1.f;
         float step = .03f;
@@ -153,17 +159,25 @@ void main()
 
         for (uint i = 0; i < steps; ++i)
         {
+            // p to sample
             vec3 p = o + t.x * r;
-            density = imageLoad(cloudtex, ivec3(uint(floor(p)) & 255)).x;
-            // find light source to p in volume
+            density = eval_density(p);
+            // calculate light source to p in volume
             vec3 ld = normalize(p - sun_pos);
-            vec2 lt = hit_sphere(sphere, sun_pos, ld);
-            // vec2 lt = hit_box(box, sun_pos, ld);
+            // vec2 lt = hit_sphere(sphere, sun_pos, ld);
+            vec2 lt = hit_box(box, sun_pos, ld);
             float s = length(p - sun_pos) - lt.x;
-            // absorption and out-scattering from light source to p
-            vec3 li = exp(-s * (sigma_a + sigma_s)) * sun_color * step;
-            transmittance *= exp(-step * (sigma_a + sigma_s) * density);
-            // in-scattering
+            // calculate light source transmitance to p
+            float tau = 0.f;
+            uint nsteps = uint(s / step);
+            for (uint j = 0; j < nsteps; ++j) {
+                p = sun_pos + lt.x * ld;
+                tau += eval_density(p);
+                lt.x += step + rand(t.y);
+            }
+            // integrate li
+            vec3 li = exp(-step * sigma_t * tau) * sun_color * step;
+            transmittance *= exp(-step * sigma_t * density);
             color += li * sigma_s * phase(.5f, dot(-ld, r)) * density * transmittance;
             t += step + rand(t.y);
             if (transmittance < (1e-3 + rand(t.y))) break;
@@ -174,17 +188,17 @@ void main()
     }
 
     // sdf marching
-    t.x = 0.f; // distance traveled
-    for (int i = 0; i < 128; ++i)
-    {
-        float s = map(o + t.x * r);
-        t.x += s;
+    // t.x = 0.f; // distance traveled
+    // for (int i = 0; i < 128; ++i)
+    // {
+    //     float s = map(o + t.x * r);
+    //     t.x += s;
 
-        if (s < .01f) {
-            vec4 color = vec4(t.x * .2f);
-            imageStore(out_frame, ivec2(x, y), color);
-        }
+    //     if (s < .01f) {
+    //         vec4 color = vec4(t.x * .2f);
+    //         imageStore(out_frame, ivec2(x, y), color);
+    //     }
 
-        if (t.x > 100.f) break;
-    }
+    //     if (t.x > 100.f) break;
+    // }
 }
