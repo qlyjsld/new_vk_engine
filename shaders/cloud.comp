@@ -112,9 +112,9 @@ float fade(float t)
 float eval_density(vec3 p)
 {
     float f = 32.f;
-    return fade(imageLoad(cloudtex, ivec3(int(floor(f * p.x)) & 1023,
-                                    int(floor(f * p.y)) & 1023,
-                                    int(floor(f * p.z)) & 1023)).x);
+    return fade(imageLoad(cloudtex, ivec3(int(floor(f * p.x)) & 255,
+                                    int(floor(f * p.y)) & 255,
+                                    int(floor(f * p.z)) & 255)).x);
 }
 
 void main()
