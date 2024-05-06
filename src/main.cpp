@@ -134,7 +134,8 @@ void vk_engine::texture_init()
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
 
-        vkCmdDispatch(cbuffer, 256 / 8, 256 / 8, 256 / 8);
+        uint32_t texture_size = 1024;
+        vkCmdDispatch(cbuffer, texture_size / 8, texture_size / 8, texture_size / 8);
     };
 
     cs::cc_init(_comp_index, _device);
