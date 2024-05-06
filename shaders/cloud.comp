@@ -57,7 +57,7 @@ vec2 hit_sphere(sphere s, vec3 o, vec3 r)
     float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
     float discriminant = b * b - 4 * a * c;
 
-    if (discriminant > 0)
+    if (discriminant >= 0)
             return vec2((-b - sqrt(discriminant)) / 2 * a, (-b + sqrt(discriminant)) / 2 * a);
 
     return vec2(-1.f);
@@ -109,12 +109,12 @@ float fade(float t)
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
 }
 
-float eval_density(vec3 p)
+float eval_density(vec3 c, vec3 d, vec3 p)
 {
-    float f = 32.f;
-    return fade(imageLoad(cloudtex, ivec3(int(floor(f * p.x)) & 255,
-                                    int(floor(f * p.y)) & 255,
-                                    int(floor(f * p.z)) & 255)).x);
+    float f = 512 / d.x;
+    p -= (c - d * .5f);
+    p *= f;
+    return fade(imageLoad(cloudtex, ivec3(p)).x);
 }
 
 void main()
@@ -139,62 +139,42 @@ void main()
 
     vec4 background = imageLoad(out_frame, ivec2(x, y));
 
-    sphere sphere;
-    sphere.centre = vec3(3.f);
-    sphere.radius = 3.f;
-
-    // box box;
-    // box.centre = vec3(3.f, 0.f, 0.f);
-    // box.size = vec3(2.f);
+    box box;
+    box.centre = vec3(0.f);
+    box.size = vec3(16.f);
 
     // intersect
-    vec2 t = hit_sphere(sphere, o, r);
-    // vec2 t = hit_box(box, o, r);
+    vec2 t = hit_box(box, o, r);
+    if ((t.x < 0.f) && (t.y >= 0.f)) { t.x = 0.f; }
 
-    if ((t.x < 0.f) && (t.y >= 0.f)) { t.x = 0; }
-
-    // in box volume marching
+    // in volume marching
     if (t.x >= 0.f)
     {
         float sigma_a = .1f; // absorption coefficient
-        float sigma_s = .9f; // scattering coefficient
+        float sigma_s = 16.f; // scattering coefficient
         float sigma_t = sigma_a + sigma_s;
-        float density = 0.f;
-        float cutoff = .3f;
         float transmittance = 1.f;
         float step = .1f;
         int steps = int((t.y - t.x) / step);
+        float cutoff = .3f;
         vec3 sun_color = vec3(1.f);
-        vec3 sun_pos = vec3(0.f, 100000.f, 0.f);
         vec3 color = vec3(0.f);
 
         for (int i = 0; i < steps; ++i)
         {
-            // p to sample
             vec3 p = o + t.x * r;
-            density = eval_density(p);
+            float density = eval_density(box.centre, box.size, p);
             if (density < cutoff) density = 0.f;
-            // calculate light source to p in volume
-            vec3 ld = normalize(p - sun_pos);
-            vec2 lt = hit_sphere(sphere, sun_pos, ld);
-            // vec2 lt = hit_box(box, sun_pos, ld);
-            float s = length(p - sun_pos) - lt.x;
-            // calculate light source transmitance to p
-            // float tau = 0.f;
-            float tau = .3f;
-            // int nsteps = int(s / step);
-            // for (int j = 0; j < nsteps; ++j) {
-            //     p = sun_pos + lt.x * ld;
-            //     float ntau = eval_density(p);
-            //     if (ntau < cutoff) ntau = 0.f;
-            //     tau += ntau;
-            //     lt.x += step + step * rand(t.y);
-            // }
-            // integrate li
-            // vec3 li = exp(-step * sigma_t * tau) * sun_color * step;
-            vec3 li = exp(-s * sigma_t * tau) * sun_color * step;
             transmittance *= exp(-step * sigma_t * density);
-            color += li * sigma_s * phase(.5f, dot(-ld, r)) * density * transmittance;
+
+            // estimate in-scattering to p in volume
+            // vec3 ld = normalize(p - sun_pos);
+            // vec2 lt = hit_box(box, sun_pos, ld);
+            // float s = length(p - sun_pos) - lt.x;
+
+            float tau = .3f;
+            vec3 li = exp(-step * sigma_t * tau) * sun_color * step;
+            color += li * sigma_s * /* phase(.5f, dot(-ld, r)) */ density * transmittance;
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
         }

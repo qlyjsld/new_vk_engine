@@ -49,7 +49,7 @@ private:
     glm::vec3 up{glm::vec3(0.f, 1.f, 0.f)};
 
     float fov{68.f};
-    float speed{3.f};
+    float speed{6.f};
     float sensitivity{0.3f};
     float yaw{0.f};
     float pitch{0.f};

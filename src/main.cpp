@@ -89,7 +89,10 @@ void vk_engine::texture_init()
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
-    allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT, VkExtent3D{256, 256, 256},
+    uint32_t texture_size = 512;
+
+    allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
+                         VkExtent3D{texture_size, texture_size, texture_size},
                          VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
                          "cloud");
 
@@ -134,7 +137,6 @@ void vk_engine::texture_init()
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
 
-        uint32_t texture_size = 256;
         vkCmdDispatch(cbuffer, texture_size / 8, texture_size / 8, texture_size / 8);
     };
 
