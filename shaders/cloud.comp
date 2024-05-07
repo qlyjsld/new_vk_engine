@@ -19,6 +19,13 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
     float fov;
 } camera;
 
+layout (set = 0, binding = 4) uniform readonly CLOUD
+{
+    vec3 extent;
+    vec3 centre;
+    vec3 size;
+} cloud;
+
 float rand(float x)
 {
     return fract(sin(x) * 100000.f);
@@ -63,15 +70,10 @@ vec2 hit_sphere(sphere s, vec3 o, vec3 r)
     return vec2(-1.f);
 }
 
-struct box {
-    vec3 centre;
-    vec3 size;
-};
-
-vec2 hit_box(box b, vec3 o, vec3 r)
+vec2 hit_box(vec3 c, vec3 e, vec3 o, vec3 r)
 {
-    vec3 bmin = b.centre - b.size * .5f;
-    vec3 bmax = b.centre + b.size * .5f;
+    vec3 bmin = c - e * .5f;
+    vec3 bmax = c + e * .5f;
 
     float tmin = (bmin.x - o.x) / r.x;
     float tmax = (bmax.x - o.x) / r.x;
@@ -111,7 +113,7 @@ float fade(float t)
 
 float eval_density(vec3 c, vec3 d, vec3 p)
 {
-    float f = 512 / d.x;
+    vec3 f = cloud.extent / d;
     p -= (c - d * .5f);
     p *= f;
     return fade(imageLoad(cloudtex, ivec3(p)).x);
@@ -139,12 +141,8 @@ void main()
 
     vec4 background = imageLoad(out_frame, ivec2(x, y));
 
-    box box;
-    box.centre = vec3(0.f);
-    box.size = vec3(16.f);
-
     // intersect
-    vec2 t = hit_box(box, o, r);
+    vec2 t = hit_box(cloud.centre, cloud.size, o, r);
     if ((t.x < 0.f) && (t.y >= 0.f)) { t.x = 0.f; }
 
     // in volume marching
@@ -163,7 +161,7 @@ void main()
         for (int i = 0; i < steps; ++i)
         {
             vec3 p = o + t.x * r;
-            float density = eval_density(box.centre, box.size, p);
+            float density = eval_density(cloud.centre, cloud.size, p);
             if (density < cutoff) density = 0.f;
             transmittance *= exp(-step * sigma_t * density);
 
@@ -173,7 +171,7 @@ void main()
             // float s = length(p - sun_pos) - lt.x;
 
             float tau = .3f;
-            vec3 li = exp(-step * sigma_t * tau) * sun_color * step;
+            vec3 li = exp(-(i / steps * step) * sigma_t * tau) * sun_color * step;
             color += li * sigma_s * /* phase(.5f, dot(-ld, r)) */ density * transmittance;
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;

@@ -45,6 +45,12 @@ void vk_engine::init()
     upload_meshes(_meshes.data(), _meshes.size());
     upload_textures(_meshes.data(), _meshes.size());
 
+    // init computes
+    skybox_init();
+    texture_init();
+    sphere_init();
+    cloud_init();
+
     _is_initialized = true;
 }
 
@@ -265,7 +271,7 @@ void vk_engine::draw()
     draw_nodes(frame);
 
     /* imgui rendering */
-    // ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cbuffer);
 
@@ -445,27 +451,29 @@ void vk_engine::run()
 
         float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
 
-        if (state[SDL_SCANCODE_W])
-            _vk_camera.w(ms);
+        if (SDL_GetRelativeMouseMode()) {
+            if (state[SDL_SCANCODE_W])
+                _vk_camera.w(ms);
 
-        if (state[SDL_SCANCODE_A])
-            _vk_camera.a(ms);
+            if (state[SDL_SCANCODE_A])
+                _vk_camera.a(ms);
 
-        if (state[SDL_SCANCODE_S])
-            _vk_camera.s(ms);
+            if (state[SDL_SCANCODE_S])
+                _vk_camera.s(ms);
 
-        if (state[SDL_SCANCODE_D])
-            _vk_camera.d(ms);
+            if (state[SDL_SCANCODE_D])
+                _vk_camera.d(ms);
 
-        if (state[SDL_SCANCODE_SPACE])
-            _vk_camera.space(ms);
+            if (state[SDL_SCANCODE_SPACE])
+                _vk_camera.space(ms);
 
-        if (state[SDL_SCANCODE_LCTRL])
-            _vk_camera.ctrl(ms);
+            if (state[SDL_SCANCODE_LCTRL])
+                _vk_camera.ctrl(ms);
 
-        float x, y;
-        SDL_GetRelativeMouseState(&x, &y);
-        _vk_camera.motion(x, y);
+            float x, y;
+            SDL_GetRelativeMouseState(&x, &y);
+            _vk_camera.motion(x, y);
+        }
 
         while (SDL_PollEvent(&e) != 0) {
             if (e.type == SDL_EVENT_QUIT)
@@ -475,7 +483,15 @@ void vk_engine::run()
                 if (e.key.keysym.sym == SDLK_ESCAPE)
                     bquit = true;
 
-            ImGui_ImplSDL3_ProcessEvent(&e);
+            if (e.type == SDL_EVENT_KEY_DOWN) {
+                if (e.key.keysym.sym == SDLK_TAB) {
+                    if (SDL_GetRelativeMouseMode())
+                        SDL_SetRelativeMouseMode(SDL_FALSE);
+                    else
+                        SDL_SetRelativeMouseMode(SDL_TRUE);
+                }
+            } else if (!SDL_GetRelativeMouseMode())
+                ImGui_ImplSDL3_ProcessEvent(&e);
         }
 
         ImGui_ImplVulkan_NewFrame();

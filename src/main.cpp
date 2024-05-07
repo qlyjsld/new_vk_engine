@@ -15,14 +15,18 @@ struct camera_data {
     alignas(4) float fov;
 };
 
+struct cloud_data {
+    alignas(16) glm::vec3 extent;
+    alignas(16) glm::vec3 centre;
+    alignas(16) glm::vec3 size;
+};
+
+static uint32_t texture_size = 512;
+
 int main(int argc, char *argv[])
 {
     vk_engine engine = {};
     engine.init();
-    engine.skybox_init();
-    engine.texture_init();
-    engine.sphere_init();
-    engine.cloud_init();
     engine.run();
     engine.cleanup();
     return 0;
@@ -89,16 +93,14 @@ void vk_engine::texture_init()
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
-    uint32_t texture_size = 512;
-
     allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
                          VkExtent3D{texture_size, texture_size, texture_size},
                          VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
-                         "cloud");
+                         "cloudtex");
 
     /* match set binding */
     std::vector<descriptor> descriptors = {
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloud"},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
     };
 
@@ -127,7 +129,7 @@ void vk_engine::texture_init()
                   &cloudtex.pipeline);
 
     cloudtex.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
-        vk_cmd::vk_img_layout_transition(cbuffer, cs->allocator.get_img("cloud").img,
+        vk_cmd::vk_img_layout_transition(cbuffer, cs->allocator.get_img("cloudtex").img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
 
@@ -208,11 +210,16 @@ void vk_engine::cloud_init()
 {
     comp_allocator allocator(_device, _allocator);
 
+    allocator.create_buffer(pad_uniform_buffer_size(sizeof(cloud_data)),
+                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
+
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloud"},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "cloud"},
     };
 
     cs cloud(allocator, descriptors, "../shaders/cloud.comp.spv", _min_buffer_alignment);
@@ -245,7 +252,18 @@ void vk_engine::cloud_init()
         vmaUnmapMemory(cs->allocator.allocator,
                        cs->allocator.get_buffer("camera").allocation);
 
+        cloud_data cloud_data;
+        cloud_data.extent = glm::vec3(texture_size);
+        cloud_data.centre = glm::vec3(0.f);
+        cloud_data.size = glm::vec3(32.f);
+
+        vmaMapMemory(_allocator, cs->allocator.get_buffer("cloud").allocation, &data);
+        std::memcpy(data, &cloud_data, pad_uniform_buffer_size(sizeof(cloud_data)));
+        vmaUnmapMemory(cs->allocator.allocator,
+                       cs->allocator.get_buffer("cloud").allocation);
+
         std::vector<uint32_t> doffsets = {
+            0,
             0,
             0,
         };

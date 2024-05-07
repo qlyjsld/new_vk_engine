@@ -56,7 +56,7 @@ void main()
     vec3 r = upperleft - left * ux - up * uy - o;
 
     sphere s;
-    s.centre = vec3(0.f, 0.f, -3.f);
+    s.centre = vec3(0.f, -1.f, 0.f);
     s.radius = 1.f;
 
     float t = hit_sphere(s, o, r);
