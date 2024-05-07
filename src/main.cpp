@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include <imgui.h>
+
 #include "vk_boiler.h"
 #include "vk_cmd.h"
 #include "vk_comp.h"
@@ -19,9 +21,15 @@ struct cloud_data {
     alignas(16) glm::vec3 extent;
     alignas(16) glm::vec3 centre;
     alignas(16) glm::vec3 size;
+    alignas(4) float sigma_a;
+    alignas(4) float sigma_s;
+    alignas(4) float step;
+    alignas(4) float cutoff;
 };
 
 static uint32_t texture_size = 512;
+
+static cloud_data cloud_data;
 
 int main(int argc, char *argv[])
 {
@@ -214,6 +222,14 @@ void vk_engine::cloud_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
+    cloud_data.extent = glm::vec3(texture_size);
+    cloud_data.centre = glm::vec3(0.f);
+    cloud_data.size = glm::vec3(16.f);
+    cloud_data.sigma_a = .1f;
+    cloud_data.sigma_s = 16.f;
+    cloud_data.step = .1f;
+    cloud_data.cutoff = .3f;
+
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
@@ -252,11 +268,6 @@ void vk_engine::cloud_init()
         vmaUnmapMemory(cs->allocator.allocator,
                        cs->allocator.get_buffer("camera").allocation);
 
-        cloud_data cloud_data;
-        cloud_data.extent = glm::vec3(texture_size);
-        cloud_data.centre = glm::vec3(0.f);
-        cloud_data.size = glm::vec3(32.f);
-
         vmaMapMemory(_allocator, cs->allocator.get_buffer("cloud").allocation, &data);
         std::memcpy(data, &cloud_data, pad_uniform_buffer_size(sizeof(cloud_data)));
         vmaUnmapMemory(cs->allocator.allocator,
@@ -280,6 +291,18 @@ void vk_engine::cloud_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
+    bool cloud = true;
+    ImGui::SetNextWindowSize(ImVec2{300, 300});
+    ImGui::SetNextWindowPos(ImVec2{30, 30});
+    ImGui::Begin("cloud", &cloud, 0);
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
+    ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
+    ImGui::SliderFloat("step", &cloud_data.step, .01f, 1.f);
+    ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 1.f);
+    ImGui::End();
+
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                      VK_IMAGE_LAYOUT_GENERAL, _comp_index);

@@ -24,6 +24,10 @@ layout (set = 0, binding = 4) uniform readonly CLOUD
     vec3 extent;
     vec3 centre;
     vec3 size;
+    float sigma_a;
+    float sigma_s;
+    float step;
+    float cutoff;
 } cloud;
 
 float rand(float x)
@@ -148,13 +152,13 @@ void main()
     // in volume marching
     if (t.x >= 0.f)
     {
-        float sigma_a = .1f; // absorption coefficient
-        float sigma_s = 16.f; // scattering coefficient
+        float sigma_a = cloud.sigma_a; // absorption coefficient
+        float sigma_s = cloud.sigma_s; // scattering coefficient
         float sigma_t = sigma_a + sigma_s;
         float transmittance = 1.f;
-        float step = .1f;
+        float step = cloud.step;
         int steps = int((t.y - t.x) / step);
-        float cutoff = .3f;
+        float cutoff = cloud.cutoff;
         vec3 sun_color = vec3(1.f);
         vec3 color = vec3(0.f);
 
@@ -171,7 +175,7 @@ void main()
             // float s = length(p - sun_pos) - lt.x;
 
             float tau = .3f;
-            vec3 li = exp(-(i / steps * step) * sigma_t * tau) * sun_color * step;
+            vec3 li = (1.f - exp(-i * step * sigma_t * tau)) * sun_color * step;
             color += li * sigma_s * /* phase(.5f, dot(-ld, r)) */ density * transmittance;
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
