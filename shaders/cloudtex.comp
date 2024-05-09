@@ -172,8 +172,8 @@ float fbm(float x, float y, float z, uint octaves, float H)
     return (t + 1.f) / 2.f;
 }
 
-#define octaves 16
-#define infreq 4
+#define octaves 64
+#define infreq 8
 #define h 1.f
 
 void main()

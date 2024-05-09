@@ -28,6 +28,7 @@ layout (set = 0, binding = 4) uniform readonly CLOUD
     float sigma_s;
     float step;
     float cutoff;
+    float density;
 } cloud;
 
 float rand(float x)
@@ -159,24 +160,23 @@ void main()
         float step = cloud.step;
         int steps = int((t.y - t.x) / step);
         float cutoff = cloud.cutoff;
-        vec3 sun_color = vec3(1.f);
         vec3 color = vec3(0.f);
 
         for (int i = 0; i < steps; ++i)
         {
             vec3 p = o + t.x * r;
-            float density = eval_density(cloud.centre, cloud.size, p);
+            float density = eval_density(cloud.centre, cloud.size, p) * cloud.density;
             if (density < cutoff) density = 0.f;
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
-            // vec3 ld = normalize(p - sun_pos);
+            vec3 ld = vec3(0.f, -1.f, 0.f);
             // vec2 lt = hit_box(box, sun_pos, ld);
             // float s = length(p - sun_pos) - lt.x;
 
-            float tau = .3f;
-            vec3 li = (1.f - exp(-i * step * sigma_t * tau)) * sun_color * step;
-            color += li * sigma_s * /* phase(.5f, dot(-ld, r)) */ density * transmittance;
+            vec3 li = 2.f * (1.f - exp(-step * sigma_s * i * .01f)) * vec3(1.f) * step;
+            color += li * sigma_s * density * transmittance * (1.f + phase(.3f, dot(-ld, r)));
+
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
         }
