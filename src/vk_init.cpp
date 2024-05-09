@@ -6,75 +6,141 @@
 
 #include "vk_boiler.h"
 #include "vk_type.h"
+#include <optional>
 
 void vk_engine::device_init()
 {
-    /* create vulkan instance */
-    vkb::InstanceBuilder vkb_instance_builder;
-    vkb_instance_builder.set_app_name("vk_engine")
-        .require_api_version(VKB_VK_API_VERSION_1_3)
-#ifndef NDEBUG
-        .request_validation_layers(true)
-        .use_default_debug_messenger()
-#endif
-        ;
-    auto vkb_instance_build_ret = vkb_instance_builder.build();
-
-    if (!vkb_instance_build_ret) {
-        std::cerr << "instance build failed: " << vkb_instance_build_ret.error().message()
-                  << std::endl;
-        abort();
+    // Create Instance
+    vkb::InstanceBuilder builder;
+    auto inst_ret = builder.set_app_name("VK Engine")
+                   .require_api_version(VKB_VK_API_VERSION_1_3)
+                   .request_validation_layers()
+                   .use_default_debug_messenger()
+                   .build();
+    if (!inst_ret)
+    {
+      std::cerr << "Failed to create Vulkan Instance: " << inst_ret.error().message() << std::endl;
+      return;
     }
 
-    vkb::Instance vkb_instance = vkb_instance_build_ret.value();
-    _instance = vkb_instance.instance;
-    _debug_utils_messenger = vkb_instance.debug_messenger;
+    auto instance = inst_ret.value();
 
-    deletion_queue.push_back([=]() {
-        vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
-        vkDestroyInstance(_instance, nullptr);
-    });
-
+    _instance              = instance.instance;
+    _debug_utils_messenger = instance.debug_messenger;
+  
+    // Create Surface 
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
+    
+    VkPhysicalDeviceDynamicRenderingFeatures features = {};
+    features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+    features.pNext = nullptr;
+    features.dynamicRendering = VK_TRUE;
 
-    deletion_queue.push_back(
-        [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
+    // Create a Vulkan device
+    vkb::PhysicalDeviceSelector selector(instance);
+    auto phys_ret = selector.add_required_extension_features(features)
+                            .set_surface(_surface)
+                            .select();
+    if (!phys_ret) 
+    {
+      std::cerr << "Failed to find suitable physical device: " << phys_ret.error().message() << std::endl;
+      return;
+    }
 
-    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
-    dynamic_rendering_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-    dynamic_rendering_features.pNext = nullptr;
-    dynamic_rendering_features.dynamicRendering = VK_TRUE;
+    auto physical_device = phys_ret.value();
+    _physical_device = physical_device.physical_device;
+    _min_buffer_alignment = physical_device.properties.limits.minUniformBufferOffsetAlignment;
 
-    /* select vulkan physical device, defaulted to discrete GPU */
-    vkb::PhysicalDeviceSelector vkb_physical_device_selector{vkb_instance};
-    vkb::PhysicalDevice vkb_physical_device =
-        vkb_physical_device_selector
-            .add_required_extension_features(dynamic_rendering_features)
-            .set_surface(_surface)
-            .select()
-            .value();
-    _physical_device = vkb_physical_device.physical_device;
+    // Create our Device
+    vkb::DeviceBuilder dev_builder(physical_device);
+    auto dev_ret = dev_builder.build();
+    if (!dev_ret)
+    {
+      std::cerr << "Failed to create Vulkan device: " << dev_ret.error().message() << std::endl;
+      return;
+    }
 
-    _min_buffer_alignment =
-        vkb_physical_device.properties.limits.minUniformBufferOffsetAlignment;
+    const vkb::Device& device = dev_ret.value();
+    _device = device.device;
 
-    /* create vulkan device */
-    vkb::DeviceBuilder vkb_device_builder{vkb_physical_device};
-    vkb::Device vkb_device = vkb_device_builder.build().value();
-    _device = vkb_device.device;
+    { // Get Queue Families
+      std::optional<uint32_t> graphics_queue_family, 
+                              transfer_queue_family, 
+                              compute_queue_family;
+    
+      const auto& families = physical_device.get_queue_families();
+      if (families.empty())
+      {
+        std::cerr << "No queue families found!" << std::endl;
+        return;
+      }
+      
+      // graphics queue
+      for (uint32_t i = 0; i < families.size(); ++i)
+      {
+        VkQueueFlags flags = families[i].queueFlags;
+        if (flags & VK_QUEUE_GRAPHICS_BIT) 
+        {
+          graphics_queue_family = i;
+          break;
+        }
+      }
+      
+      // present queue
+      for (uint32_t i = 0; i < families.size(); ++i) 
+      {
+        VkQueueFlags flags = families[i].queueFlags;
+        if (flags & VK_QUEUE_TRANSFER_BIT) 
+        {
+          transfer_queue_family = i;
+          break;
+        }
+      }
+
+      // compute queue
+      for (uint32_t i = 0; i < families.size(); ++i) 
+      {
+        VkQueueFlags flags = families[i].queueFlags;
+        if (flags & VK_QUEUE_COMPUTE_BIT)
+        {
+          compute_queue_family = i;
+          break;
+        }
+      }
+
+      // Get Graphics Queue
+      vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_gfx_queue);
+      if (_gfx_queue == VK_NULL_HANDLE) 
+      {
+        std::cerr << "Failed to get Graphics queue!" << std::endl;
+        return;
+      }
+      
+      // Get Transfer Queue
+      vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_transfer_queue);
+      if (_transfer_queue == VK_NULL_HANDLE) 
+      {
+        std::cerr << "Failed to get Transfer queue!" << std::endl;
+        return;
+      }
+
+      // Get Compute Queue
+      vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_comp_queue);
+      if (_comp_queue == VK_NULL_HANDLE) 
+      {
+        std::cerr << "Failed to get Compute queue!" << std::endl;
+        return;
+      }
+    }
+    
+    deletion_queue.push_back([=]() {
+      vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
+      vkDestroyInstance(_instance, nullptr);
+    });    
+    
+    deletion_queue.push_back([=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });   
 
     deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
-
-    /* get queues for commands */
-    _gfx_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
-    _gfx_index = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
-
-    _transfer_queue = vkb_device.get_queue(vkb::QueueType::transfer).value();
-    _transfer_index = vkb_device.get_queue_index(vkb::QueueType::transfer).value();
-
-    _comp_queue = vkb_device.get_queue(vkb::QueueType::compute).value();
-    _comp_index = vkb_device.get_queue_index(vkb::QueueType::compute).value();
 }
 
 void vk_engine::vma_init()
