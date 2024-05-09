@@ -12,25 +12,25 @@ void vk_engine::device_init()
 {
     // Create Instance
     vkb::InstanceBuilder builder;
-    auto inst_ret = builder.set_app_name("VK Engine")
-                   .require_api_version(VKB_VK_API_VERSION_1_3)
-                   .request_validation_layers()
-                   .use_default_debug_messenger()
-                   .build();
-    if (!inst_ret)
-    {
-      std::cerr << "Failed to create Vulkan Instance: " << inst_ret.error().message() << std::endl;
-      return;
+    auto inst_ret = builder.set_app_name("vk_engine")
+                        .require_api_version(VKB_VK_API_VERSION_1_3)
+                        .request_validation_layers()
+                        .use_default_debug_messenger()
+                        .build();
+    if (!inst_ret) {
+        std::cerr << "Failed to create Vulkan Instance: " << inst_ret.error().message()
+                  << std::endl;
+        return;
     }
 
     auto instance = inst_ret.value();
 
-    _instance              = instance.instance;
+    _instance = instance.instance;
     _debug_utils_messenger = instance.debug_messenger;
-  
-    // Create Surface 
+
+    // Create Surface
     SDL_Vulkan_CreateSurface(_window, _instance, nullptr, &_surface);
-    
+
     VkPhysicalDeviceDynamicRenderingFeatures features = {};
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
     features.pNext = nullptr;
@@ -38,107 +38,97 @@ void vk_engine::device_init()
 
     // Create a Vulkan device
     vkb::PhysicalDeviceSelector selector(instance);
-    auto phys_ret = selector.add_required_extension_features(features)
-                            .set_surface(_surface)
-                            .select();
-    if (!phys_ret) 
-    {
-      std::cerr << "Failed to find suitable physical device: " << phys_ret.error().message() << std::endl;
-      return;
+    auto phys_ret =
+        selector.add_required_extension_features(features).set_surface(_surface).select();
+    if (!phys_ret) {
+        std::cerr << "Failed to find suitable physical device: "
+                  << phys_ret.error().message() << std::endl;
+        return;
     }
 
     auto physical_device = phys_ret.value();
     _physical_device = physical_device.physical_device;
-    _min_buffer_alignment = physical_device.properties.limits.minUniformBufferOffsetAlignment;
+    _min_buffer_alignment =
+        physical_device.properties.limits.minUniformBufferOffsetAlignment;
 
     // Create our Device
     vkb::DeviceBuilder dev_builder(physical_device);
     auto dev_ret = dev_builder.build();
-    if (!dev_ret)
-    {
-      std::cerr << "Failed to create Vulkan device: " << dev_ret.error().message() << std::endl;
-      return;
+    if (!dev_ret) {
+        std::cerr << "Failed to create Vulkan device: " << dev_ret.error().message()
+                  << std::endl;
+        return;
     }
 
-    const vkb::Device& device = dev_ret.value();
+    const vkb::Device &device = dev_ret.value();
     _device = device.device;
 
     { // Get Queue Families
-      std::optional<uint32_t> graphics_queue_family, 
-                              transfer_queue_family, 
-                              compute_queue_family;
-    
-      const auto& families = physical_device.get_queue_families();
-      if (families.empty())
-      {
-        std::cerr << "No queue families found!" << std::endl;
-        return;
-      }
-      
-      // graphics queue
-      for (uint32_t i = 0; i < families.size(); ++i)
-      {
-        VkQueueFlags flags = families[i].queueFlags;
-        if (flags & VK_QUEUE_GRAPHICS_BIT) 
-        {
-          graphics_queue_family = i;
-          break;
-        }
-      }
-      
-      // present queue
-      for (uint32_t i = 0; i < families.size(); ++i) 
-      {
-        VkQueueFlags flags = families[i].queueFlags;
-        if (flags & VK_QUEUE_TRANSFER_BIT) 
-        {
-          transfer_queue_family = i;
-          break;
-        }
-      }
+        std::optional<uint32_t> graphics_queue_family, transfer_queue_family,
+            compute_queue_family;
 
-      // compute queue
-      for (uint32_t i = 0; i < families.size(); ++i) 
-      {
-        VkQueueFlags flags = families[i].queueFlags;
-        if (flags & VK_QUEUE_COMPUTE_BIT)
-        {
-          compute_queue_family = i;
-          break;
+        const auto &families = physical_device.get_queue_families();
+        if (families.empty()) {
+            std::cerr << "No queue families found!" << std::endl;
+            return;
         }
-      }
 
-      // Get Graphics Queue
-      vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_gfx_queue);
-      if (_gfx_queue == VK_NULL_HANDLE) 
-      {
-        std::cerr << "Failed to get Graphics queue!" << std::endl;
-        return;
-      }
-      
-      // Get Transfer Queue
-      vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_transfer_queue);
-      if (_transfer_queue == VK_NULL_HANDLE) 
-      {
-        std::cerr << "Failed to get Transfer queue!" << std::endl;
-        return;
-      }
+        // graphics queue
+        for (uint32_t i = 0; i < families.size(); ++i) {
+            VkQueueFlags flags = families[i].queueFlags;
+            if (flags & VK_QUEUE_GRAPHICS_BIT) {
+                graphics_queue_family = i;
+                break;
+            }
+        }
 
-      // Get Compute Queue
-      vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_comp_queue);
-      if (_comp_queue == VK_NULL_HANDLE) 
-      {
-        std::cerr << "Failed to get Compute queue!" << std::endl;
-        return;
-      }
+        // present queue
+        for (uint32_t i = 0; i < families.size(); ++i) {
+            VkQueueFlags flags = families[i].queueFlags;
+            if (flags & VK_QUEUE_TRANSFER_BIT) {
+                transfer_queue_family = i;
+                break;
+            }
+        }
+
+        // compute queue
+        for (uint32_t i = 0; i < families.size(); ++i) {
+            VkQueueFlags flags = families[i].queueFlags;
+            if (flags & VK_QUEUE_COMPUTE_BIT) {
+                compute_queue_family = i;
+                break;
+            }
+        }
+
+        // Get Graphics Queue
+        vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_gfx_queue);
+        if (_gfx_queue == VK_NULL_HANDLE) {
+            std::cerr << "Failed to get Graphics queue!" << std::endl;
+            return;
+        }
+
+        // Get Transfer Queue
+        vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_transfer_queue);
+        if (_transfer_queue == VK_NULL_HANDLE) {
+            std::cerr << "Failed to get Transfer queue!" << std::endl;
+            return;
+        }
+
+        // Get Compute Queue
+        vkGetDeviceQueue(_device, graphics_queue_family.value(), 0, &_comp_queue);
+        if (_comp_queue == VK_NULL_HANDLE) {
+            std::cerr << "Failed to get Compute queue!" << std::endl;
+            return;
+        }
     }
-    
+
     deletion_queue.push_back([=]() {
-      vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
-      vkDestroyInstance(_instance, nullptr);
-    });    
-    
-    deletion_queue.push_back([=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });   
+        vkb::destroy_debug_utils_messenger(_instance, _debug_utils_messenger, nullptr);
+        vkDestroyInstance(_instance, nullptr);
+    });
+
+    deletion_queue.push_back(
+        [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
 
     deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
 }
