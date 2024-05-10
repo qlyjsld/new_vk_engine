@@ -1,4 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.27.7)
+﻿cmake_minimum_required (VERSION 3.22.1)
 project ("vk_engine")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,3 +29,9 @@ endforeach(GLSL)
 add_custom_target(
     shaders ALL
     DEPENDS ${SPIRV_BINARY_FILES})
+
+# move duck model into build folder
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
+
+# move shaders into build folder 
+# file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})

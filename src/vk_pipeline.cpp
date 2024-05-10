@@ -1,22 +1,27 @@
 #include "vk_pipeline.h"
 
-#include <iostream>
 #include <vulkan/vulkan.h>
 
 #include "vk_boiler.h"
 #include "vk_type.h"
 
 void PipelineBuilder::build_layout(VkDevice device,
-                                   std::vector<VkDescriptorSetLayout> layouts)
+                                   std::vector<VkDescriptorSetLayout> &layouts,
+                                   std::vector<VkPushConstantRange> &push_constants,
+                                   VkPipelineLayout *pipeline_layout)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_info =
-        vk_boiler::pipeline_layout_create_info(layouts);
+        vk_boiler::pipeline_layout_create_info(layouts, push_constants);
 
-    VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr,
-                                    &_pipeline_layout));
+    VK_CHECK(
+        vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, pipeline_layout));
+
+    deletion_queue.push_back(
+        [=]() { vkDestroyPipelineLayout(device, *pipeline_layout, nullptr); });
 }
 
-void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format)
+void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format,
+                                VkPipelineLayout *pipeline_layout, VkPipeline *pipeline)
 {
     VkPipelineViewportStateCreateInfo viewport_state_info = {};
     viewport_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -62,27 +67,36 @@ void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format, VkFormat dept
     graphics_pipeline_info.pDepthStencilState = &_depth_stencil_state_info;
     graphics_pipeline_info.pColorBlendState = &color_blend_state_info;
     // graphics_pipeline_info.pDynamicState = ;
-    graphics_pipeline_info.layout = _pipeline_layout;
+    graphics_pipeline_info.layout = *pipeline_layout;
     // graphics_pipeline_info.renderPass = ;
     // graphics_pipeline_info.subpass = ;
     graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     // graphics_pipeline_info.basePipelineIndex = ;
 
     VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &graphics_pipeline_info,
-                                       nullptr, &_pipeline));
+                                       nullptr, pipeline));
+
+    deletion_queue.push_back([=]() { vkDestroyPipeline(device, *pipeline, nullptr); });
 }
 
-void PipelineBuilder::build_comp(VkDevice device)
+void PipelineBuilder::build_comp(VkDevice device,
+                                 std::vector<VkDescriptorSetLayout> &layouts,
+                                 std::vector<VkPushConstantRange> &push_constants,
+                                 VkPipelineLayout *pipeline_layout, VkPipeline *pipeline)
 {
+    build_layout(device, layouts, push_constants, pipeline_layout);
+
     VkComputePipelineCreateInfo comp_pipeline_info = {};
     comp_pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     comp_pipeline_info.pNext = nullptr;
     // comp_pipeline_info.flags = ;
     comp_pipeline_info.stage = _shader_stage_infos[0];
-    comp_pipeline_info.layout = _pipeline_layout;
+    comp_pipeline_info.layout = *pipeline_layout;
     comp_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     // comp_pipeline_info.basePipelineIndex = ;
 
     VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &comp_pipeline_info,
-                                      nullptr, &_pipeline));
+                                      nullptr, pipeline));
+
+    deletion_queue.push_back([=]() { vkDestroyPipeline(device, *pipeline, nullptr); });
 }

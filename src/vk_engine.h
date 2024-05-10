@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <functional>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -14,32 +13,17 @@
 
 constexpr int FRAME_OVERLAP = 2;
 
-struct deletion_queue {
-public:
-    void push_back(std::function<void()> &&f) { fs.push_back(f); }
-
-    void flush()
-    {
-        for (auto f = fs.rbegin(); f != fs.rend(); f++)
-            (*f)();
-
-        fs.clear();
-    };
-
-    std::vector<std::function<void()>> fs;
-};
-
 struct frame {
     VkFence fence;
     VkSemaphore sumbit_sem, present_sem;
-    VkCommandPool cmd_pool;
-    VkCommandBuffer cmd_buffer;
+    VkCommandPool cpool;
+    VkCommandBuffer cbuffer;
 };
 
 struct upload_context {
     VkFence fence;
-    VkCommandPool cmd_pool;
-    VkCommandBuffer cmd_buffer;
+    VkCommandPool cpool;
+    VkCommandBuffer cbuffer;
 };
 
 struct push_constants {
@@ -61,7 +45,7 @@ public:
     uint64_t _last_frame{0};
     uint64_t _frame_index{0};
     VkExtent2D _window_extent{1600, 900};
-    VkExtent2D _resolution{3840, 2160};
+    VkExtent2D _resolution{1600, 900};
     struct SDL_Window *_window{nullptr};
 
     VkInstance _instance;
@@ -69,7 +53,7 @@ public:
     VkPhysicalDevice _physical_device;
     VkDevice _device;
     VkSurfaceKHR _surface;
-    VkDeviceSize _minUniformBufferOffsetAlignment;
+    VkDeviceSize _min_buffer_alignment;
 
     VkSwapchainKHR _swapchain;
     VkFormat _swapchain_format;
@@ -89,11 +73,11 @@ public:
     VkDescriptorSet _comp_set;
 
     VkQueue _gfx_queue;
-    uint32_t _gfx_queue_family_index;
+    uint32_t _gfx_index;
     VkQueue _transfer_queue;
-    uint32_t _transfer_queue_family_index;
+    uint32_t _transfer_index;
     VkQueue _comp_queue;
-    uint32_t _comp_queue_family_index;
+    uint32_t _comp_index;
 
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
@@ -117,14 +101,16 @@ public:
     allocated_img _depth_img;
     allocated_buffer _comp_buffer;
 
-    vk_camera _cam;
-    inline static deletion_queue _deletion_queue;
+    vk_camera _vk_camera;
 
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
 
     void init();
-    void comp_draw_init();
+    void skybox_init();
+    void texture_init();
+    void sphere_init();
+    void cloud_init();
     void cleanup();
     void draw();
     void run();
@@ -155,12 +141,12 @@ private:
         return &_frames[_frame_index];
     };
 
-    allocated_buffer create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                                   VmaAllocationCreateFlags flags);
+    void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                       VmaAllocationCreateFlags flags, allocated_buffer *buffer);
 
-    allocated_img create_img(VkFormat format, VkExtent3D extent,
-                             VkImageAspectFlags aspect, VkImageUsageFlags usage,
-                             VmaAllocationCreateFlags flags);
+    void create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
+                    VkImageUsageFlags usage, VmaAllocationCreateFlags flags,
+                    allocated_img *img);
 
     size_t pad_uniform_buffer_size(size_t original_size);
 };

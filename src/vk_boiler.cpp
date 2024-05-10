@@ -1,26 +1,28 @@
 ﻿#include "vk_boiler.h"
 
-VkCommandPoolCreateInfo vk_boiler::cmd_pool_create_info(uint32_t queue_family_index)
+#include "vk_type.h"
+
+VkCommandPoolCreateInfo vk_boiler::cpool_create_info(uint32_t index)
 {
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = nullptr;
-    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
-                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    cmd_pool_info.queueFamilyIndex = queue_family_index;
-    return cmd_pool_info;
+    VkCommandPoolCreateInfo cpool_info = {};
+    cpool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cpool_info.pNext = nullptr;
+    cpool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
+                       VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cpool_info.queueFamilyIndex = index;
+    return cpool_info;
 }
 
-VkCommandBufferAllocateInfo vk_boiler::cmd_buffer_allocate_info(uint32_t cmd_buffer_count,
-                                                                VkCommandPool cmd_pool)
+VkCommandBufferAllocateInfo vk_boiler::cbuffer_allocate_info(uint32_t cbuffer_count,
+                                                             VkCommandPool cpool)
 {
-    VkCommandBufferAllocateInfo cmd_buffer_allocate_info = {};
-    cmd_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmd_buffer_allocate_info.pNext = nullptr;
-    cmd_buffer_allocate_info.commandPool = cmd_pool;
-    cmd_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd_buffer_allocate_info.commandBufferCount = cmd_buffer_count;
-    return cmd_buffer_allocate_info;
+    VkCommandBufferAllocateInfo cbuffer_allocate_info = {};
+    cbuffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cbuffer_allocate_info.pNext = nullptr;
+    cbuffer_allocate_info.commandPool = cpool;
+    cbuffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cbuffer_allocate_info.commandBufferCount = cbuffer_count;
+    return cbuffer_allocate_info;
 }
 
 VkFenceCreateInfo vk_boiler::fence_create_info(bool signaled)
@@ -85,14 +87,14 @@ VkRenderingInfo vk_boiler::rendering_info(VkRenderingAttachmentInfo *color_attac
     return rendering_info;
 }
 
-VkCommandBufferBeginInfo vk_boiler::cmd_buffer_begin_info()
+VkCommandBufferBeginInfo vk_boiler::cbuffer_begin_info()
 {
-    VkCommandBufferBeginInfo cmd_buffer_begin_info = {};
-    cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buffer_begin_info.pNext = nullptr;
-    cmd_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    cmd_buffer_begin_info.pInheritanceInfo = nullptr;
-    return cmd_buffer_begin_info;
+    VkCommandBufferBeginInfo cbuffer_begin_info = {};
+    cbuffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cbuffer_begin_info.pNext = nullptr;
+    cbuffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cbuffer_begin_info.pInheritanceInfo = nullptr;
+    return cbuffer_begin_info;
 }
 
 VkImageSubresourceRange vk_boiler::img_subresource_range(VkImageAspectFlags aspect)
@@ -112,7 +114,7 @@ VkImageMemoryBarrier vk_boiler::img_mem_barrier()
     return img_mem_barrier;
 }
 
-VkSubmitInfo vk_boiler::submit_info(VkCommandBuffer *cmd_buffer, VkSemaphore *wait_sem,
+VkSubmitInfo vk_boiler::submit_info(VkCommandBuffer *cbuffer, VkSemaphore *wait_sem,
                                     VkSemaphore *signal_sem,
                                     VkPipelineStageFlags *pipeline_stage_flags)
 {
@@ -123,7 +125,7 @@ VkSubmitInfo vk_boiler::submit_info(VkCommandBuffer *cmd_buffer, VkSemaphore *wa
     submit_info.pWaitSemaphores = wait_sem;
     submit_info.pWaitDstStageMask = pipeline_stage_flags;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = cmd_buffer;
+    submit_info.pCommandBuffers = cbuffer;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_sem;
     return submit_info;
@@ -242,7 +244,8 @@ VkPipelineMultisampleStateCreateInfo vk_boiler::multisample_state_create_info()
 }
 
 VkPipelineLayoutCreateInfo
-vk_boiler::pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts)
+vk_boiler::pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts,
+                                       std::vector<VkPushConstantRange> &push_constants)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -250,19 +253,20 @@ vk_boiler::pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layou
     // pipeline_layout_info.flags = ;
     pipeline_layout_info.setLayoutCount = layouts.size();
     pipeline_layout_info.pSetLayouts = layouts.data();
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = nullptr;
+    pipeline_layout_info.pushConstantRangeCount = push_constants.size();
+    pipeline_layout_info.pPushConstantRanges = push_constants.data();
     return pipeline_layout_info;
 }
 
 VkImageCreateInfo vk_boiler::img_create_info(VkFormat format, VkExtent3D extent,
                                              VkImageUsageFlags usage)
 {
+
     VkImageCreateInfo img_info = {};
     img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     img_info.pNext = nullptr;
     // img_info.flags = ;
-    img_info.imageType = VK_IMAGE_TYPE_2D;
+    img_info.imageType = extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
     img_info.format = format;
     img_info.extent = extent;
     img_info.mipLevels = 1;
@@ -278,7 +282,8 @@ VkImageCreateInfo vk_boiler::img_create_info(VkFormat format, VkExtent3D extent,
 }
 
 VkImageViewCreateInfo vk_boiler::img_view_create_info(VkImageAspectFlags aspect,
-                                                      VkImage img, VkFormat format)
+                                                      VkImage img, VkExtent3D extent,
+                                                      VkFormat format)
 {
     VkImageSubresourceRange subresource_range = img_subresource_range(aspect);
     VkImageViewCreateInfo img_view_info = {};
@@ -286,7 +291,8 @@ VkImageViewCreateInfo vk_boiler::img_view_create_info(VkImageAspectFlags aspect,
     img_view_info.pNext = nullptr;
     // img_view_info.flags = ;
     img_view_info.image = img;
-    img_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    img_view_info.viewType =
+        extent.depth == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
     img_view_info.format = format;
     // img_view_info.components = ;
     img_view_info.subresourceRange = subresource_range;
@@ -327,16 +333,31 @@ vk_boiler::descriptor_pool_create_info(uint32_t pool_size_count,
 }
 
 VkDescriptorSetLayoutCreateInfo
-vk_boiler::descriptor_set_layout_create_info(uint32_t binding_count,
-                                             VkDescriptorSetLayoutBinding *bindings)
+vk_boiler::descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
+                                             VkShaderStageFlags stage)
 {
+    std::vector<VkDescriptorSetLayoutBinding> *bindings =
+        new std::vector<VkDescriptorSetLayoutBinding>;
+
+    for (uint32_t i = 0; i < types.size(); ++i) {
+        VkDescriptorSetLayoutBinding binding = {};
+        binding.binding = i;
+        binding.descriptorType = types[i];
+        binding.descriptorCount = 1;
+        binding.stageFlags = stage;
+        bindings->push_back(binding);
+    }
+
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info = {};
     descriptor_set_layout_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_set_layout_info.pNext = nullptr;
     // descriptor_set_layout_info.flags = ;
-    descriptor_set_layout_info.bindingCount = binding_count;
-    descriptor_set_layout_info.pBindings = bindings;
+    descriptor_set_layout_info.bindingCount = bindings->size();
+    descriptor_set_layout_info.pBindings = bindings->data();
+
+    deletion_queue.push_back([=]() { delete bindings; });
+
     return descriptor_set_layout_info;
 }
 

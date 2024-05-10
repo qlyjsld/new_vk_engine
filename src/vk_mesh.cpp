@@ -1,6 +1,5 @@
 #include "vk_mesh.h"
 
-#include <iostream>
 #include <vector>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -16,6 +15,7 @@
 #include "vk_boiler.h"
 #include "vk_cmd.h"
 #include "vk_engine.h"
+#include "vk_type.h"
 
 using namespace tinygltf;
 
@@ -288,20 +288,14 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
 void vk_engine::load_meshes()
 {
-    std::vector<mesh> example = load_from_gltf("../assets/glTF-Sample-Assets/Models/"
-                                               "Duck/glTF-Binary/Duck.glb",
-                                               _nodes);
+    std::vector<mesh> example = load_from_gltf(
+        "./assets/glTF-Sample-Assets/Models/Duck/glTF-Binary/Duck.glb", _nodes);
 
     _meshes.insert(_meshes.end(), example.begin(), example.end());
 
-    _render_mat_buffer = create_buffer(
-        _nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-
-    _deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(_allocator, _render_mat_buffer.buffer,
-                         _render_mat_buffer.allocation);
-    });
+    create_buffer(_nodes.size() * pad_uniform_buffer_size(sizeof(render_mat)),
+                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &_render_mat_buffer);
 
     VkDescriptorBufferInfo descriptor_buffer_info = {};
     descriptor_buffer_info.buffer = _render_mat_buffer.buffer;
@@ -322,56 +316,52 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         allocated_buffer staging_buffer;
 
         /* create vertex buffer */
-        staging_buffer = create_buffer(mesh->vertices.size() * sizeof(vertex),
-                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+        create_buffer(mesh->vertices.size() * sizeof(vertex),
+                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                      VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &staging_buffer);
 
         void *data;
         vmaMapMemory(_allocator, staging_buffer.allocation, &data);
         std::memcpy(data, mesh->vertices.data(), mesh->vertices.size() * sizeof(vertex));
         vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
-        mesh->vertex_buffer = create_buffer(
-            mesh->vertices.size() * sizeof(vertex),
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+        create_buffer(mesh->vertices.size() * sizeof(vertex),
+                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                      0, &mesh->vertex_buffer);
 
-        _deletion_queue.push_back([=]() {
+        deletion_queue.push_back([=]() {
             vmaDestroyBuffer(_allocator, _meshes[i].vertex_buffer.buffer,
                              _meshes[i].vertex_buffer.allocation);
         });
 
-        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+        immediate_submit([=](VkCommandBuffer cbuffer) {
             VkBufferCopy region = {};
             region.size = mesh->vertices.size() * sizeof(vertex);
-            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, mesh->vertex_buffer.buffer,
-                            1, &region);
+            vkCmdCopyBuffer(cbuffer, staging_buffer.buffer, mesh->vertex_buffer.buffer, 1,
+                            &region);
         });
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
 
         /* create index buffer */
-        staging_buffer = create_buffer(mesh->indices.size() * sizeof(uint16_t),
-                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+        create_buffer(mesh->indices.size() * sizeof(uint16_t),
+                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                      VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &staging_buffer);
 
         vmaMapMemory(_allocator, staging_buffer.allocation, &data);
         std::memcpy(data, mesh->indices.data(), mesh->indices.size() * sizeof(uint16_t));
         vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
-        mesh->index_buffer = create_buffer(
-            mesh->indices.size() * sizeof(uint16_t),
-            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+        create_buffer(mesh->indices.size() * sizeof(uint16_t),
+                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                      0, &mesh->index_buffer);
 
-        _deletion_queue.push_back([=]() {
-            vmaDestroyBuffer(_allocator, _meshes[i].index_buffer.buffer,
-                             _meshes[i].index_buffer.allocation);
-        });
-
-        immediate_submit([=](VkCommandBuffer cmd_buffer) {
+        immediate_submit([=](VkCommandBuffer cbuffer) {
             VkBufferCopy region = {};
             region.size = mesh->indices.size() * sizeof(uint16_t);
-            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, mesh->index_buffer.buffer,
-                            1, &region);
+            vkCmdCopyBuffer(cbuffer, staging_buffer.buffer, mesh->index_buffer.buffer, 1,
+                            &region);
         });
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer, staging_buffer.allocation);
@@ -385,9 +375,9 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         allocated_buffer staging_buffer;
 
         if (mesh->texture.size() != 0) {
-            staging_buffer = create_buffer(mesh->texture.size() * sizeof(unsigned char),
-                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+            create_buffer(mesh->texture.size() * sizeof(unsigned char),
+                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                          VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &staging_buffer);
 
             void *data;
             vmaMapMemory(_allocator, staging_buffer.allocation, &data);
@@ -400,31 +390,25 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             extent.height = mesh->texture_buffer.extent.height;
             extent.depth = 1;
 
-            mesh->texture_buffer = create_img(
-                mesh->texture_buffer.format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
+            create_img(mesh->texture_buffer.format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                       VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0,
+                       &mesh->texture_buffer);
 
-            _deletion_queue.push_back([=]() {
-                vkDestroyImageView(_device, _meshes[i].texture_buffer.img_view, nullptr);
-                vmaDestroyImage(_allocator, _meshes[i].texture_buffer.img,
-                                _meshes[i].texture_buffer.allocation);
-            });
-
-            immediate_submit([=](VkCommandBuffer cmd_buffer) {
+            immediate_submit([=](VkCommandBuffer cbuffer) {
                 vk_cmd::vk_img_layout_transition(
-                    cmd_buffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+                    cbuffer, mesh->texture_buffer.img, VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
 
                 VkBufferImageCopy region = vk_boiler::buffer_img_copy(extent);
 
-                vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
+                vkCmdCopyBufferToImage(cbuffer, staging_buffer.buffer,
                                        mesh->texture_buffer.img,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-                vk_cmd::vk_img_layout_transition(cmd_buffer, mesh->texture_buffer.img,
+                vk_cmd::vk_img_layout_transition(cbuffer, mesh->texture_buffer.img,
                                                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                                 _transfer_queue_family_index);
+                                                 _transfer_index);
             });
 
             vmaDestroyBuffer(_allocator, staging_buffer.buffer,

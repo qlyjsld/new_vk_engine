@@ -2,7 +2,7 @@
 
 #include "vk_boiler.h"
 
-void vk_cmd::vk_img_layout_transition(VkCommandBuffer cmd_buffer, VkImage img,
+void vk_cmd::vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
                                       VkImageLayout old_layout, VkImageLayout new_layout,
                                       uint32_t family_index)
 {
@@ -20,12 +20,12 @@ void vk_cmd::vk_img_layout_transition(VkCommandBuffer cmd_buffer, VkImage img,
     img_mem_barrier.image = img;
     img_mem_barrier.subresourceRange = subresource_range;
 
-    vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
                          &img_mem_barrier);
 }
 
-void vk_cmd::vk_img_copy(VkCommandBuffer cmd_buffer, VkExtent3D extent, VkImage src,
+void vk_cmd::vk_img_copy(VkCommandBuffer cbuffer, VkExtent3D extent, VkImage src,
                          VkImage dst)
 {
     VkImageCopy img_copy = {};
@@ -41,6 +41,6 @@ void vk_cmd::vk_img_copy(VkCommandBuffer cmd_buffer, VkExtent3D extent, VkImage 
     img_copy.dstOffset = VkOffset3D{0, 0, 0};
     img_copy.extent = extent;
 
-    vkCmdCopyImage(cmd_buffer, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst,
+    vkCmdCopyImage(cbuffer, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst,
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &img_copy);
 }

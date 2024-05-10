@@ -17,6 +17,7 @@
 #include "vk_boiler.h"
 #include "vk_cmd.h"
 #include "vk_pipeline.h"
+#include "vk_type.h"
 
 void vk_engine::init()
 {
@@ -26,7 +27,7 @@ void vk_engine::init()
     _window = SDL_CreateWindow("vk_engine", _window_extent.width, _window_extent.height,
                                SDL_WINDOW_VULKAN);
 
-    _deletion_queue.push_back([=]() { SDL_DestroyWindow(_window); });
+    deletion_queue.push_back([=]() { SDL_DestroyWindow(_window); });
 
     device_init();
     vma_init();
@@ -44,6 +45,12 @@ void vk_engine::init()
     upload_meshes(_meshes.data(), _meshes.size());
     upload_textures(_meshes.data(), _meshes.size());
 
+    // init computes
+    skybox_init();
+    texture_init();
+    sphere_init();
+    cloud_init();
+
     _is_initialized = true;
 }
 
@@ -52,36 +59,29 @@ void vk_engine::descriptor_init()
     std::vector<VkDescriptorPoolSize> pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 256}};
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 256},
+    };
 
     VkDescriptorPoolCreateInfo pool_info =
         vk_boiler::descriptor_pool_create_info(pool_sizes.size(), pool_sizes.data());
 
     VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptor_pool));
 
-    _deletion_queue.push_back(
+    deletion_queue.push_back(
         [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
 
     { /* render mat layout and set */
-        VkDescriptorSetLayoutBinding render_mat_layout_binding_0 = {};
-        render_mat_layout_binding_0.binding = 0;
-        render_mat_layout_binding_0.descriptorType =
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        render_mat_layout_binding_0.descriptorCount = 1;
-        render_mat_layout_binding_0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-        std::vector<VkDescriptorSetLayoutBinding> render_mat_layout_bindings = {
-            render_mat_layout_binding_0,
-        };
-
         VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
             vk_boiler::descriptor_set_layout_create_info(
-                render_mat_layout_bindings.size(), render_mat_layout_bindings.data());
+                std::vector<VkDescriptorType>{
+                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+                },
+                VK_SHADER_STAGE_VERTEX_BIT);
 
         VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info, nullptr,
                                              &_render_mat_layout));
 
-        _deletion_queue.push_back([=]() {
+        deletion_queue.push_back([=]() {
             vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
         });
 
@@ -94,58 +94,34 @@ void vk_engine::descriptor_init()
     }
 
     { /* texture layout */
-        VkDescriptorSetLayoutBinding texture_data_layout_binding_0 = {};
-        texture_data_layout_binding_0.binding = 0;
-        texture_data_layout_binding_0.descriptorType =
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        texture_data_layout_binding_0.descriptorCount = 1;
-        texture_data_layout_binding_0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        std::vector<VkDescriptorSetLayoutBinding> texture_data_layout_bindings = {
-            texture_data_layout_binding_0,
-        };
-
         VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
             vk_boiler::descriptor_set_layout_create_info(
-                texture_data_layout_bindings.size(), texture_data_layout_bindings.data());
+                std::vector<VkDescriptorType>{
+                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                },
+                VK_SHADER_STAGE_FRAGMENT_BIT);
 
         VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info, nullptr,
                                              &_texture_layout));
 
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr); });
     }
 
     { /* compute shader layout*/
-        VkDescriptorSetLayoutBinding comp_binding_0 = {};
-        comp_binding_0.binding = 0;
-        comp_binding_0.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        comp_binding_0.descriptorCount = 1;
-        comp_binding_0.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        VkDescriptorSetLayoutBinding comp_binding_1 = {};
-        comp_binding_1.binding = 1;
-        comp_binding_1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        comp_binding_1.descriptorCount = 1;
-        comp_binding_1.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        VkDescriptorSetLayoutBinding comp_binding_2 = {};
-        comp_binding_2.binding = 2;
-        comp_binding_2.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        comp_binding_2.descriptorCount = 1;
-        comp_binding_2.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-        std::vector<VkDescriptorSetLayoutBinding> comp_layout_bindings = {
-            comp_binding_0, comp_binding_1, comp_binding_2};
-
         VkDescriptorSetLayoutCreateInfo comp_layout_info =
-            vk_boiler::descriptor_set_layout_create_info(comp_layout_bindings.size(),
-                                                         comp_layout_bindings.data());
+            vk_boiler::descriptor_set_layout_create_info(
+                std::vector<VkDescriptorType>{
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+                },
+                VK_SHADER_STAGE_COMPUTE_BIT);
 
         VK_CHECK(vkCreateDescriptorSetLayout(_device, &comp_layout_info, nullptr,
                                              &_comp_layout));
 
-        _deletion_queue.push_back(
+        deletion_queue.push_back(
             [=]() { vkDestroyDescriptorSetLayout(_device, _comp_layout, nullptr); });
 
         VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
@@ -206,6 +182,7 @@ void vk_engine::pipeline_init()
         gfx_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
 
         vertex_input_description description = vertex::get_vertex_input_description();
+
         gfx_pipeline_builder._vertex_input_state_info =
             vk_boiler::vertex_input_state_create_info(&description);
         gfx_pipeline_builder._input_asm_state_info =
@@ -224,15 +201,13 @@ void vk_engine::pipeline_init()
             _texture_layout,
         };
 
-        gfx_pipeline_builder.build_layout(_device, layouts);
-        gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format);
-        _gfx_pipeline = gfx_pipeline_builder.value();
-        _gfx_pipeline_layout = gfx_pipeline_builder._pipeline_layout;
+        std::vector<VkPushConstantRange> push_constants = {};
 
-        _deletion_queue.push_back([=]() {
-            vkDestroyPipelineLayout(_device, _gfx_pipeline_layout, nullptr);
-            vkDestroyPipeline(_device, _gfx_pipeline, nullptr);
-        });
+        gfx_pipeline_builder.build_layout(_device, layouts, push_constants,
+                                          &_gfx_pipeline_layout);
+
+        gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format,
+                                       &_gfx_pipeline_layout, &_gfx_pipeline);
     }
 
     { /* build compute pipeline */
@@ -242,16 +217,14 @@ void vk_engine::pipeline_init()
         comp_pipeline_builder._shader_stage_infos.push_back(
             vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, _comp));
 
-        std::vector<VkDescriptorSetLayout> layouts = {_comp_layout};
-        comp_pipeline_builder.build_layout(_device, layouts);
-        comp_pipeline_builder.build_comp(_device);
-        _comp_pipeline = comp_pipeline_builder.value();
-        _comp_pipeline_layout = comp_pipeline_builder._pipeline_layout;
+        std::vector<VkDescriptorSetLayout> layouts = {
+            _comp_layout,
+        };
 
-        _deletion_queue.push_back([=]() {
-            vkDestroyPipelineLayout(_device, _comp_pipeline_layout, nullptr);
-            vkDestroyPipeline(_device, _comp_pipeline, nullptr);
-        });
+        std::vector<VkPushConstantRange> push_constants = {};
+
+        comp_pipeline_builder.build_comp(_device, layouts, push_constants,
+                                         &_comp_pipeline_layout, &_comp_pipeline);
     }
 }
 
@@ -263,19 +236,19 @@ void vk_engine::draw()
     VK_CHECK(vkResetFences(_device, 1, &frame->fence));
 
     /* wait and acquire the next frame */
-    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, frame->present_sem,
-                                   VK_NULL_HANDLE, &_img_index));
+    vkAcquireNextImageKHR(_device, _swapchain, UINT64_MAX, frame->present_sem,
+                          VK_NULL_HANDLE, &_img_index);
 
     /* prepare command buffer and dynamic rendering functions */
-    VkCommandBufferBeginInfo cmd_buffer_begin_info = vk_boiler::cmd_buffer_begin_info();
+    VkCommandBufferBeginInfo cbuffer_begin_info = vk_boiler::cbuffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(frame->cmd_buffer, &cmd_buffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(frame->cbuffer, &cbuffer_begin_info));
 
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
-        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_queue_family_index);
+        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_index);
 
     /* draw with comp */
     draw_comp(frame);
@@ -293,62 +266,64 @@ void vk_engine::draw()
     VkRenderingInfo rendering_info =
         vk_boiler::rendering_info(&color_attachment, &depth_attachment, _resolution);
 
-    vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
+    vkCmdBeginRendering(frame->cbuffer, &rendering_info);
 
     draw_nodes(frame);
 
     /* imgui rendering */
     // ImGui::ShowDemoWindow();
     ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cmd_buffer);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cbuffer);
 
-    vkCmdEndRendering(frame->cmd_buffer);
+    vkCmdEndRendering(frame->cbuffer);
 
     /* downsampling to window */
-    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _target.img,
+    vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_GENERAL, _comp_queue_family_index);
+                                     VK_IMAGE_LAYOUT_GENERAL, _comp_index);
 
-    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _copy_to_swapchain.img,
+    vk_cmd::vk_img_layout_transition(frame->cbuffer, _copy_to_swapchain.img,
                                      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                                     _comp_queue_family_index);
+                                     _comp_index);
 
-    vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(frame->cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
                          nullptr);
 
-    vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, _comp_pipeline);
+    vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _comp_pipeline);
 
-    std::vector<VkDescriptorSet> sets = {_comp_set};
+    std::vector<VkDescriptorSet> sets = {
+        _comp_set,
+    };
 
-    glm::vec3 inf = glm::vec3{_resolution.width, _resolution.height, 1.f};
-    glm::vec3 outf = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
+    glm::vec3 in_frame = glm::vec3{_resolution.width, _resolution.height, 1.f};
+    glm::vec3 out_frame = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
 
     void *data;
     vmaMapMemory(_allocator, _comp_buffer.allocation, &data);
-    std::memcpy(data, &inf, sizeof(glm::vec3));
-    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &outf,
+    std::memcpy(data, &in_frame, sizeof(glm::vec3));
+    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &out_frame,
                 sizeof(glm::vec3));
     vmaUnmapMemory(_allocator, _comp_buffer.allocation);
 
     uint32_t doffset = 0;
-    vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+    vkCmdBindDescriptorSets(frame->cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                             _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
 
-    vkCmdDispatch(frame->cmd_buffer, _resolution.width / 8, _resolution.height / 8, 1);
+    vkCmdDispatch(frame->cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
 
-    vkCmdPipelineBarrier(frame->cmd_buffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(frame->cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
                          nullptr);
 
     /* transition image format for transfering and copy to swapchain*/
     vk_cmd::vk_img_layout_transition(
-        frame->cmd_buffer, _copy_to_swapchain.img, VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transfer_queue_family_index);
+        frame->cbuffer, _copy_to_swapchain.img, VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transfer_index);
 
     vk_cmd::vk_img_layout_transition(
-        frame->cmd_buffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_queue_family_index);
+        frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
 
     VkImageBlit region = {};
     region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -363,36 +338,34 @@ void vk_engine::draw()
     region.dstOffsets[1] =
         VkOffset3D{(int)_window_extent.width, (int)_window_extent.height, 1};
 
-    vkCmdBlitImage(frame->cmd_buffer, _copy_to_swapchain.img,
+    vkCmdBlitImage(frame->cbuffer, _copy_to_swapchain.img,
                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
 
     /* only apply to window extent = resolution */
-    // vk_cmd::vk_img_copy(frame->cmd_buffer,
+    // vk_cmd::vk_img_copy(frame->cbuffer,
     //                     VkExtent3D{_window_extent.width, _window_extent.height, 1},
     //                     _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
 
     /* transition image format for presenting */
-    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _swapchain_imgs[_img_index],
+    vk_cmd::vk_img_layout_transition(frame->cbuffer, _swapchain_imgs[_img_index],
                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                     _gfx_queue_family_index);
+                                     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, _gfx_index);
 
-    VK_CHECK(vkEndCommandBuffer(frame->cmd_buffer));
+    VK_CHECK(vkEndCommandBuffer(frame->cbuffer));
 
     /* submit and present queue */
-    VkPipelineStageFlags pipeline_stage_flags = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};
+    VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    VkSubmitInfo submit_info =
-        vk_boiler::submit_info(&frame->cmd_buffer, &frame->present_sem,
-                               &frame->sumbit_sem, &pipeline_stage_flags);
+    VkSubmitInfo submit_info = vk_boiler::submit_info(
+        &frame->cbuffer, &frame->present_sem, &frame->sumbit_sem, &pipeline_stage_flags);
 
     VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, frame->fence));
 
     VkPresentInfoKHR present_info =
         vk_boiler::present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
 
-    VK_CHECK(vkQueuePresentKHR(_gfx_queue, &present_info));
+    vkQueuePresentKHR(_gfx_queue, &present_info);
 
     _last_frame = SDL_GetTicksNS();
     _frame_number++;
@@ -410,21 +383,19 @@ void vk_engine::draw_nodes(frame *frame)
 
         if (node->mesh_id != -1) {
             mesh *mesh = &_meshes[node->mesh_id];
-            vkCmdBindPipeline(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                               _gfx_pipeline);
 
             VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(frame->cmd_buffer, 0, 1, &mesh->vertex_buffer.buffer,
+            vkCmdBindVertexBuffers(frame->cbuffer, 0, 1, &mesh->vertex_buffer.buffer,
                                    &offset);
 
-            vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer, 0,
+            vkCmdBindIndexBuffer(frame->cbuffer, mesh->index_buffer.buffer, 0,
                                  VK_INDEX_TYPE_UINT16);
 
             render_mat mat;
-            mat.view = glm::lookAt(_cam.pos, _cam.pos + _cam.dir, _cam.up);
-            mat.proj = glm::perspective(glm::radians(_cam.fov),
-                                        (float)_resolution.width / _resolution.height,
-                                        .01f, 65536.0f);
+            mat.view = _vk_camera.get_view_mat();
+            mat.proj = _vk_camera.get_proj_mat();
             mat.proj[1][1] *= -1;
             mat.model = node->transform_mat;
 
@@ -439,11 +410,11 @@ void vk_engine::draw_nodes(frame *frame)
                 mesh->texture_set,
             };
             uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
-            vkCmdBindDescriptorSets(frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            vkCmdBindDescriptorSets(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     _gfx_pipeline_layout, 0, sets.size(), sets.data(), 1,
                                     &doffset);
 
-            vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0, 0);
+            vkCmdDrawIndexed(frame->cbuffer, mesh->indices.size(), 1, 0, 0, 0);
         }
     }
 }
@@ -457,7 +428,7 @@ void vk_engine::cleanup()
     ImGui::DestroyContext();
 
     if (_is_initialized)
-        _deletion_queue.flush();
+        deletion_queue.flush();
 }
 
 void vk_engine::run()
@@ -473,47 +444,35 @@ void vk_engine::run()
 
     std::cout << "draw " << triangles << " triangels" << std::endl;
 
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+
     while (!bquit) {
         const uint8_t *state = SDL_GetKeyboardState(NULL);
 
-        if (state[SDL_SCANCODE_W]) {
-            glm::vec3 v = _cam.dir * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
 
-        if (state[SDL_SCANCODE_A]) {
-            glm::vec3 v = -_cam.right * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+        if (SDL_GetRelativeMouseMode()) {
+            if (state[SDL_SCANCODE_W])
+                _vk_camera.w(ms);
 
-        if (state[SDL_SCANCODE_S]) {
-            glm::vec3 v = -_cam.dir * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+            if (state[SDL_SCANCODE_A])
+                _vk_camera.a(ms);
 
-        if (state[SDL_SCANCODE_D]) {
-            glm::vec3 v = _cam.right * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+            if (state[SDL_SCANCODE_S])
+                _vk_camera.s(ms);
 
-        if (state[SDL_SCANCODE_Q]) {
-            float angle = _cam.sensitivity;
-            _cam.rotate_yaw(angle, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+            if (state[SDL_SCANCODE_D])
+                _vk_camera.d(ms);
 
-        if (state[SDL_SCANCODE_E]) {
-            float angle = -_cam.sensitivity;
-            _cam.rotate_yaw(angle, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+            if (state[SDL_SCANCODE_SPACE])
+                _vk_camera.space(ms);
 
-        if (state[SDL_SCANCODE_SPACE]) {
-            glm::vec3 v = _cam.up * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
-        }
+            if (state[SDL_SCANCODE_LCTRL])
+                _vk_camera.ctrl(ms);
 
-        if (state[SDL_SCANCODE_LCTRL]) {
-            glm::vec3 v = -_cam.up * _cam.speed;
-            _cam.move(v, (SDL_GetTicksNS() - _last_frame) / 1000.f);
+            float x, y;
+            SDL_GetRelativeMouseState(&x, &y);
+            _vk_camera.motion(x, y);
         }
 
         while (SDL_PollEvent(&e) != 0) {
@@ -524,7 +483,15 @@ void vk_engine::run()
                 if (e.key.keysym.sym == SDLK_ESCAPE)
                     bquit = true;
 
-            ImGui_ImplSDL3_ProcessEvent(&e);
+            if (e.type == SDL_EVENT_KEY_DOWN) {
+                if (e.key.keysym.sym == SDLK_TAB) {
+                    if (SDL_GetRelativeMouseMode())
+                        SDL_SetRelativeMouseMode(SDL_FALSE);
+                    else
+                        SDL_SetRelativeMouseMode(SDL_TRUE);
+                }
+            } else if (!SDL_GetRelativeMouseMode())
+                ImGui_ImplSDL3_ProcessEvent(&e);
         }
 
         ImGui_ImplVulkan_NewFrame();
@@ -559,7 +526,7 @@ void vk_engine::imgui_init()
     imgui_init_info.Instance = _instance;
     imgui_init_info.PhysicalDevice = _physical_device;
     imgui_init_info.Device = _device;
-    imgui_init_info.QueueFamily = _gfx_queue_family_index;
+    imgui_init_info.QueueFamily = _gfx_index;
     imgui_init_info.Queue = _gfx_queue;
     imgui_init_info.DescriptorPool = _descriptor_pool;
     imgui_init_info.MinImageCount = 2;

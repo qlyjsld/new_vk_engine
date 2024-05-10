@@ -7,10 +7,10 @@
 
 namespace vk_boiler
 {
-VkCommandPoolCreateInfo cmd_pool_create_info(uint32_t queue_family_index);
+VkCommandPoolCreateInfo cpool_create_info(uint32_t index);
 
-VkCommandBufferAllocateInfo cmd_buffer_allocate_info(uint32_t cmd_buffer_count,
-                                                     VkCommandPool cmd_pool);
+VkCommandBufferAllocateInfo cbuffer_allocate_info(uint32_t cbuffer_count,
+                                                  VkCommandPool cpool);
 
 VkFenceCreateInfo fence_create_info(bool signaled);
 
@@ -24,13 +24,13 @@ VkRenderingInfo rendering_info(VkRenderingAttachmentInfo *color_attachments,
                                VkRenderingAttachmentInfo *depth_attachments,
                                VkExtent2D extent);
 
-VkCommandBufferBeginInfo cmd_buffer_begin_info();
+VkCommandBufferBeginInfo cbuffer_begin_info();
 
 VkImageSubresourceRange img_subresource_range(VkImageAspectFlags aspect);
 
 VkImageMemoryBarrier img_mem_barrier();
 
-VkSubmitInfo submit_info(VkCommandBuffer *cmd_buffer, VkSemaphore *wait_sem,
+VkSubmitInfo submit_info(VkCommandBuffer *cbuffer, VkSemaphore *wait_sem,
                          VkSemaphore *signal_sem, VkPipelineStageFlags *flags);
 
 VkPresentInfoKHR present_info(VkSwapchainKHR *swapchain, VkSemaphore *sem,
@@ -53,13 +53,14 @@ VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 VkPipelineMultisampleStateCreateInfo multisample_state_create_info();
 
 VkPipelineLayoutCreateInfo
-pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts);
+pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts,
+                            std::vector<VkPushConstantRange> &push_constants);
 
 VkImageCreateInfo img_create_info(VkFormat format, VkExtent3D extent,
                                   VkImageUsageFlags usage);
 
 VkImageViewCreateInfo img_view_create_info(VkImageAspectFlags aspect, VkImage img,
-                                           VkFormat format);
+                                           VkExtent3D extent, VkFormat format);
 
 VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info();
 
@@ -67,8 +68,8 @@ VkDescriptorPoolCreateInfo descriptor_pool_create_info(uint32_t pool_size_count,
                                                        VkDescriptorPoolSize *pool_sizes);
 
 VkDescriptorSetLayoutCreateInfo
-descriptor_set_layout_create_info(uint32_t binding_count,
-                                  VkDescriptorSetLayoutBinding *bindings);
+descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
+                                  VkShaderStageFlags stage);
 
 VkDescriptorSetAllocateInfo descriptor_set_allocate_info(VkDescriptorPool pool,
                                                          VkDescriptorSetLayout *layouts);
