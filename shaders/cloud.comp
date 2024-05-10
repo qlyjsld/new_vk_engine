@@ -124,6 +124,16 @@ float eval_density(vec3 c, vec3 d, vec3 p)
     return fade(imageLoad(cloudtex, ivec3(p)).x);
 }
 
+/* reference: https://www.shadertoy.com/view/lslGzl */
+vec3 linearToneMapping(vec3 color)
+{
+    float exposure = .6f;
+    float gamma = 3.f;
+    color = clamp(exposure * color, 0.f, 1.f);
+    color = pow(color, vec3(1.f / gamma));
+    return color;
+}
+
 void main()
 {
     int x = int(8 * gl_WorkGroupID.x + gl_LocalInvocationID.x);
@@ -183,6 +193,7 @@ void main()
 
         color += vec3(background) * transmittance;
         imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
+        // imageStore(out_frame, ivec2(x, y), vec4(linearToneMapping(color), 1.f));
     }
 
     // sdf marching
