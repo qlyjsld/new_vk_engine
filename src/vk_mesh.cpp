@@ -288,7 +288,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
 void vk_engine::load_meshes()
 {
-    std::vector<mesh> example = load_from_gltf("../Duck/glTF-Binary/Duck.glb", _nodes);
+    std::vector<mesh> example = load_from_gltf("Duck/glTF-Binary/Duck.glb", _nodes);
 
     _meshes.insert(_meshes.end(), example.begin(), example.end());
 

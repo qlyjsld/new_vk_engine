@@ -14,9 +14,12 @@ void vk_engine::device_init()
     vkb::InstanceBuilder builder;
     auto inst_ret = builder.set_app_name("vk_engine")
                         .require_api_version(VKB_VK_API_VERSION_1_3)
-                        .request_validation_layers()
+#ifndef NDEBUG
+                        .request_validation_layers(true)
                         .use_default_debug_messenger()
+#endif
                         .build();
+
     if (!inst_ret) {
         std::cerr << "Failed to create Vulkan Instance: " << inst_ret.error().message()
                   << std::endl;
@@ -40,6 +43,7 @@ void vk_engine::device_init()
     vkb::PhysicalDeviceSelector selector(instance);
     auto phys_ret =
         selector.add_required_extension_features(features).set_surface(_surface).select();
+
     if (!phys_ret) {
         std::cerr << "Failed to find suitable physical device: "
                   << phys_ret.error().message() << std::endl;
@@ -54,6 +58,7 @@ void vk_engine::device_init()
     // Create our Device
     vkb::DeviceBuilder dev_builder(physical_device);
     auto dev_ret = dev_builder.build();
+
     if (!dev_ret) {
         std::cerr << "Failed to create Vulkan device: " << dev_ret.error().message()
                   << std::endl;
