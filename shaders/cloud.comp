@@ -176,7 +176,7 @@ void main()
         {
             vec3 p = o + t.x * r;
             float density = eval_density(cloud.centre, cloud.size, p) * cloud.density;
-            if (density < cutoff) density = 0.f;
+            if (density < cutoff) { density = 0.f; t += step + step * rand(t.y); };
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume

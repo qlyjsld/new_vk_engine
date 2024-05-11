@@ -29,7 +29,7 @@ struct cloud_data {
 };
 
 static uint32_t texture_size = 512;
-
+static bool cloud = true;
 static cloud_data cloud_data;
 
 int main(int argc, char *argv[])
@@ -293,7 +293,6 @@ void vk_engine::cloud_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
-    bool cloud = true;
     ImGui::SetNextWindowSize(ImVec2{300, 200});
     ImGui::SetNextWindowPos(ImVec2{30, 30});
     ImGui::Begin("cloud", &cloud, 0);

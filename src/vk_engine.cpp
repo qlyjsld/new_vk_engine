@@ -1,5 +1,6 @@
 ﻿#include "vk_engine.h"
 
+#include <future>
 #include <iostream>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -286,10 +287,6 @@ void vk_engine::draw()
                                      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
                                      _comp_index);
 
-    vkCmdPipelineBarrier(frame->cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
-                         nullptr);
-
     vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _comp_pipeline);
 
     std::vector<VkDescriptorSet> sets = {
@@ -311,10 +308,6 @@ void vk_engine::draw()
                             _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
 
     vkCmdDispatch(frame->cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
-
-    vkCmdPipelineBarrier(frame->cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 0,
-                         nullptr);
 
     /* transition image format for transfering and copy to swapchain*/
     vk_cmd::vk_img_layout_transition(
@@ -367,7 +360,6 @@ void vk_engine::draw()
 
     vkQueuePresentKHR(_gfx_queue, &present_info);
 
-    _last_frame = SDL_GetTicksNS();
     _frame_number++;
 }
 
@@ -446,54 +438,60 @@ void vk_engine::run()
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
-    while (!bquit) {
-        const uint8_t *state = SDL_GetKeyboardState(NULL);
+    auto input = std::async([&]() {
+        while (!bquit) {
+            const uint8_t *state = SDL_GetKeyboardState(NULL);
 
-        float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
+            float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
 
-        if (SDL_GetRelativeMouseMode()) {
-            if (state[SDL_SCANCODE_W])
-                _vk_camera.w(ms);
+            if (SDL_GetRelativeMouseMode()) {
+                if (state[SDL_SCANCODE_W])
+                    _vk_camera.w(ms);
 
-            if (state[SDL_SCANCODE_A])
-                _vk_camera.a(ms);
+                if (state[SDL_SCANCODE_A])
+                    _vk_camera.a(ms);
 
-            if (state[SDL_SCANCODE_S])
-                _vk_camera.s(ms);
+                if (state[SDL_SCANCODE_S])
+                    _vk_camera.s(ms);
 
-            if (state[SDL_SCANCODE_D])
-                _vk_camera.d(ms);
+                if (state[SDL_SCANCODE_D])
+                    _vk_camera.d(ms);
 
-            if (state[SDL_SCANCODE_SPACE])
-                _vk_camera.space(ms);
+                if (state[SDL_SCANCODE_SPACE])
+                    _vk_camera.space(ms);
 
-            if (state[SDL_SCANCODE_LCTRL])
-                _vk_camera.ctrl(ms);
+                if (state[SDL_SCANCODE_LCTRL])
+                    _vk_camera.ctrl(ms);
 
-            float x, y;
-            SDL_GetRelativeMouseState(&x, &y);
-            _vk_camera.motion(x, y);
-        }
+                float x, y;
+                SDL_GetRelativeMouseState(&x, &y);
+                _vk_camera.motion(x, y);
+            }
 
-        while (SDL_PollEvent(&e) != 0) {
-            if (e.type == SDL_EVENT_QUIT)
-                bquit = true;
-
-            if (e.type == SDL_EVENT_KEY_DOWN)
-                if (e.key.keysym.sym == SDLK_ESCAPE)
+            while (SDL_PollEvent(&e) != 0) {
+                if (e.type == SDL_EVENT_QUIT)
                     bquit = true;
 
-            if (e.type == SDL_EVENT_KEY_DOWN) {
-                if (e.key.keysym.sym == SDLK_TAB) {
-                    if (SDL_GetRelativeMouseMode())
-                        SDL_SetRelativeMouseMode(SDL_FALSE);
-                    else
-                        SDL_SetRelativeMouseMode(SDL_TRUE);
-                }
-            } else if (!SDL_GetRelativeMouseMode())
-                ImGui_ImplSDL3_ProcessEvent(&e);
-        }
+                if (e.type == SDL_EVENT_KEY_DOWN)
+                    if (e.key.keysym.sym == SDLK_ESCAPE)
+                        bquit = true;
 
+                if (e.type == SDL_EVENT_KEY_DOWN) {
+                    if (e.key.keysym.sym == SDLK_TAB) {
+                        if (SDL_GetRelativeMouseMode())
+                            SDL_SetRelativeMouseMode(SDL_FALSE);
+                        else
+                            SDL_SetRelativeMouseMode(SDL_TRUE);
+                    }
+                } else if (!SDL_GetRelativeMouseMode())
+                    ImGui_ImplSDL3_ProcessEvent(&e);
+            }
+
+            _last_frame = SDL_GetTicksNS();
+        }
+    });
+
+    while (!bquit) {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
