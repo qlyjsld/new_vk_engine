@@ -102,10 +102,9 @@ void vk_engine::texture_init()
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
-    allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
-                         VkExtent3D{texture_size, texture_size, texture_size},
-                         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
-                         "cloudtex");
+    allocator.create_img(
+        VK_FORMAT_R16_SFLOAT, VkExtent3D{texture_size, texture_size, texture_size},
+        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "cloudtex");
 
     /* match set binding */
     std::vector<descriptor> descriptors = {
@@ -227,9 +226,9 @@ void vk_engine::cloud_init()
     cloud_data.centre = glm::vec3(0.f);
     cloud_data.size = glm::vec3(32.f);
     cloud_data.sigma_a = .1f;
-    cloud_data.sigma_s = 16.f;
-    cloud_data.step = .1f;
-    cloud_data.cutoff = .3f;
+    cloud_data.sigma_s = 9.f;
+    cloud_data.step = .13f;
+    cloud_data.cutoff = .52f;
     cloud_data.density = 1.f;
 
     std::vector<descriptor> descriptors = {

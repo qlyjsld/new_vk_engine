@@ -318,7 +318,7 @@ void vk_engine::draw()
         frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
 
-    VkImageBlit region = {};
+    /* VkImageBlit region = {};
     region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = 0;
     region.srcSubresource.baseArrayLayer = 0;
@@ -333,12 +333,12 @@ void vk_engine::draw()
 
     vkCmdBlitImage(frame->cbuffer, _copy_to_swapchain.img,
                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR); */
 
     /* only apply to window extent = resolution */
-    // vk_cmd::vk_img_copy(frame->cbuffer,
-    //                     VkExtent3D{_window_extent.width, _window_extent.height, 1},
-    //                     _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
+    vk_cmd::vk_img_copy(frame->cbuffer,
+                        VkExtent3D{_window_extent.width, _window_extent.height, 1},
+                        _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
 
     /* transition image format for presenting */
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _swapchain_imgs[_img_index],

@@ -20,7 +20,7 @@ void vk_cmd::vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
     img_mem_barrier.image = img;
     img_mem_barrier.subresourceRange = subresource_range;
 
-    vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
                          &img_mem_barrier);
 }
