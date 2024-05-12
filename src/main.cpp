@@ -27,6 +27,9 @@ struct cloud_data {
     alignas(4) int max_steps;
     alignas(4) float cutoff;
     alignas(4) float density;
+    alignas(4) float lambda;
+    alignas(4) float temperature;
+    alignas(16) glm::vec3 color;
 };
 
 static uint32_t texture_size = 512;
@@ -232,6 +235,9 @@ void vk_engine::cloud_init()
     cloud_data.max_steps = 64;
     cloud_data.cutoff = .3f;
     cloud_data.density = 1.f;
+    cloud_data.lambda = 600.f;
+    cloud_data.temperature = 9500.f;
+    cloud_data.color = glm::vec3(1.f);
 
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
@@ -294,7 +300,7 @@ void vk_engine::cloud_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
-    ImGui::SetNextWindowSize(ImVec2{300, 200});
+    ImGui::SetNextWindowSize(ImVec2{300, 300});
     ImGui::SetNextWindowPos(ImVec2{30, 30});
     ImGui::Begin("cloud", &cloud, 0);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
@@ -305,6 +311,9 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("step", &cloud_data.step, .01f, 3.f);
     ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 3.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 3.f);
+    ImGui::SliderFloat("lambda", &cloud_data.lambda, 0.f, 1000.f);
+    ImGui::SliderFloat("temperature", &cloud_data.temperature, 0.f, 10000.f);
+    ImGui::ColorEdit3("color", (float *)&cloud_data.color);
     ImGui::End();
 
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,

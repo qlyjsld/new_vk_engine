@@ -30,11 +30,14 @@ layout (set = 0, binding = 4) uniform readonly CLOUD
     int max_steps;
     float cutoff;
     float density;
+    float lambda;
+    float temperature;
+    vec3 color;
 } cloud;
 
 float rand(float x)
 {
-    return fract(sin(x) * 100000.f);
+    return fract(sin(x) * 100000.f) - .5f;
 }
 
 float sdfsphere(vec3 p, float r)
@@ -106,8 +109,9 @@ vec2 hit_box(vec3 c, vec3 e, vec3 o, vec3 r)
     return vec2(max(tmin, tzmin), min(tmax, tzmax));
 }
 
-float phase(float g, float cos_theta)
+float phase(float g, vec3 a, vec3 b)
 {
+    float cos_theta = dot(a, b);
     float denom = 1.f + g * g - 2.f * g * cos_theta;
     return 1.f / (4.f * 3.14f) * (1.f - g * g) / (denom * sqrt(denom));
 }
@@ -181,19 +185,18 @@ void main()
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
-            // vec3 ld = vec3(0.f, -1.f, 0.f);
+            vec3 ld = vec3(0.f, -1.f, 0.f);
             // vec2 lt = hit_box(box, sun_pos, ld);
             // float s = length(p - sun_pos) - lt.x;
 
             const float kb = 1.3806488e-23;
-            float lambda = 600.f;
-            float T = 9500.f;
-            float l = lambda * 1e-9f;
+            float lambda = cloud.lambda * 1e-9;
+            float temperature = cloud.temperature;
 
             vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
-            vec3 le = 1.1910429e-16 / (pow(lambda, 5) * (exp(1.9864457e-25 / (l * kb * T)) - 1.f)) * vec3(1.f) * step;
-            color += (le * sigma_a * density + li * sigma_s * density /* phase(.6f, dot(-ld, r))*/) * transmittance;
-            // color += li * sigma_s * density * phase(.3f, dot(-ld, r)) * transmittance;
+            vec3 le = (1.1910429e-16 / (pow(lambda, 5.f) * (exp(1.9864457e-25 / (lambda * kb * temperature)) - 1.f))) * cloud.color * step;
+            color += (le * sigma_a * density + li * sigma_s * density * phase(.3f, -ld, r)) * transmittance;
+            // color += li * sigma_s * density /* phase(.3f, -ld, r)*/ * transmittance;
 
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
