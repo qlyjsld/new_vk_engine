@@ -27,6 +27,7 @@ layout (set = 0, binding = 4) uniform readonly CLOUD
     float sigma_a;
     float sigma_s;
     float step;
+    int max_steps;
     float cutoff;
     float density;
 } cloud;
@@ -168,7 +169,7 @@ void main()
         float sigma_t = sigma_a + sigma_s;
         float transmittance = 1.f;
         float step = cloud.step;
-        int steps = int((t.y - t.x) / step);
+        int steps = min(int((t.y - t.x) / step), cloud.max_steps);
         float cutoff = cloud.cutoff;
         vec3 color = vec3(0.f);
 
@@ -180,12 +181,19 @@ void main()
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
-            vec3 ld = vec3(0.f, -1.f, 0.f);
+            // vec3 ld = vec3(0.f, -1.f, 0.f);
             // vec2 lt = hit_box(box, sun_pos, ld);
             // float s = length(p - sun_pos) - lt.x;
 
-            vec3 li = 2.f * (1.f - exp(-step * sigma_s * i * .01f)) * vec3(1.f) * step;
-            color += li * sigma_s * density * transmittance * (1.f + phase(.3f, dot(-ld, r)));
+            const float kb = 1.3806488e-23;
+            float lambda = 600.f;
+            float T = 9500.f;
+            float l = lambda * 1e-9f;
+
+            vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
+            vec3 le = 1.1910429e-16 / (pow(lambda, 5) * (exp(1.9864457e-25 / (l * kb * T)) - 1.f)) * vec3(1.f) * step;
+            color += (le * sigma_a * density + li * sigma_s * density /* phase(.6f, dot(-ld, r))*/) * transmittance;
+            // color += li * sigma_s * density * phase(.3f, dot(-ld, r)) * transmittance;
 
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;

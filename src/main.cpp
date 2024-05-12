@@ -24,6 +24,7 @@ struct cloud_data {
     alignas(4) float sigma_a;
     alignas(4) float sigma_s;
     alignas(4) float step;
+    alignas(4) int max_steps;
     alignas(4) float cutoff;
     alignas(4) float density;
 };
@@ -225,10 +226,11 @@ void vk_engine::cloud_init()
     cloud_data.extent = glm::vec3(texture_size);
     cloud_data.centre = glm::vec3(0.f);
     cloud_data.size = glm::vec3(32.f);
-    cloud_data.sigma_a = .1f;
-    cloud_data.sigma_s = 9.f;
+    cloud_data.sigma_a = 0.f;
+    cloud_data.sigma_s = 8.f;
     cloud_data.step = .13f;
-    cloud_data.cutoff = .52f;
+    cloud_data.max_steps = 64;
+    cloud_data.cutoff = .3f;
     cloud_data.density = 1.f;
 
     std::vector<descriptor> descriptors = {
@@ -299,6 +301,7 @@ void vk_engine::draw_comp(frame *frame)
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
+    ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 100);
     ImGui::SliderFloat("step", &cloud_data.step, .01f, 3.f);
     ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 3.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 3.f);
