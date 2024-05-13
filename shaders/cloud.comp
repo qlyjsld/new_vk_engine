@@ -194,7 +194,7 @@ void main()
 
             vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
             vec3 le = (1.1910429e-16 / (pow(lambda, 5.f) * (exp(1.9864457e-25 / (lambda * kb * (temperature * density))) - 1.f))) * cloud.color * step;
-            color += (le * .1f * sigma_a * density + li * sigma_s * density /* phase(.3f, -ld, r)*/) * transmittance;
+            color += (le * sigma_a * density + li * sigma_s * density /* phase(.3f, -ld, r)*/) * transmittance;
             // color += li * sigma_s * density /* phase(.3f, -ld, r)*/ * transmittance;
 
             t += step + step * rand(t.y);
