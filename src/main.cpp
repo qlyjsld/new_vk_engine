@@ -236,7 +236,7 @@ void vk_engine::cloud_init()
     cloud_data.cutoff = .3f;
     cloud_data.density = 1.f;
     cloud_data.lambda = 600.f;
-    cloud_data.temperature = 9500.f;
+    cloud_data.temperature = 3000.f;
     cloud_data.color = glm::vec3(1.f);
 
     std::vector<descriptor> descriptors = {

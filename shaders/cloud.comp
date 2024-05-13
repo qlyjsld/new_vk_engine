@@ -174,14 +174,13 @@ void main()
         float transmittance = 1.f;
         float step = cloud.step;
         int steps = min(int((t.y - t.x) / step), cloud.max_steps);
-        float cutoff = cloud.cutoff;
         vec3 color = vec3(0.f);
 
         for (int i = 0; i < steps; ++i)
         {
             vec3 p = o + t.x * r;
             float density = eval_density(cloud.centre, cloud.size, p) * cloud.density;
-            if (density < cutoff) { density = 0.f; t += step + step * rand(t.y); }
+            if (density < cloud.cutoff) { density = 0.f; t += step + step * rand(t.y); }
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
@@ -194,8 +193,8 @@ void main()
             float temperature = cloud.temperature;
 
             vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
-            vec3 le = (1.1910429e-16 / (pow(lambda, 5.f) * (exp(1.9864457e-25 / (lambda * kb * temperature)) - 1.f))) * cloud.color * step;
-            color += (le * sigma_a * density + li * sigma_s * density /* phase(.3f, -ld, r)*/) * transmittance;
+            vec3 le = (1.1910429e-16 / (pow(lambda, 5.f) * (exp(1.9864457e-25 / (lambda * kb * (temperature * density))) - 1.f))) * cloud.color * step;
+            color += (le * .1f * sigma_a * density + li * sigma_s * density /* phase(.3f, -ld, r)*/) * transmittance;
             // color += li * sigma_s * density /* phase(.3f, -ld, r)*/ * transmittance;
 
             t += step + step * rand(t.y);
