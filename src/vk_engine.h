@@ -108,7 +108,8 @@ public:
 
     void init();
     void skybox_init();
-    void texture_init();
+    void cloudtex_init();
+    void weather_init();
     void sphere_init();
     void cloud_init();
     void cleanup();

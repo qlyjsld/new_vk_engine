@@ -48,7 +48,8 @@ void vk_engine::init()
 
     // init computes
     skybox_init();
-    texture_init();
+    cloudtex_init();
+    weather_init();
     sphere_init();
     cloud_init();
 

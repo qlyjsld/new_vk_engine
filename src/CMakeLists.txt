@@ -6,7 +6,7 @@ file(GLOB SOURCE_FILES
 
 add_executable(vk_engine ${SOURCE_FILES})
 
-target_link_libraries(vk_engine Vulkan::Vulkan SDL3::SDL3 vk-bootstrap GPUOpen::VulkanMemoryAllocator tinygltf imgui)
+target_link_libraries(vk_engine Vulkan::Vulkan SDL3::SDL3 vk-bootstrap GPUOpen::VulkanMemoryAllocator tinygltf imgui) #OpenVDB::openvdb
 
 include_directories(
 	"${PROJECT_SOURCE_DIR}/vendor/imgui"

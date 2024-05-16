@@ -6,14 +6,12 @@ layout (set = 0, binding = 0, rgba16f) uniform image2D out_frame;
 
 layout (set = 0, binding = 1, r16f) uniform readonly image3D cloudtex;
 
-layout (set = 0, binding = 2, rg16f) uniform readonly image2D weather;
-
-layout (set = 0, binding = 3) uniform readonly EXTENT
+layout (set = 0, binding = 2) uniform readonly EXTENT
 {
     vec2 value;
 } extent;
 
-layout (set = 0, binding = 4) uniform readonly CAMERA
+layout (set = 0, binding = 3) uniform readonly CAMERA
 {
     vec3 pos;
     vec3 dir;
@@ -21,11 +19,11 @@ layout (set = 0, binding = 4) uniform readonly CAMERA
     float fov;
 } camera;
 
-layout (set = 0, binding = 5) uniform readonly CLOUD
+layout (set = 0, binding = 4) uniform readonly CLOUD
 {
-    int cloudtex_size;
+    vec3 extent;
     vec3 centre;
-    int size;
+    vec3 size;
     float sigma_a;
     float sigma_s;
     float step;
@@ -42,7 +40,46 @@ float rand(float x)
     return fract(sin(x) * 100000.f) - .5f;
 }
 
-vec2 hit_box(vec3 c, float e, vec3 o, vec3 r)
+float sdfsphere(vec3 p, float r)
+{
+    return length(p) - r;
+}
+
+float sdfbox(vec3 p, vec3 d)
+{
+    return length(p - min(max(vec3(0), p), d));
+}
+
+float map(vec3 p)
+{
+    vec3 sphere = vec3(0.f, 0.f, 3.f);
+    float s = sdfsphere(p - sphere, 1.f);
+
+    vec3 box = vec3(-4.f, -1.f, -1.f);
+    s = min(sdfbox(p - box, vec3(2.f)), s);
+
+    return s;
+}
+
+struct sphere {
+    vec3 centre;
+    float radius;
+};
+
+vec2 hit_sphere(sphere s, vec3 o, vec3 r)
+{
+    float a = dot(r, r);
+    float b = -2 * dot(r, s.centre - o);
+    float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant >= 0)
+            return vec2((-b - sqrt(discriminant)) / 2 * a, (-b + sqrt(discriminant)) / 2 * a);
+
+    return vec2(-1.f);
+}
+
+vec2 hit_box(vec3 c, vec3 e, vec3 o, vec3 r)
 {
     vec3 bmin = c - e * .5f;
     vec3 bmax = c + e * .5f;
@@ -84,12 +121,12 @@ float fade(float t)
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
 }
 
-float eval_density(vec3 p)
+float eval_density(vec3 c, vec3 d, vec3 p)
 {
-    float coverage = fade(imageLoad(weather, ivec2(floor(p - (cloud.centre - vec3(cloud.size) * .5f)).xz)).x);
-    float freq = 10.f;
-    p *= freq;
-    return fade(imageLoad(cloudtex, ivec3(floor(p)) & cloud.cloudtex_size - 1).x);
+    vec3 f = cloud.extent / d;
+    p -= (c - d * .5f);
+    p *= f;
+    return fade(imageLoad(cloudtex, ivec3(p)).x);
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -118,8 +155,8 @@ void main()
     float ux = float(x) / res.x * extent.value.x;
     float uy = float(y) / res.y * extent.value.y;
 
-    float h = tan(radians(camera.fov) / 2.f);
-    vec3 upperleft = (o + res.y / 2.f / h * d) + left * extent.value.x / 2.f + up * extent.value.y / 2.f;
+    float h = tan(radians(camera.fov) / 2);
+    vec3 upperleft = (o + res.y / 2 / h * d) + left * extent.value.x / 2 + up * extent.value.y / 2;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
     vec4 background = imageLoad(out_frame, ivec2(x, y));
@@ -142,7 +179,7 @@ void main()
         for (int i = 0; i < steps; ++i)
         {
             vec3 p = o + t.x * r;
-            float density = eval_density(p) * cloud.density;
+            float density = eval_density(cloud.centre, cloud.size, p) * cloud.density;
             if (density < cloud.cutoff) { density = 0.f; t += step + step * rand(t.y); }
             transmittance *= exp(-step * sigma_t * density);
 
@@ -151,8 +188,14 @@ void main()
             // vec2 lt = hit_box(box, sun_pos, ld);
             // float s = length(p - sun_pos) - lt.x;
 
+            const float kb = 1.3806488e-23;
+            float lambda = cloud.lambda * 1e-9;
+            float temperature = cloud.temperature;
+
             vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
-            color += li * sigma_s * density /* phase(.3f, -ld, r)*/ * transmittance;
+            vec3 le = (1.1910429e-16 / (pow(lambda, 5.f) * (exp(1.9864457e-25 / (lambda * kb * (temperature * density))) - 1.f))) * cloud.color * step;
+            color += (le * sigma_a * density + li * sigma_s * density /* phase(.3f, -ld, r)*/) * transmittance;
+            // color += li * sigma_s * density /* phase(.3f, -ld, r)*/ * transmittance;
 
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
@@ -162,4 +205,19 @@ void main()
         imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
         // imageStore(out_frame, ivec2(x, y), vec4(linearToneMapping(color), 1.f));
     }
+
+    // sdf marching
+    // t.x = 0.f; // distance traveled
+    // for (int i = 0; i < 128; ++i)
+    // {
+    //     float s = map(o + t.x * r);
+    //     t.x += s;
+
+    //     if (s < .01f) {
+    //         vec4 color = vec4(t.x * .2f);
+    //         imageStore(out_frame, ivec2(x, y), color);
+    //     }
+
+    //     if (t.x > 100.f) break;
+    // }
 }

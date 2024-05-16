@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <imgui.h>
+// #include <openvdb/openvdb.h>
 
 #include "vk_boiler.h"
 #include "vk_cmd.h"
@@ -18,9 +19,9 @@ struct camera_data {
 };
 
 struct cloud_data {
-    alignas(16) glm::vec3 extent;
+    alignas(4) int cloudtex_size;
     alignas(16) glm::vec3 centre;
-    alignas(16) glm::vec3 size;
+    alignas(4) int size;
     alignas(4) float sigma_a;
     alignas(4) float sigma_s;
     alignas(4) float step;
@@ -32,7 +33,8 @@ struct cloud_data {
     alignas(16) glm::vec3 color;
 };
 
-static uint32_t texture_size = 512;
+static uint32_t cloudtex_size = 128;
+static uint32_t weather_size = 32;
 static bool cloud = true;
 static cloud_data cloud_data;
 
@@ -40,6 +42,12 @@ int main(int argc, char *argv[])
 {
     vk_engine engine = {};
     engine.init();
+
+    /* openvdb::initialize();
+    openvdb::io::File file("./assets/wdas_cloud/wdas_cloud.vdb");
+    file.open();
+    file.close(); */
+
     engine.run();
     engine.cleanup();
     return 0;
@@ -101,13 +109,13 @@ void vk_engine::skybox_init()
     css.push_back(skybox);
 }
 
-void vk_engine::texture_init()
+void vk_engine::cloudtex_init()
 {
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
     allocator.create_img(
-        VK_FORMAT_R16_SFLOAT, VkExtent3D{texture_size, texture_size, texture_size},
+        VK_FORMAT_R16_SFLOAT, VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "cloudtex");
 
     /* match set binding */
@@ -151,11 +159,68 @@ void vk_engine::texture_init()
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
 
-        vkCmdDispatch(cbuffer, texture_size / 8, texture_size / 8, texture_size / 8);
+        vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8, cloudtex_size / 8);
     };
 
     cs::cc_init(_comp_index, _device);
     cs::comp_immediate_submit(_device, _comp_queue, &cloudtex);
+}
+
+void vk_engine::weather_init()
+{
+    /* to init a cs you need an allocator (custom struct) */
+    comp_allocator allocator(_device, _allocator);
+
+    allocator.create_img(
+        VK_FORMAT_R16G16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
+        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "weather");
+
+    /* match set binding */
+    std::vector<descriptor> descriptors = {
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
+    };
+
+    cs weather(allocator, descriptors, "../shaders/weather.comp.spv",
+               _min_buffer_alignment);
+
+    /* start building pipeline using info from struct cs and comp_allocator */
+    PipelineBuilder pb = {};
+    pb._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, weather.module));
+
+    VkPushConstantRange u_time = {};
+    u_time.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    u_time.offset = 0;
+    u_time.size = sizeof(float);
+
+    std::vector<VkDescriptorSetLayout> layouts = {
+        weather.layout,
+    };
+
+    std::vector<VkPushConstantRange> push_constants = {
+        u_time,
+    };
+
+    pb.build_comp(_device, layouts, push_constants, &weather.pipeline_layout,
+                  &weather.pipeline);
+
+    weather.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+        vk_cmd::vk_img_layout_transition(cbuffer, cs->allocator.get_img("weather").img,
+                                         VK_IMAGE_LAYOUT_UNDEFINED,
+                                         VK_IMAGE_LAYOUT_GENERAL, _comp_index);
+
+        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
+
+        uint32_t doffset = 0;
+        vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
+
+        vkCmdDispatch(cbuffer, weather_size / 8, weather_size / 8, 1);
+    };
+
+    cs::cc_init(_comp_index, _device);
+    cs::comp_immediate_submit(_device, _comp_queue, &weather);
 }
 
 void vk_engine::sphere_init()
@@ -215,7 +280,7 @@ void vk_engine::sphere_init()
         vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
 
-    css.push_back(sphere);
+    // css.push_back(sphere);
 }
 
 void vk_engine::cloud_init()
@@ -226,14 +291,14 @@ void vk_engine::cloud_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
-    cloud_data.extent = glm::vec3(texture_size);
-    cloud_data.centre = glm::vec3(0.f);
-    cloud_data.size = glm::vec3(32.f);
+    cloud_data.cloudtex_size = cloudtex_size;
+    cloud_data.centre = glm::vec3(0.f, 0.f, 0.f);
+    cloud_data.size = weather_size;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = 8.f;
     cloud_data.step = .13f;
     cloud_data.max_steps = 100;
-    cloud_data.cutoff = .3f;
+    cloud_data.cutoff = .1f;
     cloud_data.density = 1.f;
     cloud_data.lambda = 600.f;
     cloud_data.temperature = 3000.f;
@@ -242,6 +307,7 @@ void vk_engine::cloud_init()
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "cloud"},
@@ -311,9 +377,9 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("step", &cloud_data.step, .01f, 3.f);
     ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 3.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 3.f);
-    ImGui::SliderFloat("lambda", &cloud_data.lambda, 0.f, 1000.f);
-    ImGui::SliderFloat("temperature", &cloud_data.temperature, 0.f, 10000.f);
-    ImGui::ColorEdit3("color", (float *)&cloud_data.color);
+    // ImGui::SliderFloat("lambda", &cloud_data.lambda, 0.f, 1000.f);
+    // ImGui::SliderFloat("temperature", &cloud_data.temperature, 0.f, 10000.f);
+    // ImGui::ColorEdit3("color", (float *)&cloud_data.color);
     ImGui::End();
 
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,

@@ -2,9 +2,9 @@
 
 #version 460
 
-layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout (set = 0, binding = 0, r16f) uniform writeonly image3D out_frame;
+layout (set = 0, binding = 0, rg16f) uniform writeonly image2D out_frame;
 
 layout (set = 0, binding = 1) uniform readonly EXTENT
 {
@@ -59,140 +59,81 @@ float lerp(float a, float b, float t)
 	return a + t * (b - a);
 }
 
-float grad(uint h, vec3 v)
+float grad(uint h, vec2 v)
 {
-    switch(h & 7) {
+    switch(h & 3) {
     case 0:
-        return dot(v, vec3(.707f, .707f, .707f));
+        return dot(v, vec2(0.707f, 0.707f));
     case 1:
-        return dot(v, vec3(-.707f, .707f, .707f));
+        return dot(v, vec2(0.707f, -0.707f));
     case 2:
-        return dot(v, vec3(.707f, -.707f, .707f));
+        return dot(v, vec2(-0.707f, 0.707f));
     case 3:
-        return dot(v, vec3(-.707f, -.707f, .707f));
-    case 4:
-        return dot(v, vec3(.707f, .707f, -.707f));
-    case 5:
-        return dot(v, vec3(-.707f, .707f, -.707f));
-    case 6:
-        return dot(v, vec3(.707f, -.707f, -.707f));
-    case 7:
-        return dot(v, vec3(-.707f, -.707f, -.707f));
+        return dot(v, vec2(-0.707f, -0.707f));
     }
 }
 
-float perlin_noise(float x, float y, float z, float f)
+float perlin_noise(float x, float y)
 {
     uint ix = uint(floor(x)) & 255;
     uint iy = uint(floor(y)) & 255;
-    uint iz = uint(floor(z)) & 255;
 
     x -= floor(x);
     y -= floor(y);
-    z -= floor(z);
 
     float u = fade(x);
     float v = fade(y);
-    float w = fade(z);
 
-    uint ix1 = ix + 1;
-    uint iy1 = iy + 1;
-    uint iz1 = iz + 1;
+    uint p_topleft = p[p[ix] + iy];
+    uint p_topright = p[p[ix + 1] + iy];
+    uint p_bottomleft = p[p[ix]+ iy + 1];
+    uint p_bottomright = p[p[ix + 1] + iy + 1];
 
-    if (ix1 == f) ix1 = 0;
-    if (iy1 == f) iy1 = 0;
-    if (iz1 == f) iz1 = 0;
+    vec2 dist_topleft = vec2(x, y);
+    vec2 dist_topright = vec2(x - 1.f, y);
+    vec2 dist_bottomleft = vec2(x, y - 1.f);
+    vec2 dist_bottomright = vec2(x - 1.f, y - 1.f);
 
-    uint a = p[p[p[ix] + iy] + iz];
-    uint aa = p[p[p[ix1] + iy] + iz];
-    uint ab = p[p[p[ix] + iy1] + iz];
-    uint ac = p[p[p[ix1] + iy1] + iz];
-    uint b = p[p[p[ix] + iy] + iz1];
-    uint ba = p[p[p[ix1] + iy] + iz1];
-    uint bb = p[p[p[ix] + iy1] + iz1];
-    uint bc = p[p[p[ix1] + iy1] + iz1];
-
-    vec3 da = vec3(x, y, z);
-    vec3 daa = vec3(x - 1.f, y, z);
-    vec3 dab = vec3(x, y - 1.f, z);
-    vec3 dac = vec3(x - 1.f, y - 1.f, z);
-    vec3 db = vec3(x, y, z - 1.f);
-    vec3 dba = vec3(x - 1.f, y, z - 1.f);
-    vec3 dbb = vec3(x, y - 1.f, z - 1.f);
-    vec3 dbc = vec3(x - 1.f, y - 1.f, z - 1.f);
-
-    float alerp = lerp(lerp(grad(a, da), grad(aa, daa), u), 
-                    lerp(grad(ab, dab), grad(ac, dac), u), v);
-
-    float blerp = lerp(lerp(grad(b, db), grad(ba, dba), u), 
-                    lerp(grad(bb, dbb), grad(bc, dbc), u), v);
-
-    return lerp(alerp, blerp, w);
+    return lerp(lerp(grad(p_topleft, dist_topleft), grad(p_topright, dist_topright), u), 
+                lerp(grad(p_bottomleft, dist_bottomleft), grad(p_bottomright, dist_bottomright), u), v);
 }
 
-float dist (vec3 a, vec3 b)
+float dist (vec2 a, vec2 b)
 {
-    return sqrt((b.z - a.z) * (b.z - a.z) + (b.y - a.y) * (b.y - a.y) + (b.x - a.x) * (b.x - a.x));
+    return sqrt((b.y - a.y) * (b.y - a.y) + (b.x - a.x) * (b.x - a.x));
 }
 
-vec3 random3f(vec3 st)
-{
-    st = vec3(dot(st, vec3(127.1f, 311.7f, 256.1f)),
-            dot(st, vec3(269.5f, 183.3f, 241.3f)),
-            dot(st, vec3(246.2f, 225.6f, 296.7f)));
-    return fract(sin(st) * 43758.5453123f);
-}
-
-float worley_noise(float x, float y, float z)
-{
-    int ix = int(floor(x)) - 1;
-    int iy = int(floor(y)) - 1;
-    int iz = int(floor(z)) - 1;
-
-    float t = 1.f;
-
-    for (uint i = 0; i < 3; ++i)
-        for (uint j = 0; j < 3; ++j)
-            for (uint k = 0; k < 3; ++k) {
-                vec3 r = random3f(vec3(ix + i, iy + j, iz + k));
-                r += vec3(i, j, k);
-                t = min(t, dist(vec3(x - ix, y - iy, z - iz), r));
-            }
-    
-    return 1.f - t;
-}
-
-#define octaves 3
-#define h 1.f
-#define infreq 3
-
-float fbm(float x, float y, float z)
+float fbm(float x, float y, uint octaves, float H)
 {
     float t = 0.f;
     for (uint o = 0; o < octaves; ++o) {
-        float f = pow(2.f, o) * infreq;
-        float a = pow(f, -h);
-        t += a * perlin_noise(f * x, f * y, f * z, f);
-    }
-
-    for (uint o = 0; o < octaves; ++o) {
         float f = pow(2.f, o);
-        float a = pow(f, -h);
-        t += a * (worley_noise(f * x, f * y, f * z) * 2.f - 1.f);
+        float a = pow(f, -H);
+        t += a * perlin_noise(f * x, f * y);
     }
 
     return (t + 1.f) / 2.f;
 }
 
+#define octaves 3
+#define infreq 8
+#define h 1.f
+
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    uint z = 8 * gl_WorkGroupID.z + gl_LocalInvocationID.z;
-    float ux = x / 128.f;
-    float uy = y / 128.f;
-    float uz = z / 128.f;
-    vec4 color = vec4(fbm(ux, uy, uz));
+    float ux = x / extent.value.x * infreq;
+    float uy = y / extent.value.x * infreq;
+    // vec2 q = vec2(fbm(ux, uy, octaves, h), fbm(ux, uy, octaves, h));
+    // vec2 r = vec2(fbm(ux + 3.f * q.x + -0.3f * u_time.value, uy + 3.f * q.y + -0.3f * u_time.value, octaves, h),
+    //             fbm(ux + 3.f * q.x + 0.9f * u_time.value, uy + 3.f * q.y + 0.9f * u_time.value, octaves, h));
+    // float p = fbm(ux + 0.3f * r.x + 0.3f * u_time.value, uy + 0.3f * r.y + 0.3f * u_time.value, octaves, h);
+    // vec4 color = vec4(p);
+    // color = mix(color, vec4(0.128f, 0.625f, 0.995f, 1.f), vec4(0.003f, 0.675f, 0.642f, 1.f));
+    // color = mix(color, vec4(0.996f, 0.154f, 0.129f, 1.f), vec4(0.3f, 0.4f, 0.6f, 1.f));
+    // color *= p * p * p * p * p * 0.01f + .3f * p * p + .3f * p;
+    vec4 color = vec4(fbm(ux, uy, octaves, h));
 
-    imageStore(out_frame, ivec3(x, y, z), color);
+    imageStore(out_frame, ivec2(x, y), color);
 }
