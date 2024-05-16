@@ -11,6 +11,11 @@ layout (set = 0, binding = 1) uniform readonly EXTENT
     vec2 value;
 } extent;
 
+layout (set = 0, binding = 2) uniform readonly SIZE
+{
+    float value;
+} size;
+
 layout (push_constant) uniform readonly U_TIME
 {
     float value;
@@ -81,7 +86,7 @@ float grad(uint h, vec3 v)
     }
 }
 
-float perlin_noise(float x, float y, float z, float f)
+float perlin_noise(float x, float y, float z, int f)
 {
     uint ix = uint(floor(x)) & 255;
     uint iy = uint(floor(y)) & 255;
@@ -143,7 +148,7 @@ vec3 random3f(vec3 st)
     return fract(sin(st) * 43758.5453123f);
 }
 
-float worley_noise(float x, float y, float z)
+float worley_noise(float x, float y, float z, int f)
 {
     int ix = int(floor(x)) - 1;
     int iy = int(floor(y)) - 1;
@@ -151,34 +156,46 @@ float worley_noise(float x, float y, float z)
 
     float t = 1.f;
 
-    for (uint i = 0; i < 3; ++i)
-        for (uint j = 0; j < 3; ++j)
-            for (uint k = 0; k < 3; ++k) {
-                vec3 r = random3f(vec3(ix + i, iy + j, iz + k));
-                r += vec3(i, j, k);
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            for (int k = 0; k < 3; ++k) {
+
+                int ixi = ix + i;
+                int iyj = iy + j;
+                int izk = iz + k;
+
+                if (ixi == f) ixi = 0;
+                if (iyj == f) iyj = 0;
+                if (izk == f) izk = 0;
+
+                if (ixi < 0) ixi = f - 1;
+                if (iyj < 0) iyj = f - 1;
+                if (izk < 0) izk = f - 1;
+
+                vec3 r = random3f(vec3(ixi, iyj, izk)) + vec3(i, j, k);
                 t = min(t, dist(vec3(x - ix, y - iy, z - iz), r));
             }
     
     return 1.f - t;
 }
 
-#define octaves 3
+#define octaves 64
 #define h 1.f
-#define infreq 3
+#define infreq 1
 
 float fbm(float x, float y, float z)
 {
     float t = 0.f;
     for (uint o = 0; o < octaves; ++o) {
-        float f = pow(2.f, o) * infreq;
+        int f = int(pow(2, o)) * infreq;
         float a = pow(f, -h);
         t += a * perlin_noise(f * x, f * y, f * z, f);
     }
 
-    for (uint o = 0; o < octaves; ++o) {
-        float f = pow(2.f, o);
+    for (int o = 0; o < octaves; ++o) {
+        int f = int(pow(2, o)) * infreq;
         float a = pow(f, -h);
-        t += a * (worley_noise(f * x, f * y, f * z) * 2.f - 1.f);
+        t += a * (worley_noise(f * x, f * y, f * z, f) * 2.f - 1.f);
     }
 
     return (t + 1.f) / 2.f;
@@ -189,9 +206,9 @@ void main()
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     uint z = 8 * gl_WorkGroupID.z + gl_LocalInvocationID.z;
-    float ux = x / 128.f;
-    float uy = y / 128.f;
-    float uz = z / 128.f;
+    float ux = x / size.value;
+    float uy = y / size.value;
+    float uz = z / size.value;
     vec4 color = vec4(fbm(ux, uy, uz));
 
     imageStore(out_frame, ivec3(x, y, z), color);

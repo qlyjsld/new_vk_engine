@@ -118,10 +118,24 @@ void vk_engine::cloudtex_init()
         VK_FORMAT_R16_SFLOAT, VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "cloudtex");
 
+    allocator.create_buffer(pad_uniform_buffer_size(sizeof(float)),
+                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "size");
+
+    allocated_buffer buffer = allocator.get_buffer("size");
+
+    float dummy = (float)cloudtex_size;
+
+    void *data;
+    vmaMapMemory(_allocator, buffer.allocation, &data);
+    std::memcpy(data, (float *)&dummy, sizeof(float));
+    vmaUnmapMemory(_allocator, buffer.allocation);
+
     /* match set binding */
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "size"},
     };
 
     cs cloudtex(allocator, descriptors, "../shaders/cloudtex.comp.spv",
@@ -155,9 +169,14 @@ void vk_engine::cloudtex_init()
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        uint32_t doffset = 0;
+        std::vector<uint32_t> doffsets = {
+            0,
+            0,
+        };
+
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
+                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
+                                doffsets.data());
 
         vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8, cloudtex_size / 8);
     };

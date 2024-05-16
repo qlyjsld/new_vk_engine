@@ -25,3 +25,5 @@ target_link_libraries(imgui Vulkan::Vulkan SDL3::SDL3)
 target_include_directories(imgui PRIVATE
 	"${PROJECT_SOURCE_DIR}/vendor/imgui"
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends")
+
+# find_package(OpenVDB REQUIRED)
