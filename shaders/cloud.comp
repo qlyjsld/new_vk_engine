@@ -89,7 +89,7 @@ float eval_density(vec3 p)
     float coverage = fade(imageLoad(weather, ivec2(floor(p - (cloud.centre - vec3(cloud.size) * .5f)).xz)).x);
     float freq = 10.f;
     p *= freq;
-    return fade(imageLoad(cloudtex, ivec3(floor(p)) & cloud.cloudtex_size - 1).x);
+    return coverage * fade(imageLoad(cloudtex, ivec3(floor(p)) & cloud.cloudtex_size - 1).x);
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */

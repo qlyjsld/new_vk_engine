@@ -86,7 +86,7 @@ float grad(uint h, vec3 v)
     }
 }
 
-float perlin_noise(float x, float y, float z, int f)
+float perlin_noise(float x, float y, float z, float f)
 {
     uint ix = uint(floor(x)) & 255;
     uint iy = uint(floor(y)) & 255;
@@ -148,7 +148,7 @@ vec3 random3f(vec3 st)
     return fract(sin(st) * 43758.5453123f);
 }
 
-float worley_noise(float x, float y, float z, int f)
+float worley_noise(float x, float y, float z, float f)
 {
     int ix = int(floor(x)) - 1;
     int iy = int(floor(y)) - 1;
@@ -159,7 +159,6 @@ float worley_noise(float x, float y, float z, int f)
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
             for (int k = 0; k < 3; ++k) {
-
                 int ixi = ix + i;
                 int iyj = iy + j;
                 int izk = iz + k;
@@ -168,9 +167,9 @@ float worley_noise(float x, float y, float z, int f)
                 if (iyj == f) iyj = 0;
                 if (izk == f) izk = 0;
 
-                if (ixi < 0) ixi = f - 1;
-                if (iyj < 0) iyj = f - 1;
-                if (izk < 0) izk = f - 1;
+                if (ixi < 0) ixi = int(floor(f)) - 1;
+                if (iyj < 0) iyj = int(floor(f)) - 1;
+                if (izk < 0) izk = int(floor(f)) - 1;
 
                 vec3 r = random3f(vec3(ixi, iyj, izk)) + vec3(i, j, k);
                 t = min(t, dist(vec3(x - ix, y - iy, z - iz), r));
@@ -181,19 +180,19 @@ float worley_noise(float x, float y, float z, int f)
 
 #define octaves 64
 #define h 1.f
-#define infreq 1
+#define infreq 3
 
 float fbm(float x, float y, float z)
 {
     float t = 0.f;
     for (uint o = 0; o < octaves; ++o) {
-        int f = int(pow(2, o)) * infreq;
+        float f = pow(2, o) * infreq;
         float a = pow(f, -h);
         t += a * perlin_noise(f * x, f * y, f * z, f);
     }
 
     for (int o = 0; o < octaves; ++o) {
-        int f = int(pow(2, o)) * infreq;
+        float f = pow(2, o) * infreq;
         float a = pow(f, -h);
         t += a * (worley_noise(f * x, f * y, f * z, f) * 2.f - 1.f);
     }
