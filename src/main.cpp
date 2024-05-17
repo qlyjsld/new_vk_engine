@@ -19,9 +19,11 @@ struct camera_data {
 };
 
 struct cloud_data {
-    alignas(4) int cloudtex_size;
     alignas(16) glm::vec3 centre;
     alignas(4) int size;
+    alignas(4) int cloudtex_size;
+    alignas(4) int weather_size;
+    alignas(4) float freq;
     alignas(4) float sigma_a;
     alignas(4) float sigma_s;
     alignas(4) float step;
@@ -33,8 +35,9 @@ struct cloud_data {
     alignas(16) glm::vec3 color;
 };
 
+static uint32_t cloud_size = 32;
 static uint32_t cloudtex_size = 128;
-static uint32_t weather_size = 32;
+static uint32_t weather_size = 512;
 static bool cloud = true;
 static cloud_data cloud_data;
 
@@ -190,9 +193,9 @@ void vk_engine::weather_init()
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
-    allocator.create_img(
-        VK_FORMAT_R16G16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
-        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "weather");
+    allocator.create_img(VK_FORMAT_R16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
+                         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
+                         "weather");
 
     /* match set binding */
     std::vector<descriptor> descriptors = {
@@ -234,6 +237,10 @@ void vk_engine::weather_init()
         uint32_t doffset = 0;
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
+
+        float u_time = 1.f;
+        vkCmdPushConstants(cbuffer, cs->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                           sizeof(float), &u_time);
 
         vkCmdDispatch(cbuffer, weather_size / 8, weather_size / 8, 1);
     };
@@ -310,9 +317,11 @@ void vk_engine::cloud_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
+    cloud_data.centre = glm::vec3(0.f);
+    cloud_data.size = cloud_size;
     cloud_data.cloudtex_size = cloudtex_size;
-    cloud_data.centre = glm::vec3(0.f, 0.f, 0.f);
-    cloud_data.size = weather_size;
+    cloud_data.weather_size = weather_size;
+    cloud_data.freq = 3.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = 3.f;
     cloud_data.step = .3f;
@@ -390,6 +399,8 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::Begin("cloud", &cloud, 0);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::SliderInt("size", &cloud_data.size, 0, 1024);
+    ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 10.f);
     ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
     ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 300);

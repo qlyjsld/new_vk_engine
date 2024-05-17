@@ -6,7 +6,7 @@ layout (set = 0, binding = 0, rgba16f) uniform image2D out_frame;
 
 layout (set = 0, binding = 1, r16f) uniform readonly image3D cloudtex;
 
-layout (set = 0, binding = 2, rg16f) uniform readonly image2D weather;
+layout (set = 0, binding = 2, r16f) uniform readonly image2D weather;
 
 layout (set = 0, binding = 3) uniform readonly EXTENT
 {
@@ -23,9 +23,11 @@ layout (set = 0, binding = 4) uniform readonly CAMERA
 
 layout (set = 0, binding = 5) uniform readonly CLOUD
 {
-    int cloudtex_size;
     vec3 centre;
     int size;
+    int cloudtex_size;
+    int weather_size;
+    float freq;
     float sigma_a;
     float sigma_s;
     float step;
@@ -86,23 +88,21 @@ float fade(float t)
 
 float eval_density(vec3 p)
 {
-    vec2 weather = imageLoad(weather, ivec2(floor(p - (cloud.centre - vec3(cloud.size) * .5f)))).xz;
+    // map p to cloud
+    vec3 np = p - (cloud.centre - vec3(cloud.size) * .5f);
+    float weather = imageLoad(weather, ivec2(floor(np.x / cloud.size * cloud.weather_size),
+                                            floor(np.z / cloud.size * cloud.weather_size))).x;
+    float height = np.y / cloud.size;
 
-    float height = (p - (cloud.centre - vec3(cloud.size) * .5f)).y / cloud.size;
-
-    float bb = 1.f;
+    float type = 1.f;
     if (height < .4f)
-        bb = smoothstep(.3f, .4f, height);
+        type = smoothstep(.3f, .4f, height);
     if (height > .8f)
-        bb = smoothstep(.9f, .8f, height);
+        type = smoothstep(.9f, .8f, height);
 
-    float freq = 10.f;
-    p *= freq;
+    p *= cloud.freq;
 
-    float density = fade(imageLoad(cloudtex, ivec3(floor(p)) & (cloud.cloudtex_size - 1)).x);
-    density *= bb;
-
-    return density;
+    return fade(imageLoad(cloudtex, ivec3(floor(p)) & (cloud.cloudtex_size - 1)).x) * weather * type;;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -148,6 +148,7 @@ void main()
         float sigma_s = cloud.sigma_s; // scattering coefficient
         float sigma_t = sigma_a + sigma_s;
         float transmittance = 1.f;
+        float ambient = 1.f;
         float step = cloud.step;
         int steps = min(int((t.y - t.x) / step), cloud.max_steps);
         vec3 color = vec3(0.f);
@@ -165,7 +166,7 @@ void main()
             // float s = length(p - sun_pos) - lt.x;
 
             vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
-            color += li * sigma_s * density /* phase(.3f, -ld, r)*/ * transmittance;
+            color += li * sigma_s * density * (ambient + phase(.3f, -ld, r) + phase(.6f, -ld, r)) * transmittance;
 
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
