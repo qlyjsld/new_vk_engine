@@ -314,10 +314,10 @@ void vk_engine::cloud_init()
     cloud_data.centre = glm::vec3(0.f, 0.f, 0.f);
     cloud_data.size = weather_size;
     cloud_data.sigma_a = 0.f;
-    cloud_data.sigma_s = 8.f;
-    cloud_data.step = .13f;
-    cloud_data.max_steps = 100;
-    cloud_data.cutoff = .1f;
+    cloud_data.sigma_s = 3.f;
+    cloud_data.step = .3f;
+    cloud_data.max_steps = 128;
+    cloud_data.cutoff = .3f;
     cloud_data.density = 1.f;
     cloud_data.lambda = 600.f;
     cloud_data.temperature = 3000.f;

@@ -86,10 +86,23 @@ float fade(float t)
 
 float eval_density(vec3 p)
 {
-    float coverage = fade(imageLoad(weather, ivec2(floor(p - (cloud.centre - vec3(cloud.size) * .5f)).xz)).x);
+    vec2 weather = imageLoad(weather, ivec2(floor(p - (cloud.centre - vec3(cloud.size) * .5f)))).xz;
+
+    float height = (p - (cloud.centre - vec3(cloud.size) * .5f)).y / cloud.size;
+
+    float bb = 1.f;
+    if (height < .4f)
+        bb = smoothstep(.3f, .4f, height);
+    if (height > .8f)
+        bb = smoothstep(.9f, .8f, height);
+
     float freq = 10.f;
     p *= freq;
-    return coverage * fade(imageLoad(cloudtex, ivec3(floor(p)) & cloud.cloudtex_size - 1).x);
+
+    float density = fade(imageLoad(cloudtex, ivec3(floor(p)) & (cloud.cloudtex_size - 1)).x);
+    density *= bb;
+
+    return density;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
