@@ -4,7 +4,7 @@
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-layout (set = 0, binding = 0, r16f) uniform writeonly image3D out_frame;
+layout (set = 0, binding = 0, rgba16f) uniform writeonly image3D out_frame;
 
 layout (set = 0, binding = 1) uniform readonly EXTENT
 {
@@ -178,11 +178,9 @@ float worley_noise(float x, float y, float z, float f)
     return 1.f - t;
 }
 
-#define octaves 64
 #define h 1.f
-#define infreq 3
 
-float fbm(float x, float y, float z)
+float fbm(float x, float y, float z, uint octaves, float infreq)
 {
     float t = 0.f;
     for (uint o = 0; o < octaves; ++o) {
@@ -200,6 +198,30 @@ float fbm(float x, float y, float z)
     return (t + 1.f) / 2.f;
 }
 
+float fbm_perlin(float x, float y, float z, uint octaves, float infreq)
+{
+    float t = 0.f;
+    for (uint o = 0; o < octaves; ++o) {
+        float f = pow(2, o) * infreq;
+        float a = pow(f, -h);
+        t += a * perlin_noise(f * x, f * y, f * z, f);
+    }
+
+    return (t + 1.f) / 2.f;
+}
+
+float fbm_worley(float x, float y, float z, uint octaves, float infreq)
+{
+    float t = 0.f;
+    for (int o = 0; o < octaves; ++o) {
+        float f = pow(2, o) * infreq;
+        float a = pow(f, -h);
+        t += a * worley_noise(f * x, f * y, f * z, f);
+    }
+
+    return t;
+}
+
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
@@ -208,7 +230,7 @@ void main()
     float ux = x / size.value;
     float uy = y / size.value;
     float uz = z / size.value;
-    vec4 color = vec4(fbm(ux, uy, uz));
+    vec4 color = vec4(fbm(ux, uy, uz, 3, 1), fbm_worley(ux, uy, uz, 3, 3), fbm_worley(ux, uy, uz, 9, 6), 1.f);
 
     imageStore(out_frame, ivec3(x, y, z), color);
 }

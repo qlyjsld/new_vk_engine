@@ -4,7 +4,7 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout (set = 0, binding = 0, rgba16f) uniform image2D out_frame;
 
-layout (set = 0, binding = 1, r16f) uniform readonly image3D cloudtex;
+layout (set = 0, binding = 1, rgba16f) uniform readonly image3D cloudtex;
 
 layout (set = 0, binding = 2, r16f) uniform readonly image2D weather;
 
@@ -94,15 +94,9 @@ float eval_density(vec3 p)
                                             floor(np.z / cloud.size * cloud.weather_size))).x;
     float height = np.y / cloud.size;
 
-    float type = 1.f;
-    if (height < .4f)
-        type = smoothstep(.3f, .4f, height);
-    if (height > .8f)
-        type = smoothstep(.9f, .8f, height);
-
     p *= cloud.freq;
-
-    return fade(imageLoad(cloudtex, ivec3(floor(p)) & (cloud.cloudtex_size - 1)).x) * weather * type;;
+    vec4 d = imageLoad(cloudtex, ivec3(floor(p)) & (cloud.cloudtex_size - 1));
+    return fade(d.x) /* weather */;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -148,7 +142,7 @@ void main()
         float sigma_s = cloud.sigma_s; // scattering coefficient
         float sigma_t = sigma_a + sigma_s;
         float transmittance = 1.f;
-        float ambient = 1.f;
+        float ambient = .3f;
         float step = cloud.step;
         int steps = min(int((t.y - t.x) / step), cloud.max_steps);
         vec3 color = vec3(0.f);
@@ -161,12 +155,23 @@ void main()
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
-            vec3 ld = vec3(0.f, -1.f, 0.f);
-            // vec2 lt = hit_box(box, sun_pos, ld);
-            // float s = length(p - sun_pos) - lt.x;
+            vec3 sun_pos = vec3(0.f, 1000.f, 0.f);
+            vec3 ld = normalize(p - sun_pos);
 
-            vec3 li = 2.f * (1.f - exp(-step * sigma_t * i * .01f)) * vec3(1.f) * step;
-            color += li * sigma_s * density * (ambient + phase(.3f, -ld, r) + phase(.6f, -ld, r)) * transmittance;
+            vec2 lt = hit_box(cloud.centre, cloud.size, sun_pos, ld);
+            float s = length(p - sun_pos) - lt.x;
+            int nsteps = int(s / step);
+            float tau = 0.f;
+
+            for (int j = 0; j < nsteps; ++j)
+            {
+                p = sun_pos + (j * step + lt.x) * ld;
+                tau += eval_density(p) * cloud.density;
+            }
+
+            float phase = 6.f * phase(.3f, -ld, r) + 3.f * phase(.6f, -ld, r) + phase(.9f, -ld, r);
+            vec3 li = phase * exp(-step * sigma_t * tau) * vec3(1.f) * step;
+            color += transmittance * sigma_s * density * li;
 
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;

@@ -117,9 +117,10 @@ void vk_engine::cloudtex_init()
     /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
-    allocator.create_img(
-        VK_FORMAT_R16_SFLOAT, VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
-        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "cloudtex");
+    allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
+                         VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
+                         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
+                         "cloudtex");
 
     allocator.create_buffer(pad_uniform_buffer_size(sizeof(float)),
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -321,13 +322,13 @@ void vk_engine::cloud_init()
     cloud_data.size = cloud_size;
     cloud_data.cloudtex_size = cloudtex_size;
     cloud_data.weather_size = weather_size;
-    cloud_data.freq = 3.f;
+    cloud_data.freq = 4.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = 3.f;
-    cloud_data.step = .3f;
-    cloud_data.max_steps = 128;
-    cloud_data.cutoff = .3f;
-    cloud_data.density = 1.f;
+    cloud_data.step = .13f;
+    cloud_data.max_steps = 64;
+    cloud_data.cutoff = .13f;
+    cloud_data.density = .79f;
     cloud_data.lambda = 600.f;
     cloud_data.temperature = 3000.f;
     cloud_data.color = glm::vec3(1.f);
@@ -400,7 +401,7 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::SliderInt("size", &cloud_data.size, 0, 1024);
-    ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 10.f);
+    ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 30.f);
     ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
     ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 300);
