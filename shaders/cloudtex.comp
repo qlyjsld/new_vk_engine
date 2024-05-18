@@ -230,7 +230,7 @@ void main()
     float ux = x / size.value;
     float uy = y / size.value;
     float uz = z / size.value;
-    vec4 color = vec4(fbm(ux, uy, uz, 3, 1), fbm_worley(ux, uy, uz, 3, 3), fbm_worley(ux, uy, uz, 9, 6), 1.f);
+    vec4 color = vec4(fbm(ux, uy, uz, 3, 3), fbm_worley(ux, uy, uz, 6, 6), fbm_worley(ux, uy, uz, 9, 9), fbm_worley(ux, uy, uz, 16, 16));
 
     imageStore(out_frame, ivec3(x, y, z), color);
 }

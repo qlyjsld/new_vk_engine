@@ -86,17 +86,30 @@ float fade(float t)
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
 }
 
+float remap(float value, float old_min, float old_max, float new_min, float new_max)
+{
+    return new_min + (value - old_min) / (old_max - old_min) * (new_max - new_min);
+}
+
 float eval_density(vec3 p)
 {
     // map p to cloud
     vec3 np = p - (cloud.centre - vec3(cloud.size) * .5f);
     float weather = imageLoad(weather, ivec2(floor(np.x / cloud.size * cloud.weather_size),
                                             floor(np.z / cloud.size * cloud.weather_size))).x;
-    float height = np.y / cloud.size;
 
     p *= cloud.freq;
     vec4 d = imageLoad(cloudtex, ivec3(floor(p)) & (cloud.cloudtex_size - 1));
-    return fade(d.x) /* weather */;
+
+    float height = np.y / cloud.size;
+    float type = 1.f;
+
+    if (height > .8f)
+        type = smoothstep(.9f, .8f, height);
+    if (height < .3f)
+        type = smoothstep(.1f, .3f, height);
+
+    return fade(d.r) * type;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -138,9 +151,7 @@ void main()
     // in volume marching
     if (t.x >= 0.f)
     {
-        float sigma_a = cloud.sigma_a; // absorption coefficient
-        float sigma_s = cloud.sigma_s; // scattering coefficient
-        float sigma_t = sigma_a + sigma_s;
+        float sigma_t = cloud.sigma_a + cloud.sigma_s;
         float transmittance = 1.f;
         float ambient = .3f;
         float step = cloud.step;
@@ -150,8 +161,8 @@ void main()
         for (int i = 0; i < steps; ++i)
         {
             vec3 p = o + t.x * r;
-            float density = eval_density(p) * cloud.density;
-            if (density < cloud.cutoff) { density = 0.f; t += step + step * rand(t.y); }
+            float density = eval_density(p) /* cloud.density*/;
+            if (density < cloud.cutoff) { t += step + step * rand(t.y); continue; }
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
@@ -160,18 +171,18 @@ void main()
 
             vec2 lt = hit_box(cloud.centre, cloud.size, sun_pos, ld);
             float s = length(p - sun_pos) - lt.x;
-            int nsteps = int(s / step);
+            int nsteps = 6;
             float tau = 0.f;
 
             for (int j = 0; j < nsteps; ++j)
             {
-                p = sun_pos + (j * step + lt.x) * ld;
-                tau += eval_density(p) * cloud.density;
+                p = sun_pos + (j * s / nsteps + lt.x) * ld;
+                tau += eval_density(p) /* cloud.density*/;
             }
 
-            float phase = 6.f * phase(.3f, -ld, r) + 3.f * phase(.6f, -ld, r) + phase(.9f, -ld, r);
-            vec3 li = phase * exp(-step * sigma_t * tau) * vec3(1.f) * step;
-            color += transmittance * sigma_s * density * li;
+            float phase = 3.f * phase(.3f, -ld, r) + 1.f * phase(.6f, -ld, r) + .3f * phase(-.3f, -ld, r);
+            vec3 li = (phase * exp(-step * sigma_t * tau) + ambient) * vec3(1.f);
+            color += transmittance * cloud.sigma_s * density * li * step;
 
             t += step + step * rand(t.y);
             if (transmittance < (step + step * rand(t.y))) break;
