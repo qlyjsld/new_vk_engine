@@ -37,7 +37,7 @@ struct cloud_data {
     alignas(16) glm::vec3 color;
 };
 
-static uint32_t cloud_size = 32;
+static uint32_t cloud_size = 256;
 static uint32_t cloudtex_size = 128;
 static uint32_t weather_size = 512;
 static bool cloud = true;
@@ -326,15 +326,15 @@ void vk_engine::cloud_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
-    cloud_data.centre = glm::vec3(0.f);
+    cloud_data.centre = glm::vec3(0.f, 0.f, 0.f);
     cloud_data.size = cloud_size;
-    cloud_data.height = 32.f;
+    cloud_data.height = 128.f;
     cloud_data.cloudtex_size = cloudtex_size;
     cloud_data.weather_size = weather_size;
-    cloud_data.freq = 3.f;
-    cloud_data.ambient = 1.f;
+    cloud_data.freq = 1.f;
+    cloud_data.ambient = 0.f;
     cloud_data.sigma_a = 0.f;
-    cloud_data.sigma_s = 3.f;
+    cloud_data.sigma_s = 9.f;
     cloud_data.step = .3f;
     cloud_data.max_steps = 128;
     cloud_data.cutoff = 0.f;
@@ -405,7 +405,7 @@ void vk_engine::cloud_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
-    ImGui::SetNextWindowSize(ImVec2{300, 300});
+    ImGui::SetNextWindowSize(ImVec2{300, 290});
     ImGui::SetNextWindowPos(ImVec2{30, 30});
     ImGui::Begin("cloud", &cloud, 0);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
@@ -415,9 +415,8 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("ambient", &cloud_data.ambient, 0.f, 1.f);
     ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
-    ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 300);
+    ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 1000);
     ImGui::SliderFloat("step", &cloud_data.step, .01f, 3.f);
-    ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 3.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 3.f);
     // ImGui::SliderFloat("lambda", &cloud_data.lambda, 0.f, 1000.f);
     // ImGui::SliderFloat("temperature", &cloud_data.temperature, 0.f, 10000.f);
