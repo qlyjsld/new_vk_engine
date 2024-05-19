@@ -133,7 +133,7 @@ void vk_engine::skybox_init()
         vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
 
-    css.push_back(skybox);
+    // css.push_back(skybox);
 }
 
 void vk_engine::cloudtex_init()
@@ -315,7 +315,7 @@ void vk_engine::sphere_init()
         vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
 
-    css.push_back(sphere);
+    // css.push_back(sphere);
 }
 
 void vk_engine::cloud_init()
@@ -335,7 +335,7 @@ void vk_engine::cloud_init()
     cloud_data.ambient = 1.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = 3.f;
-    cloud_data.step = .13f;
+    cloud_data.step = .3f;
     cloud_data.max_steps = 128;
     cloud_data.cutoff = 0.f;
     cloud_data.density = 1.f;
