@@ -21,9 +21,11 @@ struct camera_data {
 struct cloud_data {
     alignas(16) glm::vec3 centre;
     alignas(4) int size;
+    alignas(4) int height;
     alignas(4) int cloudtex_size;
     alignas(4) int weather_size;
     alignas(4) float freq;
+    alignas(4) float ambient;
     alignas(4) float sigma_a;
     alignas(4) float sigma_s;
     alignas(4) float step;
@@ -60,6 +62,10 @@ void vk_engine::skybox_init()
 {
     comp_allocator allocator(_device, _allocator);
 
+    allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
+                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
+
     allocator.create_buffer(pad_uniform_buffer_size(sizeof(glm::vec2)),
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "extent");
@@ -81,6 +87,7 @@ void vk_engine::skybox_init()
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
+        // {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
     };
 
     cs skybox(allocator, descriptors, "../shaders/skybox.comp.spv",
@@ -102,9 +109,26 @@ void vk_engine::skybox_init()
     skybox.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        uint32_t doffset = 0;
+        /* camera_data camera_data;
+        camera_data.pos = _vk_camera.get_pos();
+        camera_data.dir = _vk_camera.get_dir();
+        camera_data.up = _vk_camera.get_up();
+        camera_data.fov = _vk_camera.get_fov();
+
+        void *data;
+        vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
+        std::memcpy(data, &camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
+        vmaUnmapMemory(cs->allocator.allocator,
+                       cs->allocator.get_buffer("camera").allocation); */
+
+        std::vector<uint32_t> doffsets = {
+            0,
+            // 0,
+        };
+
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
+                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
+                                doffsets.data());
 
         vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
@@ -254,10 +278,6 @@ void vk_engine::sphere_init()
 {
     comp_allocator allocator(_device, _allocator);
 
-    allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
-
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
@@ -283,18 +303,6 @@ void vk_engine::sphere_init()
     sphere.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        camera_data camera_data;
-        camera_data.pos = _vk_camera.get_pos();
-        camera_data.dir = _vk_camera.get_dir();
-        camera_data.up = _vk_camera.get_up();
-        camera_data.fov = _vk_camera.get_fov();
-
-        void *data;
-        vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
-        std::memcpy(data, &camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
-        vmaUnmapMemory(cs->allocator.allocator,
-                       cs->allocator.get_buffer("camera").allocation);
-
         std::vector<uint32_t> doffsets = {
             0,
             0,
@@ -307,7 +315,7 @@ void vk_engine::sphere_init()
         vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
     };
 
-    // css.push_back(sphere);
+    css.push_back(sphere);
 }
 
 void vk_engine::cloud_init()
@@ -320,15 +328,17 @@ void vk_engine::cloud_init()
 
     cloud_data.centre = glm::vec3(0.f);
     cloud_data.size = cloud_size;
+    cloud_data.height = 32.f;
     cloud_data.cloudtex_size = cloudtex_size;
     cloud_data.weather_size = weather_size;
-    cloud_data.freq = 4.f;
+    cloud_data.freq = 3.f;
+    cloud_data.ambient = 1.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = 3.f;
     cloud_data.step = .13f;
-    cloud_data.max_steps = 64;
-    cloud_data.cutoff = .13f;
-    cloud_data.density = .79f;
+    cloud_data.max_steps = 128;
+    cloud_data.cutoff = 0.f;
+    cloud_data.density = 1.f;
     cloud_data.lambda = 600.f;
     cloud_data.temperature = 3000.f;
     cloud_data.color = glm::vec3(1.f);
@@ -402,6 +412,7 @@ void vk_engine::draw_comp(frame *frame)
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::SliderInt("size", &cloud_data.size, 0, 1024);
     ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 30.f);
+    ImGui::SliderFloat("ambient", &cloud_data.ambient, 0.f, 1.f);
     ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
     ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 300);
