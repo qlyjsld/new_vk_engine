@@ -336,8 +336,8 @@ void vk_engine::cloud_init()
     cloud_data.freq = 1.f;
     cloud_data.ambient = .1f;
     cloud_data.sigma_a = 0.f;
-    cloud_data.sigma_s = .1f;
-    cloud_data.step = .23f;
+    cloud_data.sigma_s = .39f;
+    cloud_data.step = .39f;
     cloud_data.max_steps = 128;
     cloud_data.cutoff = .289f;
     cloud_data.density = 1.f;
@@ -421,7 +421,7 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 1.f);
     ImGui::SliderFloat("step", &cloud_data.step, .1f, 3.f);
     ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 1024);
-    ImGui::SliderFloat("cutoff", &cloud_data.cutoff, .1f, 1.f);
+    ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 1.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 32.f);
     // ImGui::SliderFloat("lambda", &cloud_data.lambda, 0.f, 1000.f);
     // ImGui::SliderFloat("temperature", &cloud_data.temperature, 0.f, 10000.f);

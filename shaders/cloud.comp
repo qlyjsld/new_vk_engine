@@ -96,10 +96,13 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
 
 float eval_density(vec3 np, vec3 cloud_extent)
 {
-    float d = fade(imageLoad(cloudtex, ivec3(floor(np * cloud.freq)) & (cloud.cloudtex_size - 1)).x);
-    if (d < cloud.cutoff) return 0.f;
+    vec4 d = imageLoad(cloudtex, ivec3(floor(np * cloud.freq)) & (cloud.cloudtex_size - 1));
+    float low_freq_worley = d.y + d.z + d.w;
+    d.x = remap(d.x, low_freq_worley - 1.f, 1.f, 0.f, 1.f);
+    if (d.x < cloud.cutoff) return 0.f;
 
-    /* float coverage = fade(imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x) */;
+    /* float coverage = imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x; */
+
     float height = np.y / cloud.height;
     float type = 1.f;
 
@@ -112,7 +115,7 @@ float eval_density(vec3 np, vec3 cloud_extent)
     if (height > upperlowerlimit)
         type = smoothstep(upperupperlimit, upperlowerlimit, height);
 
-    return d * type * height /* coverage */;
+    return d.x * type * height /* coverage */;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -177,7 +180,7 @@ void main()
 
             // estimate in-scattering to p in volume
             vec3 ld = vec3(0.f, 1.f, 0.f);
-            int nsteps = 7;
+            int nsteps = 0;
             float tau = 0.f;
 
             for (int j = 1; j < nsteps; ++j)

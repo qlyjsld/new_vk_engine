@@ -54,6 +54,11 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
 
+float remap(float value, float old_min, float old_max, float new_min, float new_max)
+{
+    return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
+}
+
 float fade(float t)
 {
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
@@ -219,7 +224,7 @@ float fbm_worley(float x, float y, float z, uint octaves, float infreq)
         t += a * worley_noise(f * x, f * y, f * z, f);
     }
 
-    return t;
+    return remap(t, 0.f, .3f, 0.f, 1.f);
 }
 
 void main()
@@ -230,7 +235,7 @@ void main()
     float ux = x / size.value;
     float uy = y / size.value;
     float uz = z / size.value;
-    vec4 color = vec4(fbm(ux, uy, uz, 6, 2), fbm_worley(ux, uy, uz, 6, 6), fbm_worley(ux, uy, uz, 9, 9), fbm_worley(ux, uy, uz, 16, 16));
+    vec4 color = vec4(fade(fbm(ux, uy, uz, 3, 3)), fbm_worley(ux, uy, uz, 6, 6), fbm_worley(ux, uy, uz, 9, 9), fbm_worley(ux, uy, uz, 16, 16));
 
     imageStore(out_frame, ivec3(x, y, z), color);
 }

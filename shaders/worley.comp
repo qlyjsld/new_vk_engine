@@ -66,14 +66,6 @@ void main()
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     float ux = x / extent.value.x * infreq;
     float uy = y / extent.value.x * infreq;
-    // vec2 q = vec2(fbm(ux, uy, octaves, h), fbm(ux, uy, octaves, h));
-    // vec2 r = vec2(fbm(ux + 3.f * q.x + -.3f * u_time.value, uy + 3.f * q.y + -.3f * u_time.value, octaves, h),
-    //             fbm(ux + 3.f * q.x + .9f * u_time.value, uy + 3.f * q.y + .9f * u_time.value, octaves, h));
-    // float p = fbm(ux + .3f * r.x + .3f * u_time.value, uy + .3f * r.y + .3f * u_time.value, octaves, h);
-    // vec4 color = vec4(p);
-    // color = mix(color, vec4(.128f, .625f, .995f, 1.f), vec4(.003f, .675f, .642f, 1.f));
-    // color = mix(color, vec4(.996f, .154f, .129f, 1.f), vec4(.3f, .4f, .6f, 1.f));
-    // color *= p * p * p * p * p * .01f + .3f * p * p + .3f * p;
     vec4 color = vec4(fbm(ux, uy, octaves, h));
 
     imageStore(out_frame, ivec2(x, y), color);

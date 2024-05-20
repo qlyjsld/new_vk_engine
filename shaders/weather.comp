@@ -49,6 +49,16 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
 
+float rand(float x)
+{
+    return fract(sin(x) * 100000.f) - .5f;
+}
+
+float remap(float value, float old_min, float old_max, float new_min, float new_max)
+{
+    return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
+}
+
 float fade(float t)
 {
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
@@ -125,14 +135,17 @@ void main()
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     float ux = x / extent.value.x * infreq;
     float uy = y / extent.value.x * infreq;
+    float magic = rand(u_time.value * -100.f);
     vec2 q = vec2(fbm(ux, uy, octaves, h), fbm(ux, uy, octaves, h));
-    vec2 r = vec2(fbm(ux + 3.f * q.x + -0.3f * u_time.value, uy + 3.f * q.y + -0.3f * u_time.value, octaves, h),
-                fbm(ux + 3.f * q.x + 0.9f * u_time.value, uy + 3.f * q.y + 0.9f * u_time.value, octaves, h));
-    float p = fbm(ux + 0.3f * r.x + 0.3f * u_time.value, uy + 0.3f * r.y + 0.3f * u_time.value, octaves, h);
+    vec2 r = vec2(fbm(ux + 3.f * q.x + -.3f * magic, uy + 3.f * q.y + -.3f * magic, octaves, h),
+                fbm(ux + 6.f * q.x + 1.9f * magic, uy + 6.f * q.y + 1.9f * magic, octaves, h));
+    float p = fbm(ux + .3f * r.x + .3f * magic, uy + .3f * r.y + .3f * magic, octaves, h);
     vec4 color = vec4(p);
-    color = mix(color, vec4(0.128f, 0.625f, 0.995f, 1.f), vec4(0.003f, 0.675f, 0.642f, 1.f));
-    color = mix(color, vec4(0.996f, 0.154f, 0.129f, 1.f), vec4(0.3f, 0.4f, 0.6f, 1.f));
-    color *= p * p * p * p * p * 0.01f + .3f * p * p + .3f * p;
+    color = mix(color, vec4(.128f, .625f, .995f, 1.f), vec4(.003f, .675f, .642f, 1.f));
+    color = mix(color, vec4(.996f, .154f, .129f, 1.f), vec4(.3f, .4f, .6f, 1.f));
+    color *= p * p * p * p * p * .1f + .3f * p * p + .9f * p;
+
+    color.x = fade(remap(color.x, 0.f, .7f, 0.f, 1.f));
 
     imageStore(out_frame, ivec2(x, y), color);
 }
