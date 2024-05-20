@@ -24,8 +24,8 @@ layout (set = 0, binding = 4) uniform readonly CAMERA
 layout (set = 0, binding = 5) uniform readonly CLOUD
 {
     vec3 centre;
-    int size;
-    int height;
+    float size;
+    float height;
     int cloudtex_size;
     int weather_size;
     float freq;
@@ -95,33 +95,23 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
 
 float eval_density(vec3 np, vec3 cloud_extent)
 {
-    float coverage = imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x;
+    float d = fade(imageLoad(cloudtex, ivec3(floor(np * cloud.freq)) & (cloud.cloudtex_size - 1)).x);
+    if (d < cloud.cutoff) return 0.f;
 
+    float coverage = imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x;
     float height = np.y / cloud.height;
     float type = 1.f;
 
-    // stratus
-    // if (height > .2f)
-    //     type = smoothstep(.23f, .2f, height);
-    // if (height < .13f)
-    //     type = smoothstep(.1f, .13f, height);
+    float lowerupperlimit = fade(remap(coverage, 0.f, 1.f, .1f, .3f));
+    float upperlowerlimit = fade(remap(coverage, 0.f, 1.f, .3f, .6f));
+    float upperupperlimit = fade(remap(coverage, 0.f, 1.f, .3f, .9f));
 
-    // cumulus
-    // if (height > .4f)
-    //     type = smoothstep(.6f, .4f, height);
-    // if (height < .3f)
-    //     type = smoothstep(.1f, .3f, height);
+    if (height < lowerupperlimit)
+        type = smoothstep(.1f, lowerupperlimit, height);
+    if (height > upperlowerlimit)
+        type = smoothstep(upperupperlimit, upperlowerlimit, height);
 
-    // cumulonumbis
-    if (height > .7f)
-        type = smoothstep(.9f, .7f, height);
-    if (height < .2f)
-        type = smoothstep(.1f, .2f, height);
-
-    np *= cloud.freq;
-    float d = fade(imageLoad(cloudtex, ivec3(floor(np)) & (cloud.cloudtex_size - 1)).x);
-    if (d > .3f) return remap(d, .3f, 1.f, 0.f, 1.f) * type * height * coverage;
-    return 0.f;
+    return clamp(remap(d, cloud.cutoff, 1.f, 0.f, 1.f), 0.f, 1.f) * type * height * coverage;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -170,7 +160,7 @@ void main()
         float sigma_s = cloud.sigma_s;
         float sigma_t = cloud.sigma_a + cloud.sigma_s;
         float step = cloud.step;
-        int steps = min(int((t.y - t.x) / step), cloud.max_steps) - 1;
+        int step_count = 0;
         t += step + step * rand(t.y);
 
         while (t.x < t.y)
@@ -180,6 +170,7 @@ void main()
 
             float density = eval_density(np, cloud_extent) * cloud.density;
             if (density == 0.f) { t.x += 10.f * (step + step * rand(t.x)); continue; }
+            if (++step_count > cloud.max_steps) break;
 
             transmittance *= exp(-step * sigma_t * density);
 
@@ -194,9 +185,9 @@ void main()
                 tau += eval_density(np, cloud_extent) * cloud.density;
             }
 
-            float phase = phase(.6f, ld, r) /* + phase(.3f, ld, r) + phase(-.3f, ld, r) */;
-            vec3 li = vec3(phase * exp(-step * sigma_t * tau) + cloud.ambient);
-            color += transmittance * sigma_s * density * li * step;
+            float fr = phase(.6f, ld, r) /* + phase(.3f, ld, r) + phase(-.3f, ld, r) */;
+            vec3 li = vec3(fr * exp(-step * sigma_t * tau));
+            color += transmittance * sigma_s * density * li * step + (1.f - transmittance) * phase(-.3f, ld, r) * cloud.ambient;
 
             t.x += step + step * rand(t.x);
             if (transmittance < (step + step * rand(t.x))) break;
