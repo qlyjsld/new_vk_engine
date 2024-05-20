@@ -24,6 +24,7 @@ struct cloud_data {
     alignas(4) float height;
     alignas(4) int cloudtex_size;
     alignas(4) int weather_size;
+    alignas(4) float type;
     alignas(4) float freq;
     alignas(4) float ambient;
     alignas(4) float sigma_a;
@@ -326,18 +327,19 @@ void vk_engine::cloud_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
-    cloud_data.centre = glm::vec3(0.f, 0.f, 0.f);
+    cloud_data.centre = glm::vec3(0.f, 400.f, 0.f);
     cloud_data.size = cloud_size;
     cloud_data.height = 128.f;
     cloud_data.cloudtex_size = cloudtex_size;
     cloud_data.weather_size = weather_size;
+    cloud_data.type = .6f;
     cloud_data.freq = 1.f;
-    cloud_data.ambient = 0.f;
+    cloud_data.ambient = .1f;
     cloud_data.sigma_a = 0.f;
-    cloud_data.sigma_s = 9.f;
-    cloud_data.step = .473f;
+    cloud_data.sigma_s = .1f;
+    cloud_data.step = .23f;
     cloud_data.max_steps = 128;
-    cloud_data.cutoff = .3f;
+    cloud_data.cutoff = .289f;
     cloud_data.density = 1.f;
     cloud_data.lambda = 600.f;
     cloud_data.temperature = 3000.f;
@@ -410,16 +412,17 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::Begin("cloud", &cloud, 0);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::SliderFloat("size", &cloud_data.size, 0.f, 65536.f);
-    ImGui::SliderFloat("height", &cloud_data.height, 0.f, 6500.f);
+    ImGui::SliderFloat("size", &cloud_data.size, 0.f, 6553.f);
+    ImGui::SliderFloat("height", &cloud_data.height, 0.f, 650.f);
+    ImGui::SliderFloat("type", &cloud_data.type, 0.f, 1.f);
     ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 3.f);
-    ImGui::SliderFloat("ambient", &cloud_data.ambient, 0.f, 3.f);
-    ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 100.f);
-    ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 100.f);
+    ImGui::SliderFloat("ambient", &cloud_data.ambient, 0.f, 1.f);
+    ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 1.f);
+    ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 1.f);
     ImGui::SliderFloat("step", &cloud_data.step, .1f, 3.f);
-    ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 1000);
-    ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 1.f);
-    ImGui::SliderFloat("density", &cloud_data.density, 0.f, 30.f);
+    ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 1024);
+    ImGui::SliderFloat("cutoff", &cloud_data.cutoff, .1f, 1.f);
+    ImGui::SliderFloat("density", &cloud_data.density, 0.f, 32.f);
     // ImGui::SliderFloat("lambda", &cloud_data.lambda, 0.f, 1000.f);
     // ImGui::SliderFloat("temperature", &cloud_data.temperature, 0.f, 10000.f);
     // ImGui::ColorEdit3("color", (float *)&cloud_data.color);

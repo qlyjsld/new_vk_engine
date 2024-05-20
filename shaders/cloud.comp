@@ -28,6 +28,7 @@ layout (set = 0, binding = 5) uniform readonly CLOUD
     float height;
     int cloudtex_size;
     int weather_size;
+    float type;
     float freq;
     float ambient;
     float sigma_a;
@@ -90,7 +91,7 @@ float fade(float t)
 
 float remap(float value, float old_min, float old_max, float new_min, float new_max)
 {
-    return new_min + (value - old_min) / (old_max - old_min) * (new_max - new_min);
+    return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
 }
 
 float eval_density(vec3 np, vec3 cloud_extent)
@@ -98,20 +99,20 @@ float eval_density(vec3 np, vec3 cloud_extent)
     float d = fade(imageLoad(cloudtex, ivec3(floor(np * cloud.freq)) & (cloud.cloudtex_size - 1)).x);
     if (d < cloud.cutoff) return 0.f;
 
-    float coverage = imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x;
+    /* float coverage = fade(imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x) */;
     float height = np.y / cloud.height;
     float type = 1.f;
 
-    float lowerupperlimit = fade(remap(coverage, 0.f, 1.f, .1f, .3f));
-    float upperlowerlimit = fade(remap(coverage, 0.f, 1.f, .3f, .6f));
-    float upperupperlimit = fade(remap(coverage, 0.f, 1.f, .3f, .9f));
+    float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
+    float upperlowerlimit = remap(cloud.type, 0.f, 1.f, .13f, .75f);
+    float upperupperlimit = remap(cloud.type, 0.f, 1.f, .14f, .89f);
 
     if (height < lowerupperlimit)
         type = smoothstep(.1f, lowerupperlimit, height);
     if (height > upperlowerlimit)
         type = smoothstep(upperupperlimit, upperlowerlimit, height);
 
-    return clamp(remap(d, cloud.cutoff, 1.f, 0.f, 1.f), 0.f, 1.f) * type * height * coverage;
+    return d * type * height /* coverage */;
 }
 
 /* reference: https://www.shadertoy.com/view/lslGzl */
@@ -169,7 +170,7 @@ void main()
             vec3 np = p - (cloud.centre - cloud_extent * .5f);
 
             float density = eval_density(np, cloud_extent) * cloud.density;
-            if (density == 0.f) { t.x += 10.f * (step + step * rand(t.x)); continue; }
+            if (density < .01f) { t.x += 10.f * (step + step * rand(t.x)); continue; }
             if (++step_count > cloud.max_steps) break;
 
             transmittance *= exp(-step * sigma_t * density);
