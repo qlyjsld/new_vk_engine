@@ -29,7 +29,10 @@ See src/main.cpp and shaders/*.comp to begin.
 
 ## Demo
 ![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/cloud.png)
-*Tone mapped volmetric rendering, highly recommend a HDR monitor for original results.*
+** *Tone mapped volmetric rendering, highly recommend a HDR monitor for original results.*
+
+![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/sunset.png)
+** *Sunset with phase function, ambient lighting.*
 
 ## Todo
 - [ ] Dynamic Descriptors Pool
