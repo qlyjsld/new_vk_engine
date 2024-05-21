@@ -98,7 +98,7 @@ float eval_density(vec3 np, vec3 cloud_extent)
 {
     vec4 d = imageLoad(cloudtex, ivec3(floor(np * cloud.freq)) & (cloud.cloudtex_size - 1));
     float low_freq_worley = d.y + d.z + d.w;
-    d.x = remap(d.x, low_freq_worley - 1.f, 1.f, 0.f, 1.f);
+    d.x = remap(d.x, low_freq_worley - 1.6f, 1.f, 0.f, 1.f);
     if (d.x < cloud.cutoff) return 0.f;
 
     /* float coverage = imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x; */
@@ -148,7 +148,10 @@ void main()
     vec3 upperleft = (o + res.y / 2.f / h * d) + left * extent.value.x / 2.f + up * extent.value.y / 2.f;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    vec3 background = /* vec3(0.f) */ mix(vec3(.46f, .7f, 1.f), vec3(1.f), y / extent.value.y);
+    vec3 sun_color = vec3(.99f, .36f, .32f); // sunset
+    vec3 sky_color = vec3(.98f, .83f, .64f); // red
+    // vec3 sky_color = vec3(.76f, .84f, .93f); // blue
+    vec3 background = /* vec3(0.f) */ mix(sky_color, vec3(1.f), y / extent.value.y);
     vec3 cloud_extent = vec3(cloud.size, cloud.height, cloud.size);
 
     // intersect
@@ -179,7 +182,7 @@ void main()
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
-            vec3 ld = normalize(vec3(0.f, 1.f, 0.f));
+            vec3 ld = normalize(vec3(0.f, .3f, 1.f));
             float nstep = step * 3.f;
             int nsteps = 9;
             float tau = 0.f;
@@ -190,8 +193,8 @@ void main()
                 tau += eval_density(np, cloud_extent) * cloud.density;
             }
 
-            float fr = phase(.6f, ld, r);
-            vec3 li = vec3(1.f) * fr * exp(-step * sigma_t * tau) + vec3(1.f) * cloud.ambient * exp(-nstep * sigma_t * tau);
+            float fr = phase(.6f, ld, r) + phase(-.3f, ld, r);
+            vec3 li = sun_color * fr * exp(-nstep * sigma_t * tau) + vec3(1.f) * cloud.ambient * exp(-nstep * sigma_t * tau);
             color += transmittance * sigma_s * density * li * step;
 
             t.x += step + step * rand(t.x);
