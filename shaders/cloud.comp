@@ -23,8 +23,7 @@ layout (set = 0, binding = 4) uniform readonly CAMERA
 
 layout (set = 0, binding = 5) uniform readonly CLOUD
 {
-    vec3 centre;
-    float size;
+    float inner_radius;
     float height;
     int cloudtex_size;
     int weather_size;
@@ -77,6 +76,24 @@ vec2 hit_box(vec3 c, vec3 e, vec3 o, vec3 r)
     return vec2(max(tmin, tzmin), min(tmax, tzmax));
 }
 
+struct sphere {
+    vec3 centre;
+    float radius;
+};
+
+vec2 hit_sphere(sphere s, vec3 o, vec3 r)
+{
+    float a = dot(r, r);
+    float b = -2 * dot(r, s.centre - o);
+    float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant >= 0)
+            return vec2((-b - sqrt(discriminant)) / 2 * a, (-b + sqrt(discriminant)) / 2 * a);
+
+    return vec2(-1.f);
+}
+
 float phase(float g, vec3 a, vec3 b)
 {
     float cos_theta = dot(a, b);
@@ -94,16 +111,16 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
     return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
 }
 
-float eval_density(vec3 np, vec3 cloud_extent)
+float eval_density(vec3 p)
 {
-    vec4 d = imageLoad(cloudtex, ivec3(floor(np * cloud.freq)) & (cloud.cloudtex_size - 1));
+    vec4 d = imageLoad(cloudtex, ivec3(floor(p * cloud.freq)) & (cloud.cloudtex_size - 1));
     float low_freq_worley = d.y + d.z + d.w;
-    d.x = remap(d.x, low_freq_worley - 1.6f, 1.f, 0.f, 1.f);
+    d.x = remap(d.x, low_freq_worley - 1.3f, 1.f, 0.f, 1.f);
     if (d.x < cloud.cutoff) return 0.f;
 
-    /* float coverage = imageLoad(weather, ivec2(floor(np / cloud.size * cloud.weather_size).xz)).x; */
+    float coverage = imageLoad(weather, ivec2(floor(p * cloud.freq)) & (cloud.weather_size - 1)).x;
 
-    float height = np.y / cloud.height;
+    float height = (length(p) - cloud.inner_radius) / cloud.height;
     float type = 1.f;
 
     float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
@@ -148,15 +165,32 @@ void main()
     vec3 upperleft = (o + res.y / 2.f / h * d) + left * extent.value.x / 2.f + up * extent.value.y / 2.f;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    vec3 sun_color = vec3(.99f, .36f, .32f); // sunset
-    vec3 sky_color = vec3(.98f, .83f, .64f); // red
-    // vec3 sky_color = vec3(.76f, .84f, .93f); // blue
+    vec3 sun_color = vec3(1.f); // default
+    // vec3 sun_color = vec3(.99f, .36f, .32f); // sunset
+    vec3 sky_color = vec3(.76f, .84f, .93f); // sky blue
+    // vec3 sky_color = vec3(.98f, .83f, .64f); // sunset
     vec3 background = /* vec3(0.f) */ mix(sky_color, vec3(1.f), y / extent.value.y);
-    vec3 cloud_extent = vec3(cloud.size, cloud.height, cloud.size);
 
     // intersect
-    vec2 t = hit_box(cloud.centre, cloud_extent, o, r);
-    if ((t.x < 0.f) && (t.y >= 0.f)) { t.x = 0.f; }
+    sphere inner;
+    inner.centre = vec3(0.f);
+    inner.radius = cloud.inner_radius;
+    sphere outer;
+    outer.centre = vec3(0.f);
+    outer.radius = cloud.inner_radius + cloud.height;
+
+    vec2 innert = hit_sphere(inner, o, r);
+    if ((innert.x < 0.f) && (innert.y >= 0.f)) { innert.x = 0.f; }
+
+    vec2 outert = hit_sphere(outer, o, r);
+    if ((outert.x < 0.f) && (outert.y >= 0.f)) { outert.x = 0.f; }
+
+    float camera_radius = length(o);
+    vec2 t = vec2(-1.f);
+
+    if (camera_radius < inner.radius) t = vec2(innert.y, outert.y);
+    if ((camera_radius > inner.radius) && (camera_radius < outer.radius)) t = vec2(0.f, outert.y);
+    if (camera_radius > outer.radius) t = outert;
 
     float transmittance = 1.f;
     vec3 color = vec3(0.f);
@@ -173,9 +207,7 @@ void main()
         while (t.x < t.y)
         {
             vec3 p = o + t.x * r;
-            vec3 np = p - (cloud.centre - cloud_extent * .5f);
-
-            float density = eval_density(np, cloud_extent) * cloud.density;
+            float density = eval_density(p) * cloud.density;
             if (density < .01f) { t.x += 10.f * (step + step * rand(t.x)); continue; }
             if (++step_count > cloud.max_steps) break;
 
@@ -183,14 +215,14 @@ void main()
 
             // estimate in-scattering to p in volume
             vec3 ld = normalize(vec3(0.f, .3f, 1.f));
-            float nstep = step * 3.f;
-            int nsteps = 9;
+            float nstep = step * 6.f;
+            int nsteps = 7;
             float tau = 0.f;
 
             for (int j = 1; j < nsteps; ++j)
             {
-                np += (j * (nstep + nstep * rand(np.x))) * ld;
-                tau += eval_density(np, cloud_extent) * cloud.density;
+                p += (nstep + nstep * rand(p.x)) * ld;
+                tau += eval_density(p) * cloud.density;
             }
 
             float fr = phase(.6f, ld, r) + phase(-.3f, ld, r);

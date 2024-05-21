@@ -224,7 +224,7 @@ float fbm_worley(float x, float y, float z, uint octaves, float infreq)
         t += a * worley_noise(f * x, f * y, f * z, f);
     }
 
-    return remap(t, 0.f, .3f, 0.f, 1.f);
+    return remap(t, 0.f, .6f, 0.f, 1.f);
 }
 
 void main()
