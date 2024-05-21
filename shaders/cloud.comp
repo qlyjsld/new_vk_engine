@@ -148,7 +148,7 @@ void main()
     vec3 upperleft = (o + res.y / 2.f / h * d) + left * extent.value.x / 2.f + up * extent.value.y / 2.f;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    vec3 background = /* vec3(0.f) */ mix(vec3(.46f, .7f, 1.f), vec3(1.f, 1.f, 1.f), y / extent.value.y);
+    vec3 background = /* vec3(0.f) */ mix(vec3(.46f, .7f, 1.f), vec3(1.f), y / extent.value.y);
     vec3 cloud_extent = vec3(cloud.size, cloud.height, cloud.size);
 
     // intersect
@@ -179,8 +179,8 @@ void main()
             transmittance *= exp(-step * sigma_t * density);
 
             // estimate in-scattering to p in volume
-            vec3 ld = vec3(0.f, 1.f, 0.f);
-            int nsteps = 0;
+            vec3 ld = normalize(vec3(0.f, 1.f, 0.f));
+            int nsteps = 7;
             float tau = 0.f;
 
             for (int j = 1; j < nsteps; ++j)
@@ -189,9 +189,9 @@ void main()
                 tau += eval_density(np, cloud_extent) * cloud.density;
             }
 
-            float fr = phase(.6f, ld, r) /* + phase(.3f, ld, r) + phase(-.3f, ld, r) */;
-            vec3 li = vec3(fr * exp(-step * sigma_t * tau));
-            color += transmittance * sigma_s * density * li * step + (1.f - transmittance) * phase(-.3f, ld, r) * cloud.ambient;
+            float fr = phase(.6f, ld, r);
+            vec3 li = (vec3(1.f) * fr + vec3(1.f) * cloud.ambient) * exp(-step * sigma_t * tau);
+            color += transmittance * sigma_s * density * li * step;
 
             t.x += step + step * rand(t.x);
             if (transmittance < (step + step * rand(t.x))) break;

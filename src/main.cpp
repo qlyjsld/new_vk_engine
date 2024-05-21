@@ -334,7 +334,7 @@ void vk_engine::cloud_init()
     cloud_data.weather_size = weather_size;
     cloud_data.type = .6f;
     cloud_data.freq = 1.f;
-    cloud_data.ambient = .1f;
+    cloud_data.ambient = 1.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = .39f;
     cloud_data.step = .39f;
@@ -416,7 +416,7 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("height", &cloud_data.height, 0.f, 650.f);
     ImGui::SliderFloat("type", &cloud_data.type, 0.f, 1.f);
     ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 3.f);
-    ImGui::SliderFloat("ambient", &cloud_data.ambient, 0.f, 1.f);
+    ImGui::SliderFloat("ambient", &cloud_data.ambient, 0.f, 32.f);
     ImGui::SliderFloat("sigma_a", &cloud_data.sigma_a, 0.f, 1.f);
     ImGui::SliderFloat("sigma_s", &cloud_data.sigma_s, 0.f, 1.f);
     ImGui::SliderFloat("step", &cloud_data.step, .1f, 3.f);
