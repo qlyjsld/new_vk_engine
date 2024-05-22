@@ -23,10 +23,8 @@ layout (set = 0, binding = 4) uniform readonly CAMERA
 
 layout (set = 0, binding = 5) uniform readonly CLOUD
 {
-    float inner_radius;
+    float inner;
     float height;
-    int cloudtex_size;
-    int weather_size;
     float type;
     float freq;
     float ambient;
@@ -36,45 +34,39 @@ layout (set = 0, binding = 5) uniform readonly CLOUD
     int max_steps;
     float cutoff;
     float density;
-    float lambda;
-    float temperature;
-    vec3 color;
+
+    int cloudtex_size;
+    int weather_size;
 } cloud;
 
 float rand(float x)
 {
-    return fract(sin(x) * 100000.f) - .5f;
+    /* better performance worse result */
+    return sqrt(fract(sin(x) * 100000.f));
+    // return sqrt(fract(sin(x) * 100000.f)) - .5f;
+    // return fract(sin(x) * 100000.f) - .5f;
 }
 
-vec2 hit_box(vec3 c, vec3 e, vec3 o, vec3 r)
+float fade(float t)
 {
-    vec3 bmin = c - e * .5f;
-    vec3 bmax = c + e * .5f;
-
-    float tmin = (bmin.x - o.x) / r.x;
-    float tmax = (bmax.x - o.x) / r.x;
-
-    if (tmin > tmax) { float dummy = tmin; tmin = tmax; tmax = dummy; }
-
-    float tymin = (bmin.y - o.y) / r.y;
-    float tymax = (bmax.y - o.y) / r.y;
-
-    if (tymin > tymax) { float dummy = tymin; tymin = tymax; tymax = dummy; }
-
-    if ((tmin > tymax) || (tymin > tmax)) return vec2(-1.f);
-
-    tmin = max(tmin, tymin);
-    tmax = min(tmax, tymax);
-
-    float tzmin = (bmin.z - o.z) / r.z;
-    float tzmax = (bmax.z - o.z) / r.z;
-
-    if (tzmin > tzmax) { float dummy = tzmin; tzmin = tzmax; tzmax = dummy; }
-
-    if ((tmin > tzmax) || (tzmin > tmax)) return vec2(-1.f);
-
-    return vec2(max(tmin, tzmin), min(tmax, tzmax));
+	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
 }
+
+float remap(float value, float old_min, float old_max, float new_min, float new_max)
+{
+    return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
+}
+
+/* reference: https://www.shadertoy.com/view/lslGzl */
+vec3 linearToneMapping(vec3 color)
+{
+    float exposure = .6f;
+    float gamma = 3.f;
+    color = clamp(exposure * color, 0.f, 1.f);
+    color = pow(color, vec3(1.f / gamma));
+    return color;
+}
+
 
 struct sphere {
     vec3 centre;
@@ -101,17 +93,7 @@ float phase(float g, vec3 a, vec3 b)
     return 1.f / (4.f * 3.14f) * (1.f - g * g) / (denom * sqrt(denom));
 }
 
-float fade(float t)
-{
-	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
-}
-
-float remap(float value, float old_min, float old_max, float new_min, float new_max)
-{
-    return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
-}
-
-float eval_density(vec3 p)
+float eval_density(vec3 p, float height)
 {
     vec4 d = imageLoad(cloudtex, ivec3(floor(p * cloud.freq)) & (cloud.cloudtex_size - 1));
     float low_freq_worley = d.y + d.z + d.w;
@@ -119,8 +101,6 @@ float eval_density(vec3 p)
     if (d.x < cloud.cutoff) return 0.f;
 
     float coverage = imageLoad(weather, ivec2(floor(p * cloud.freq)) & (cloud.weather_size - 1)).x;
-
-    float height = (length(p) - cloud.inner_radius) / cloud.height;
     float type = 1.f;
 
     float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
@@ -133,16 +113,6 @@ float eval_density(vec3 p)
         type = smoothstep(upperupperlimit, upperlowerlimit, height);
 
     return d.x * type * height /* coverage */;
-}
-
-/* reference: https://www.shadertoy.com/view/lslGzl */
-vec3 linearToneMapping(vec3 color)
-{
-    float exposure = .6f;
-    float gamma = 3.f;
-    color = clamp(exposure * color, 0.f, 1.f);
-    color = pow(color, vec3(1.f / gamma));
-    return color;
 }
 
 void main()
@@ -174,10 +144,11 @@ void main()
     // intersect
     sphere inner;
     inner.centre = vec3(0.f);
-    inner.radius = cloud.inner_radius;
+    inner.radius = cloud.inner;
+
     sphere outer;
     outer.centre = vec3(0.f);
-    outer.radius = cloud.inner_radius + cloud.height;
+    outer.radius = cloud.inner + cloud.height;
 
     vec2 innert = hit_sphere(inner, o, r);
     if ((innert.x < 0.f) && (innert.y >= 0.f)) { innert.x = 0.f; }
@@ -207,7 +178,9 @@ void main()
         while (t.x < t.y)
         {
             vec3 p = o + t.x * r;
-            float density = eval_density(p) * cloud.density;
+            float height = (length(p) - inner.radius) / cloud.height;
+            float density = eval_density(p, height) * cloud.density;
+
             if (density < .01f) { t.x += 10.f * (step + step * rand(t.x)); continue; }
             if (++step_count > cloud.max_steps) break;
 
@@ -221,12 +194,14 @@ void main()
 
             for (int j = 1; j < nsteps; ++j)
             {
-                p += (nstep + nstep * rand(p.x)) * ld;
-                tau += eval_density(p) * cloud.density;
+                p += (nstep + nstep * rand(p.x + p.y + p.z)) * ld;
+                float nheight = (length(p) - inner.radius) / cloud.height;
+                tau += eval_density(p, nheight) * cloud.density;
             }
 
             float fr = phase(.6f, ld, r) + phase(-.3f, ld, r);
-            vec3 li = sun_color * fr * exp(-nstep * sigma_t * tau) + vec3(1.f) * cloud.ambient * exp(-nstep * sigma_t * tau);
+            vec3 ambient = vec3(1.f) * cloud.ambient * remap(height, 0.f, 1.f, .6f, 1.f) * exp(-nstep * sigma_t * tau);
+            vec3 li = sun_color * fr * exp(-nstep * sigma_t * tau) + ambient;
             color += transmittance * sigma_s * density * li * step;
 
             t.x += step + step * rand(t.x);
