@@ -34,6 +34,9 @@ See src/main.cpp and shaders/*.comp to begin.
 ![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/sunset.png)
 ** *Sunset with phase function, and ambient lighting.*
 
+![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/spherical_atmosphere.png)
+** *Spherical atmosphere.*
+
 ## Todo
 - [ ] Dynamic Descriptors Pool
 - [ ] Dynamic Pipelines
