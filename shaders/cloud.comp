@@ -71,12 +71,12 @@ struct sphere {
 vec2 hit_sphere(sphere s, vec3 o, vec3 r)
 {
     float a = dot(r, r);
-    float b = -2 * dot(r, s.centre - o);
+    float b = -2.f * dot(r, s.centre - o);
     float c = dot(s.centre - o, s.centre - o) - s.radius * s.radius;
-    float discriminant = b * b - 4 * a * c;
+    float discriminant = b * b - 4.f * a * c;
 
-    if (discriminant >= 0)
-            return vec2((-b - sqrt(discriminant)) / 2 * a, (-b + sqrt(discriminant)) / 2 * a);
+    if (discriminant >= 0.f)
+            return vec2((-b - sqrt(discriminant)) / 2.f * a, (-b + sqrt(discriminant)) / 2.f * a);
 
     return vec2(-1.f);
 }
@@ -182,11 +182,8 @@ void main()
             }
 
             float height = (length(p) - inner.radius) / 800.f;
-
             float density = eval_density(p, height) * cloud.density;
             if (density < .02f) { t.x += 20.f * (step + step * rand(t.x)); continue; }
-
-            if (++step_count > cloud.max_steps) break;
 
             transmittance *= exp(-step * sigma_t * density);
 
@@ -209,6 +206,7 @@ void main()
             color += transmittance * sigma_s * density * li * step;
 
             t.x += step + step * rand(t.x);
+            if (++step_count > cloud.max_steps) break;
             if (transmittance < (step + step * rand(t.x))) break;
         }
     }
