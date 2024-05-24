@@ -90,12 +90,16 @@ float phase(float g, vec3 a, vec3 b)
 
 float eval_density(vec3 p, float height)
 {
-    vec4 d = imageLoad(cloudtex, ivec3(floor(p * cloud.freq)) & 127);
-    float low_freq_worley = d.y + d.z + d.w;
-    d.x = remap(d.x, low_freq_worley - 1.3f, 1.f, 0.f, 1.f);
-    if (d.x < cloud.cutoff) return 0.f;
+    // float rand = 3.f * rand(p.x + p.y + p.z);
+    float coverage = imageLoad(weather, ivec2(p.xz * .09f - vec2(-256.f))).x;
+    if (coverage < .02f) return 0.f;
 
-    float coverage = imageLoad(weather, ivec2(floor(p.xz * .3f - vec2(-256.f)))).x;
+    vec4 d = imageLoad(cloudtex, ivec3(p * cloud.freq) & 127);
+    float low_freq_worley = d.y + d.z + d.w;
+    d.x = remap(d.x, 1.f - coverage, 1.f, 0.f, 1.f);
+    d.x = remap(d.x, low_freq_worley - 1.f, 1.f, 0.f, 1.f);
+    d.x = remap(d.x, cloud.cutoff, 1.f, 0.f, 1.f);
+
     float type = 1.f;
 
     float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
@@ -139,7 +143,7 @@ void main()
     // intersect
     sphere inner;
     inner.centre = vec3(0.f);
-    inner.radius = sqrt(637100.f) + 150.f;
+    inner.radius = sqrt(6371000.f) + 150.f;
 
     sphere outer;
     outer.centre = vec3(0.f);

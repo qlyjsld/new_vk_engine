@@ -35,11 +35,8 @@ struct cloud_data {
     earth radius = 6371000m;
     mt. everest height = 9000m;
     cloud appears at above = 1500m;
- */
+*/
 
-// static float cloud_inner = 0.f + 150.f;
-static float cloud_inner = sqrt(637100.f) + 150.f;
-static float cloud_height = 900.f - 150.f;
 static uint32_t cloudtex_size = 128;
 static uint32_t weather_size = 512;
 static bool cloud_ui = true;
@@ -206,13 +203,13 @@ void vk_engine::cloud_init()
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
     cloud_data.type = .6f;
-    cloud_data.freq = .6f;
+    cloud_data.freq = .3f;
     cloud_data.ambient = 1.f;
     cloud_data.sigma_a = 0.f;
-    cloud_data.sigma_s = .39f;
-    cloud_data.step = .39f;
-    cloud_data.max_steps = 64;
-    cloud_data.cutoff = .3;
+    cloud_data.sigma_s = .6f;
+    cloud_data.step = .4f;
+    cloud_data.max_steps = 96;
+    cloud_data.cutoff = .3f;
     cloud_data.density = 1.f;
 
     std::vector<descriptor> descriptors = {
@@ -277,8 +274,10 @@ void vk_engine::cloud_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
-    ImGui::Begin("cloud", &cloud_ui, 0);
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+    ImGui::Begin("cloud", &cloud_ui, ImGuiWindowFlags_NoResize);
+    ImGui::SetWindowSize(ImVec2(290.f, 290.f));
+    ImGui::Text("'tab' to toggle; 'ese' to close");
+    ImGui::Text("application average %.3f ms/frame \n (%.1f FPS)",
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::SliderFloat("type", &cloud_data.type, 0.f, 1.f);
     ImGui::SliderFloat("freq", &cloud_data.freq, 0.f, 1.f);
@@ -290,6 +289,32 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 1.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 32.f);
     ImGui::End();
+
+    auto black = ImVec4(.1f, .1f, .1f, 1.f);
+    auto grey = ImVec4(.6f, .6f, .6f, 1.f);
+    auto lightgrey = ImVec4(.7f, .7f, .7f, 1.f);
+    auto white = ImVec4(.9f, .9f, .9f, 1.f);
+
+    ImGuiStyle &style = ImGui::GetStyle();
+    style.Alpha = .8f;
+    style.WindowRounding = 6.f;
+    style.FrameRounding = 3.f;
+    style.GrabMinSize = 12.f;
+    style.GrabRounding = 3.f;
+    style.Colors[ImGuiCol_Text] = black;
+    style.Colors[ImGuiCol_WindowBg] = white;
+    style.Colors[ImGuiCol_FrameBg] = grey;
+    style.Colors[ImGuiCol_FrameBgHovered] = lightgrey;
+    style.Colors[ImGuiCol_FrameBgActive] = lightgrey;
+    style.Colors[ImGuiCol_TitleBg] = black;
+    style.Colors[ImGuiCol_TitleBgActive] = black;
+    style.Colors[ImGuiCol_TitleBgCollapsed] = black;
+    style.Colors[ImGuiCol_MenuBarBg] = black;
+    style.Colors[ImGuiCol_ScrollbarBg] = white;
+    style.Colors[ImGuiCol_SliderGrab] = style.Colors[ImGuiCol_ScrollbarGrab];
+    style.Colors[ImGuiCol_SliderGrabActive] = style.Colors[ImGuiCol_ScrollbarGrabActive];
+    style.Colors[ImGuiCol_ButtonHovered] = black;
+    style.Colors[ImGuiCol_ButtonActive] = black;
 
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
