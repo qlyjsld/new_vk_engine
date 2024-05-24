@@ -2,6 +2,7 @@
 
 #include <cstring>
 
+#include <SDL3/SDL.h>
 #include <imgui.h>
 // #include <openvdb/openvdb.h>
 
@@ -19,8 +20,6 @@ struct camera_data {
 };
 
 struct cloud_data {
-    alignas(4) float inner;
-    alignas(4) float height;
     alignas(4) float type;
     alignas(4) float freq;
     alignas(4) float ambient;
@@ -30,9 +29,6 @@ struct cloud_data {
     alignas(4) int max_steps;
     alignas(4) float cutoff;
     alignas(4) float density;
-
-    alignas(4) int cloudtex_size;
-    alignas(4) int weather_size;
 };
 
 /*
@@ -41,7 +37,8 @@ struct cloud_data {
     cloud appears at above = 1500m;
  */
 
-static float cloud_inner = 0.f + 150.f;
+// static float cloud_inner = 0.f + 150.f;
+static float cloud_inner = sqrt(637100.f) + 150.f;
 static float cloud_height = 900.f - 150.f;
 static uint32_t cloudtex_size = 128;
 static uint32_t weather_size = 512;
@@ -190,15 +187,14 @@ void vk_engine::weather_init()
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
 
-        float u_time = 1.f;
+        float u_time = SDL_GetTicks() / 10000.f;
         vkCmdPushConstants(cbuffer, cs->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
                            sizeof(float), &u_time);
 
         vkCmdDispatch(cbuffer, weather_size / 8, weather_size / 8, 1);
     };
 
-    cs::cc_init(_comp_index, _device);
-    cs::comp_immediate_submit(_device, _comp_queue, &weather);
+    css.push_back(weather);
 }
 
 void vk_engine::cloud_init()
@@ -209,12 +205,8 @@ void vk_engine::cloud_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
-    cloud_data.inner = cloud_inner;
-    cloud_data.height = cloud_height;
-    cloud_data.cloudtex_size = cloudtex_size;
-    cloud_data.weather_size = weather_size;
     cloud_data.type = .6f;
-    cloud_data.freq = 1.f;
+    cloud_data.freq = .6f;
     cloud_data.ambient = 1.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = .39f;
@@ -285,8 +277,6 @@ void vk_engine::cloud_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
-    ImGui::SetNextWindowSize(ImVec2{300, 290});
-    ImGui::SetNextWindowPos(ImVec2{30, 30});
     ImGui::Begin("cloud", &cloud_ui, 0);
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
