@@ -204,7 +204,7 @@ void vk_engine::cloud_init()
 
     cloud_data.type = .6f;
     cloud_data.freq = .2f;
-    cloud_data.ambient = 1.3f;
+    cloud_data.ambient = 1.f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = .6f;
     cloud_data.step = .4f;
