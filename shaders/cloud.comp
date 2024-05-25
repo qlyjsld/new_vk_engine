@@ -90,28 +90,28 @@ float phase(float g, vec3 a, vec3 b)
 
 float eval_density(vec3 p, float height)
 {
-    // float rand = 3.f * rand(p.x + p.y + p.z);
-    float coverage = imageLoad(weather, ivec2(p.xz * .09f - vec2(-256.f))).x;
+    float coverage = imageLoad(weather, ivec2(p.xz * .19f - vec2(-256.f))).x;
     if (coverage < .02f) return 0.f;
 
     vec4 d = imageLoad(cloudtex, ivec3(p * cloud.freq) & 127);
     float low_freq_worley = d.y + d.z + d.w;
+    d.x = remap(d.x, 1.f - cloud.density, 1.f, 0.f, 1.f);
     d.x = remap(d.x, 1.f - coverage, 1.f, 0.f, 1.f);
-    d.x = remap(d.x, low_freq_worley - 1.f, 1.f, 0.f, 1.f);
-    d.x = remap(d.x, cloud.cutoff, 1.f, 0.f, 1.f);
-
-    float type = 1.f;
+    d.x = remap(d.x, low_freq_worley - 1.3f, 1.f, 0.f, 1.f);
 
     float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
     float upperlowerlimit = remap(cloud.type, 0.f, 1.f, .13f, .75f);
     float upperupperlimit = remap(cloud.type, 0.f, 1.f, .14f, .89f);
 
+    float type = 1.f;
     if (height < lowerupperlimit)
         type = smoothstep(.1f, lowerupperlimit, height);
     if (height > upperlowerlimit)
         type = smoothstep(upperupperlimit, upperlowerlimit, height);
+    d.x = remap(d.x, 1.f - type, 1.f, 0.f, 1.f);
 
-    return d.x * type * height * coverage;
+    d.x = remap(d.x, cloud.cutoff, 1.f, 0.f, 1.f);
+    return d.x * cloud.density * coverage * type * height;
 }
 
 void main()
@@ -186,7 +186,7 @@ void main()
             }
 
             float height = (length(p) - inner.radius) / 800.f;
-            float density = eval_density(p, height) * cloud.density;
+            float density = eval_density(p, height);
             if (density < .02f) { t.x += 20.f * (step + step * rand(t.x)); continue; }
 
             transmittance *= exp(-step * sigma_t * density);
@@ -201,7 +201,7 @@ void main()
             {
                 p += (nstep + nstep * rand(p.x + p.y + p.z)) * ld;
                 float nheight = (length(p) - inner.radius) / 800.f;
-                tau += eval_density(p, nheight) * cloud.density;
+                tau += eval_density(p, nheight);
             }
 
             float fr = phase(.6f, ld, r) + phase(-.3f, ld, r);

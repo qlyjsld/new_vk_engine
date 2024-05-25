@@ -184,7 +184,7 @@ void vk_engine::weather_init()
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
 
-        float u_time = SDL_GetTicks() / 10000.f;
+        float u_time = SDL_GetTicks() / 1000.f;
         vkCmdPushConstants(cbuffer, cs->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
                            sizeof(float), &u_time);
 
@@ -203,8 +203,8 @@ void vk_engine::cloud_init()
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
     cloud_data.type = .6f;
-    cloud_data.freq = .3f;
-    cloud_data.ambient = 1.f;
+    cloud_data.freq = .2f;
+    cloud_data.ambient = 1.3f;
     cloud_data.sigma_a = 0.f;
     cloud_data.sigma_s = .6f;
     cloud_data.step = .4f;

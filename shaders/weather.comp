@@ -142,7 +142,7 @@ void main()
     // color = mix(color, vec4(.128f, .625f, .995f, 1.f), vec4(.003f, .675f, .642f, 1.f));
     // color = mix(color, vec4(.996f, .154f, .129f, 1.f), vec4(.3f, .4f, .6f, 1.f));
     // color *= p * p * p * p * p * .6f + .6f * p * p + .6f * p;
-    vec4 color = vec4(fbm(ux + u_time.value, uy + u_time.value, octaves, h));
+    vec4 color = vec4(fbm(ux + u_time.value * .06f, uy + u_time.value * .06f, octaves, h));
     color.x = remap(color.x, .3f, 1.f, 0.f, 1.f);
     imageStore(out_frame, ivec2(x, y), color);
 }
