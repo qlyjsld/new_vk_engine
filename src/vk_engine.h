@@ -44,8 +44,8 @@ public:
     uint64_t _frame_number{0};
     uint64_t _last_frame{0};
     uint64_t _frame_index{0};
-    VkExtent2D _window_extent{1600, 900};
-    VkExtent2D _resolution{1600, 900};
+    VkExtent2D _window_extent{1024, 768};
+    VkExtent2D _resolution{1024, 768};
     struct SDL_Window *_window{nullptr};
 
     VkInstance _instance;

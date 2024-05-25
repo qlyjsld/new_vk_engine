@@ -287,7 +287,7 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderFloat("step", &cloud_data.step, .1f, 3.f);
     ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 128);
     ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 1.f);
-    ImGui::SliderFloat("density", &cloud_data.density, 0.f, 32.f);
+    ImGui::SliderFloat("density", &cloud_data.density, 0.f, 3.f);
     ImGui::End();
 
     auto black = ImVec4(.1f, .1f, .1f, 1.f);
