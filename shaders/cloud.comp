@@ -32,6 +32,8 @@ layout (set = 0, binding = 5) uniform readonly CLOUD
     int max_steps;
     float cutoff;
     float density;
+    vec3 sun_color;
+    vec3 sky_color;
 } cloud;
 
 float rand(float x)
@@ -134,11 +136,7 @@ void main()
     vec3 upperleft = (o + res.y / 2.f / h * d) + left * extent.value.x / 2.f + up * extent.value.y / 2.f;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    // vec3 sun_color = vec3(1.f); // default
-    vec3 sun_color = vec3(.99f, .36f, .32f); // sunset
-    // vec3 sky_color = vec3(.76f, .84f, .93f); // sky blue
-    vec3 sky_color = vec3(.98f, .83f, .64f); // sunset
-    vec3 background = /* vec3(0.f) */ mix(sky_color, vec3(1.f), y / extent.value.y);
+    vec3 background = /* vec3(0.f) */ mix(cloud.sky_color, vec3(1.f), y / extent.value.y);
 
     // intersect
     sphere inner;
@@ -207,7 +205,7 @@ void main()
             float fr = 3.f * phase(.3f, ld, r) + 1.5f * phase(.6f, ld, r)
                     + .3f * phase(.9f, ld, r) + .3f * phase(-.3f, ld, r);
             vec3 ambient = vec3(1.f) * cloud.ambient * remap(height, 0.f, 1.f, .6f, 1.f) * exp(-nstep * sigma_t * tau);
-            vec3 li = sun_color * fr * exp(-nstep * sigma_t * tau) + ambient;
+            vec3 li = cloud.sun_color * fr * exp(-nstep * sigma_t * tau) + ambient;
             color += transmittance * sigma_s * density * li * step;
 
             t.x += step + step * rand(t.x);

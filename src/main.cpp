@@ -29,6 +29,8 @@ struct cloud_data {
     alignas(4) int max_steps;
     alignas(4) float cutoff;
     alignas(4) float density;
+    alignas(16) glm::vec3 sun_color;
+    alignas(16) glm::vec3 sky_color;
 };
 
 /*
@@ -211,6 +213,8 @@ void vk_engine::cloud_init()
     cloud_data.max_steps = 96;
     cloud_data.cutoff = .3f;
     cloud_data.density = 1.f;
+    cloud_data.sun_color = glm::vec3(.99f, .36f, .32f);
+    cloud_data.sky_color = glm::vec3(.98f, .83f, .64f);
 
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
@@ -288,6 +292,8 @@ void vk_engine::draw_comp(frame *frame)
     ImGui::SliderInt("max_steps", &cloud_data.max_steps, 0, 128);
     ImGui::SliderFloat("cutoff", &cloud_data.cutoff, 0.f, 1.f);
     ImGui::SliderFloat("density", &cloud_data.density, 0.f, 3.f);
+    ImGui::ColorEdit3("sun_color", (float *)&cloud_data.sun_color);
+    ImGui::ColorEdit3("sky_color", (float *)&cloud_data.sky_color);
     ImGui::End();
 
     auto black = ImVec4(.1f, .1f, .1f, 1.f);
@@ -298,6 +304,7 @@ void vk_engine::draw_comp(frame *frame)
     ImGuiStyle &style = ImGui::GetStyle();
     style.Alpha = .8f;
     style.WindowRounding = 6.f;
+    style.PopupRounding = 6.f;
     style.FrameRounding = 3.f;
     style.GrabMinSize = 12.f;
     style.GrabRounding = 3.f;
