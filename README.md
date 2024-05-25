@@ -16,10 +16,11 @@ This project uses CMake and Make, to clone and build:
 
 ```
 1. git clone --recursive https://github.com/qlyjsld/new_vk_engine
-2. mkdir build && cd build
-3. cmake ..
-4. make -j <threads>
-5. ./src/vk_engine
+2. cd new_vk_engine
+3. mkdir build && cd build
+4. cmake ..
+5. make -j <threads>
+6. ./src/vk_engine
 ```
 
 **Warning** ** may not build or run on your machine. **
