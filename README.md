@@ -28,14 +28,9 @@ This project uses CMake and Make, to clone and build:
 See src/main.cpp and shaders/*.comp to begin.
 
 ## Demo
-![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/screenshots/cloud.png)
-** *Tone mapped volmetric rendering, highly recommend a HDR monitor for original results.*
 
-![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/screenshots/sunset.png)
-** *Sunset with phase function, and ambient lighting.*
-
-![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/screenshots/spherical_atmosphere.png)
-** *Spherical atmosphere.*
+![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/screenshots/sunset2.png)
+** *Sunset with phase function, and ambient lighting. highly recommend a HDR monitor for original results.*
 
 ## Todo
 - [ ] Dynamic Descriptors Pool
