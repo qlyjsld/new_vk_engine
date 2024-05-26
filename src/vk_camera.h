@@ -53,7 +53,7 @@ private:
     float sensitivity{.3f};
     float yaw{0.f};
     float pitch{0.f};
-    float aspect{16.f / 9.f};
+    float aspect{4.f / 3.f};
 
     void move(glm::vec3 dir, float time) { pos += speed * dir * time; }
 };
