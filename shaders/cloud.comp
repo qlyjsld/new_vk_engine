@@ -141,7 +141,7 @@ void main()
     // intersect
     sphere inner;
     inner.centre = vec3(0.f);
-    inner.radius = 63710000.f + 150.f;
+    inner.radius = 637100.f + 150.f;
 
     sphere outer;
     outer.centre = vec3(0.f);
