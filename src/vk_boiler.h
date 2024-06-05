@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <volk.h>
 
 #include "vk_mesh.h"
 

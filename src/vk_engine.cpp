@@ -3,12 +3,17 @@
 #include <future>
 #include <iostream>
 #include <vector>
-#include <vulkan/vulkan.h>
+#define VOLK_IMPLEMENTATION
+#include <volk.h>
+
+#define VK_NO_PROTOTYPES
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <glm/gtc/matrix_transform.hpp>
 #define VMA_IMPLEMENTATION
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #include "vk_mem_alloc.h"
 
 #include <imgui.h>
@@ -31,7 +36,51 @@ void vk_engine::init()
     deletion_queue.push_back([=]() { SDL_DestroyWindow(_window); });
 
     device_init();
+
+    volkInitialize();
+    volkLoadInstance(_instance);
+    volkLoadDevice(_device);
+
+    vma_vulkan_func = {};
+    vma_vulkan_func.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
+    vma_vulkan_func.vkGetPhysicalDeviceMemoryProperties =
+        vkGetPhysicalDeviceMemoryProperties;
+    vma_vulkan_func.vkAllocateMemory = vkAllocateMemory;
+    vma_vulkan_func.vkFreeMemory = vkFreeMemory;
+    vma_vulkan_func.vkMapMemory = vkMapMemory;
+    vma_vulkan_func.vkUnmapMemory = vkUnmapMemory;
+    vma_vulkan_func.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+    vma_vulkan_func.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
+    vma_vulkan_func.vkBindBufferMemory = vkBindBufferMemory;
+    vma_vulkan_func.vkBindImageMemory = vkBindImageMemory;
+    vma_vulkan_func.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
+    vma_vulkan_func.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+    vma_vulkan_func.vkCreateBuffer = vkCreateBuffer;
+    vma_vulkan_func.vkDestroyBuffer = vkDestroyBuffer;
+    vma_vulkan_func.vkCreateImage = vkCreateImage;
+    vma_vulkan_func.vkDestroyImage = vkDestroyImage;
+    vma_vulkan_func.vkCmdCopyBuffer = vkCmdCopyBuffer;
+#if VMA_DEDICATED_ALLOCATION || VMA_VULKAN_VERSION >= 1001000
+    vma_vulkan_func.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR;
+    vma_vulkan_func.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR;
+#endif
+#if VMA_BIND_MEMORY2 || VMA_VULKAN_VERSION >= 1001000
+    vma_vulkan_func.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR;
+    vma_vulkan_func.vkBindImageMemory2KHR = vkBindImageMemory2KHR;
+#endif
+#if VMA_MEMORY_BUDGET || VMA_VULKAN_VERSION >= 1001000
+    vma_vulkan_func.vkGetPhysicalDeviceMemoryProperties2KHR =
+        vkGetPhysicalDeviceMemoryProperties2KHR;
+#endif
+#if VMA_KHR_MAINTENANCE4 || VMA_VULKAN_VERSION >= 1003000
+    vma_vulkan_func.vkGetDeviceBufferMemoryRequirements =
+        vkGetDeviceBufferMemoryRequirements;
+    vma_vulkan_func.vkGetDeviceImageMemoryRequirements =
+        vkGetDeviceImageMemoryRequirements;
+#endif
+
     vma_init();
+
     swapchain_init();
     command_init();
     sync_init();

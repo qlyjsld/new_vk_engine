@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <volk.h>
 
 #include "vk_mem_alloc.h"
 #include <glm/mat4x4.hpp>
@@ -117,6 +117,8 @@ public:
     void run();
 
 private:
+    VmaVulkanFunctions vma_vulkan_func;
+
     void device_init();
     void vma_init();
     void swapchain_init();

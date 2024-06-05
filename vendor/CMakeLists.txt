@@ -8,8 +8,10 @@ add_subdirectory(vk-bootstrap)
 add_subdirectory(SDL)
 add_subdirectory(vma)
 add_subdirectory(tinygltf)
+add_subdirectory(volk)
 
 add_library(imgui STATIC)
+add_compile_definitions(IMGUI_IMPL_VULKAN_USE_VOLK)
 
 target_sources(imgui PRIVATE
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/imgui.cpp"
@@ -20,10 +22,11 @@ target_sources(imgui PRIVATE
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_sdl3.cpp"
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_vulkan.cpp")
 
-target_link_libraries(imgui Vulkan::Vulkan SDL3::SDL3)
+target_link_libraries(imgui volk SDL3::SDL3)
 
 target_include_directories(imgui PRIVATE
 	"${PROJECT_SOURCE_DIR}/vendor/imgui"
-	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends")
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends"
+	"${PROJECT_SOURCE_DIR}/vendor/volk")
 
 # find_package(OpenVDB REQUIRED)
