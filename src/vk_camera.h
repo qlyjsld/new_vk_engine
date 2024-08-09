@@ -44,7 +44,7 @@ public:
     inline float get_fov() { return fov; };
 
 private:
-    glm::vec3 pos{glm::vec3(0.f, 637100.f, 0.f)};
+    glm::vec3 pos{glm::vec3(0.f, 0.f, 0.f)};
     glm::vec3 dir{glm::vec3(0.f, 0.f, -1.f)};
     glm::vec3 up{glm::vec3(0.f, 1.f, 0.f)};
 
