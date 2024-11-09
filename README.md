@@ -21,6 +21,13 @@ This project uses CMake and Make, to clone and build:
 4. cmake ..
 5. make -j <threads>
 6. ./src/vk_engine
+
+** Please be aware that you may have to modify
+vendor/imgui/backends/imgui_impl_vulkan.h header
+
+-#include <Volk/volk.h>
++#include <volk.h>
+
 ```
 
 **Warning** ** may not build or run on your machine. **
