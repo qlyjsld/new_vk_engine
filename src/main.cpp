@@ -4,7 +4,6 @@
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
-// #include <openvdb/openvdb.h>
 
 #include "vk_boiler.h"
 #include "vk_cmd.h"
@@ -48,20 +47,64 @@ int main(int argc, char *argv[])
 {
     vk_engine engine = {};
     engine.init();
-
-    /* openvdb::initialize();
-    openvdb::io::File file("./assets/wdas_cloud/wdas_cloud.vdb");
-    file.open();
-    file.close(); */
-
     engine.run();
     engine.cleanup();
     return 0;
 }
 
+/*
+    Each of the functions below initialize a compute shader
+    for running, follwing the structure:
+
+        comp_allocator allocator(_device, _allocator);
+
+        allocator.create_img(..., img_name);
+        allocator.create_buffer(..., buffer_name);
+
+    comp_allocator has static class member for storing buffers and images
+    in unordered_map with their name as key, it is common to share resources
+    within multiple shaders.
+
+        std::vector<descriptor> descriptors = {
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, img_name},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, buffer_name},
+        };
+
+        cs compute_shader_example(allocator,
+                                descriptors,
+                                "../shaders/example.spv",
+                                _min_buffer_alignment);
+
+    Descriptors binding is done with vector of "descriptor" which is std::pair of
+    <VkDescriptorType, std::string>, provided the name and arguments, create class cs.
+    Then start building pipeline using info from struct cs and comp_allocator.
+
+        PipelineBuilder pb = {};
+        pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
+            VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_example.module));
+
+        pb.build_comp(...);
+
+    Finally, add draw commands. At this point, you have mutiple options, you have to run
+    cc_init(...) the first time. After that, you could push_back(...) to have it executed
+    in the main loop, or call comp_immediate_submit(...) to execute immediately, the latter
+    one is ofter used for preparing texture or data used later.
+
+        compute_shader_example.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+            vkCmdBindPipeline(...);
+            vkCmdBindDescriptorSets(...);
+            vkCmdDispatch(...);
+        };
+
+        cs::cc_init(_comp_index, _device);
+        cs::push_back(compute_shader_example);
+        cs::comp_immediate_submit(_device, _comp_queue, &compute_shader_example);
+
+*/
+
 void vk_engine::cloudtex_init()
 {
-    /* to init a cs you need an allocator (custom struct) */
+    /* initializing a compute shader */
     comp_allocator allocator(_device, _allocator);
 
     allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -92,7 +135,7 @@ void vk_engine::cloudtex_init()
     cs cloudtex(allocator, descriptors, "../shaders/cloudtex.comp.spv",
                 _min_buffer_alignment);
 
-    /* start building pipeline using info from struct cs and comp_allocator */
+    /* build pipeline */
     PipelineBuilder pb = {};
     pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
         VK_SHADER_STAGE_COMPUTE_BIT, cloudtex.module));
@@ -138,14 +181,12 @@ void vk_engine::cloudtex_init()
 
 void vk_engine::weather_init()
 {
-    /* to init a cs you need an allocator (custom struct) */
     comp_allocator allocator(_device, _allocator);
 
     allocator.create_img(VK_FORMAT_R16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
                          VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
                          "weather");
 
-    /* match set binding */
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
@@ -154,7 +195,6 @@ void vk_engine::weather_init()
     cs weather(allocator, descriptors, "../shaders/weather.comp.spv",
                _min_buffer_alignment);
 
-    /* start building pipeline using info from struct cs and comp_allocator */
     PipelineBuilder pb = {};
     pb._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, weather.module));
