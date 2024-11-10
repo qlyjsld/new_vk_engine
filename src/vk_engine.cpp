@@ -90,10 +90,10 @@ void vk_engine::init()
 
     imgui_init();
 
-    load_meshes();
-    std::cout << "meshes size " << _meshes.size() << std::endl;
-    upload_meshes(_meshes.data(), _meshes.size());
-    upload_textures(_meshes.data(), _meshes.size());
+    // load_meshes();
+    // std::cout << "meshes size " << _meshes.size() << std::endl;
+    // upload_meshes(_meshes.data(), _meshes.size());
+    // upload_textures(_meshes.data(), _meshes.size());
 
     // init computes
     skybox_init();
@@ -158,63 +158,6 @@ void vk_engine::descriptor_init()
         deletion_queue.push_back(
             [=]() { vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr); });
     }
-
-    { /* compute shader layout*/
-        VkDescriptorSetLayoutCreateInfo comp_layout_info =
-            vk_boiler::descriptor_set_layout_create_info(
-                std::vector<VkDescriptorType>{
-                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-                },
-                VK_SHADER_STAGE_COMPUTE_BIT);
-
-        VK_CHECK(vkCreateDescriptorSetLayout(_device, &comp_layout_info, nullptr,
-                                             &_comp_layout));
-
-        deletion_queue.push_back(
-            [=]() { vkDestroyDescriptorSetLayout(_device, _comp_layout, nullptr); });
-
-        VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-            vk_boiler::descriptor_set_allocate_info(_descriptor_pool, &_comp_layout);
-
-        VK_CHECK(
-            vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info, &_comp_set));
-
-        /* update compute shader's descriptor sets */
-        {
-            VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.imageView = _target.img_view;
-            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, _comp_set, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-
-            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
-        }
-        {
-            VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.imageView = _copy_to_swapchain.img_view;
-            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, _comp_set, 1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-
-            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
-        }
-        {
-            VkDescriptorBufferInfo descriptor_buffer_info = {};
-            descriptor_buffer_info.buffer = _comp_buffer.buffer;
-            descriptor_buffer_info.offset = 0;
-            descriptor_buffer_info.range = 2 * pad_uniform_buffer_size(sizeof(glm::vec3));
-
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_buffer_info, _comp_set, 2,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
-
-            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
-        }
-    }
 }
 
 void vk_engine::pipeline_init()
@@ -259,23 +202,6 @@ void vk_engine::pipeline_init()
 
         gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format,
                                        &_gfx_pipeline_layout, &_gfx_pipeline);
-    }
-
-    { /* build compute pipeline */
-        load_shader_module("../shaders/.comp.spv", &_comp);
-
-        PipelineBuilder comp_pipeline_builder = {};
-        comp_pipeline_builder._shader_stage_infos.push_back(
-            vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, _comp));
-
-        std::vector<VkDescriptorSetLayout> layouts = {
-            _comp_layout,
-        };
-
-        std::vector<VkPushConstantRange> push_constants = {};
-
-        comp_pipeline_builder.build_comp(_device, layouts, push_constants,
-                                         &_comp_pipeline_layout, &_comp_pipeline);
     }
 }
 
@@ -328,67 +254,36 @@ void vk_engine::draw()
 
     vkCmdEndRendering(frame->cbuffer);
 
-    /* downsampling to window */
-    vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
-                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_GENERAL, _comp_index);
-
-    vk_cmd::vk_img_layout_transition(frame->cbuffer, _copy_to_swapchain.img,
-                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                                     _comp_index);
-
-    vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, _comp_pipeline);
-
-    std::vector<VkDescriptorSet> sets = {
-        _comp_set,
-    };
-
-    glm::vec3 in_frame = glm::vec3{_resolution.width, _resolution.height, 1.f};
-    glm::vec3 out_frame = glm::vec3{_window_extent.width, _window_extent.height, 1.f};
-
-    void *data;
-    vmaMapMemory(_allocator, _comp_buffer.allocation, &data);
-    std::memcpy(data, &in_frame, sizeof(glm::vec3));
-    std::memcpy((char *)data + pad_uniform_buffer_size(sizeof(glm::vec3)), &out_frame,
-                sizeof(glm::vec3));
-    vmaUnmapMemory(_allocator, _comp_buffer.allocation);
-
-    uint32_t doffset = 0;
-    vkCmdBindDescriptorSets(frame->cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            _comp_pipeline_layout, 0, 1, &_comp_set, 1, &doffset);
-
-    vkCmdDispatch(frame->cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
-
-    /* transition image format for transfering and copy to swapchain*/
+    /* transition image format for transfering */
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _copy_to_swapchain.img, VK_IMAGE_LAYOUT_GENERAL,
+        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transfer_index);
 
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
 
-    VkImageBlit region = {};
-    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.srcSubresource.mipLevel = 0;
-    region.srcSubresource.baseArrayLayer = 0;
-    region.srcSubresource.layerCount = 1;
-    region.srcOffsets[1] = VkOffset3D{(int)_resolution.width, (int)_resolution.height, 1};
-    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.dstSubresource.mipLevel = 0;
-    region.dstSubresource.baseArrayLayer = 0;
-    region.dstSubresource.layerCount = 1;
-    region.dstOffsets[1] =
-        VkOffset3D{(int)_window_extent.width, (int)_window_extent.height, 1};
+    // VkImageBlit region = {};
+    // region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // region.srcSubresource.mipLevel = 0;
+    // region.srcSubresource.baseArrayLayer = 0;
+    // region.srcSubresource.layerCount = 1;
+    // region.srcOffsets[1] = VkOffset3D{(int)_resolution.width, (int)_resolution.height, 1};
+    // region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    // region.dstSubresource.mipLevel = 0;
+    // region.dstSubresource.baseArrayLayer = 0;
+    // region.dstSubresource.layerCount = 1;
+    // region.dstOffsets[1] =
+    //     VkOffset3D{(int)_window_extent.width, (int)_window_extent.height, 1};
 
-    vkCmdBlitImage(frame->cbuffer, _copy_to_swapchain.img,
-                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+    // vkCmdBlitImage(frame->cbuffer, _target.img,
+    //                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
+    //                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
 
-    /* only apply to window extent = resolution */
-    // vk_cmd::vk_img_copy(frame->cbuffer,
-    //                     VkExtent3D{_window_extent.width, _window_extent.height, 1},
-    //                     _copy_to_swapchain.img, _swapchain_imgs[_img_index]);
+    /* only apply to window extent == resolution */
+    vk_cmd::vk_img_copy(frame->cbuffer,
+                        VkExtent3D{_window_extent.width, _window_extent.height, 1},
+                        _target.img, _swapchain_imgs[_img_index]);
 
     /* transition image format for presenting */
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _swapchain_imgs[_img_index],
@@ -397,7 +292,7 @@ void vk_engine::draw()
 
     VK_CHECK(vkEndCommandBuffer(frame->cbuffer));
 
-    /* submit and present queue */
+    /* submit present queue */
     VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     VkSubmitInfo submit_info = vk_boiler::submit_info(
@@ -484,7 +379,7 @@ void vk_engine::run()
             triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
     }
 
-    std::cout << "draw " << triangles << " triangels" << std::endl;
+    // std::cout << "draw " << triangles << " triangels" << std::endl;
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 

@@ -157,33 +157,16 @@ void vk_engine::swapchain_init()
     deletion_queue.push_back(
         [=]() { vkDestroyImageView(_device, _depth_img.img_view, nullptr); });
 
-    /* create img target for rendering and copying */
-    {
-        VkExtent3D extent = {};
-        extent.width = _resolution.width;
-        extent.height = _resolution.height;
-        extent.depth = 1;
+    /* create img target for rendering */
+    VkExtent3D extent = {};
+    extent.width = _resolution.width;
+    extent.height = _resolution.height;
+    extent.depth = 1;
 
-        create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT, 0,
-                   &_target);
-    }
-
-    {
-        VkExtent3D extent = {};
-        extent.width = _resolution.width;
-        extent.height = _resolution.height;
-        extent.depth = 1;
-
-        create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
-                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
-                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                   0, &_copy_to_swapchain);
-    }
-
-    create_buffer(2 * pad_uniform_buffer_size(sizeof(glm::vec3)),
-                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &_comp_buffer);
+    create_img(_format, extent, VK_IMAGE_ASPECT_COLOR_BIT,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 0,
+                &_target);
 
     VkSamplerCreateInfo sampler_info = vk_boiler::sampler_create_info();
     VK_CHECK(vkCreateSampler(_device, &sampler_info, nullptr, &_sampler));

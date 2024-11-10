@@ -69,8 +69,6 @@ public:
     VkDescriptorSet _render_mat_set;
     allocated_buffer _render_mat_buffer;
     VkDescriptorSetLayout _texture_layout;
-    VkDescriptorSetLayout _comp_layout;
-    VkDescriptorSet _comp_set;
 
     VkQueue _gfx_queue;
     uint32_t _gfx_index;
@@ -85,21 +83,15 @@ public:
 
     VkShaderModule _vert;
     VkShaderModule _frag;
-    VkShaderModule _comp;
 
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
-
-    VkPipeline _comp_pipeline;
-    VkPipelineLayout _comp_pipeline_layout;
 
     VkFormat _format = {VK_FORMAT_R16G16B16A16_SFLOAT};
     VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
 
     allocated_img _target;
-    allocated_img _copy_to_swapchain;
     allocated_img _depth_img;
-    allocated_buffer _comp_buffer;
 
     vk_camera _vk_camera;
 

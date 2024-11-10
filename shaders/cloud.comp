@@ -64,7 +64,6 @@ vec3 linearToneMapping(vec3 color)
     return color;
 }
 
-
 struct sphere {
     vec3 centre;
     float radius;
