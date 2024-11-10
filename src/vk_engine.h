@@ -40,13 +40,13 @@ struct render_mat {
 class vk_engine
 {
 public:
-    bool _is_initialized{false};
-    uint64_t _frame_number{0};
-    uint64_t _last_frame{0};
-    uint64_t _frame_index{0};
-    VkExtent2D _window_extent{1024, 768};
-    VkExtent2D _resolution{1024, 768};
-    struct SDL_Window *_window{nullptr};
+    bool _is_initialized = false;
+    uint64_t _frame_number = 0;
+    uint64_t _last_frame = 0;
+    uint64_t _frame_index = 0;
+    VkExtent2D _window_extent = { 1024, 768 };
+    VkExtent2D _resolution = { 1024, 768 };
+    struct SDL_Window *_window = nullptr;
 
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
@@ -87,8 +87,8 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
-    VkFormat _format = {VK_FORMAT_R16G16B16A16_SFLOAT};
-    VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    VkFormat _format = { VK_FORMAT_R16G16B16A16_SFLOAT };
+    VkColorSpaceKHR _colorspace = { VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 
     allocated_img _target;
     allocated_img _depth_img;
@@ -99,11 +99,6 @@ public:
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
 
     void init();
-    void skybox_init();
-    void cloudtex_init();
-    void weather_init();
-    void sphere_init();
-    void cloud_init();
     void cleanup();
     void draw();
     void run();
@@ -126,6 +121,11 @@ private:
     void load_meshes();
     void upload_meshes(mesh *meshes, size_t size);
     void upload_textures(mesh *meshes, size_t size);
+
+    void comp_init();
+    void cloudtex_init();
+    void weather_init();
+    void cloud_init();
 
     void draw_comp(frame *frame);
     void draw_nodes(frame *frame);

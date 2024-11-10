@@ -60,10 +60,12 @@ int main(int argc, char *argv[])
 
         allocator.create_img(..., img_name);
         allocator.create_buffer(..., buffer_name);
+        allocator.load_img(img_name, ...);
 
     comp_allocator has static class member for storing buffers and images
     in unordered_map with their name as key, it is common to share resources
-    within multiple shaders.
+    within multiple shaders. By default, _target, "target" is the framebuffer
+    we draw to.
 
         std::vector<descriptor> descriptors = {
             {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, img_name},
@@ -102,9 +104,40 @@ int main(int argc, char *argv[])
 
 */
 
+void vk_engine::comp_init()
+{
+    comp_allocator allocator(_device, _allocator);
+
+    allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
+                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
+
+    allocator.create_buffer(pad_uniform_buffer_size(sizeof(glm::vec2)),
+                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "extent");
+
+    glm::vec2 extent = glm::vec2{
+        _resolution.width,
+        _resolution.height,
+    };
+
+    allocated_buffer buffer = allocator.get_buffer("extent");
+
+    void *data;
+    vmaMapMemory(_allocator, buffer.allocation, &data);
+    std::memcpy(data, &extent, sizeof(glm::vec2));
+    vmaUnmapMemory(_allocator, buffer.allocation);
+
+    allocator.load_img("target", _target);
+
+    cloudtex_init();
+    weather_init();
+    cloud_init();
+}
+
 void vk_engine::cloudtex_init()
 {
-    /* initializing a compute shader */
+    /* initializing compute shader */
     comp_allocator allocator(_device, _allocator);
 
     allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -145,13 +178,9 @@ void vk_engine::cloudtex_init()
     u_time.offset = 0;
     u_time.size = sizeof(float);
 
-    std::vector<VkDescriptorSetLayout> layouts = {
-        cloudtex.layout,
-    };
+    std::vector<VkPushConstantRange> push_constants = { u_time };
 
-    std::vector<VkPushConstantRange> push_constants = {
-        u_time,
-    };
+    std::vector<VkDescriptorSetLayout> layouts = { cloudtex.layout };
 
     pb.build_comp(_device, layouts, push_constants, &cloudtex.pipeline_layout,
                   &cloudtex.pipeline);
@@ -163,10 +192,7 @@ void vk_engine::cloudtex_init()
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        std::vector<uint32_t> doffsets = {
-            0,
-            0,
-        };
+        std::vector<uint32_t> doffsets = { 0, 0, };
 
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
@@ -204,13 +230,9 @@ void vk_engine::weather_init()
     u_time.offset = 0;
     u_time.size = sizeof(float);
 
-    std::vector<VkDescriptorSetLayout> layouts = {
-        weather.layout,
-    };
+    std::vector<VkPushConstantRange> push_constants = { u_time };
 
-    std::vector<VkPushConstantRange> push_constants = {
-        u_time,
-    };
+    std::vector<VkDescriptorSetLayout> layouts = { weather.layout };
 
     pb.build_comp(_device, layouts, push_constants, &weather.pipeline_layout,
                   &weather.pipeline);
@@ -271,11 +293,9 @@ void vk_engine::cloud_init()
     pb._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, cloud.module));
 
-    std::vector<VkDescriptorSetLayout> layouts = {
-        cloud.layout,
-    };
-
     std::vector<VkPushConstantRange> push_constants = {};
+
+    std::vector<VkDescriptorSetLayout> layouts = { cloud.layout };
 
     pb.build_comp(_device, layouts, push_constants, &cloud.pipeline_layout,
                   &cloud.pipeline);
@@ -300,12 +320,7 @@ void vk_engine::cloud_init()
         vmaUnmapMemory(cs->allocator.allocator,
                        cs->allocator.get_buffer("cloud").allocation);
 
-        std::vector<uint32_t> doffsets = {
-            0,
-            0,
-            0,
-        };
-
+        std::vector<uint32_t> doffsets = { 0, 0, 0 };
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
                                 doffsets.data());
@@ -373,126 +388,4 @@ void vk_engine::draw_comp(frame *frame)
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                      _comp_index);
-}
-
-void vk_engine::skybox_init()
-{
-    comp_allocator allocator(_device, _allocator);
-
-    allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
-
-    allocator.create_buffer(pad_uniform_buffer_size(sizeof(glm::vec2)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "extent");
-
-    glm::vec2 extent = glm::vec2{
-        _resolution.width,
-        _resolution.height,
-    };
-
-    allocated_buffer buffer = allocator.get_buffer("extent");
-
-    void *data;
-    vmaMapMemory(_allocator, buffer.allocation, &data);
-    std::memcpy(data, &extent, sizeof(glm::vec2));
-    vmaUnmapMemory(_allocator, buffer.allocation);
-
-    allocator.load_img("target", _target);
-
-    std::vector<descriptor> descriptors = {
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
-        // {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
-    };
-
-    cs skybox(allocator, descriptors, "../shaders/skybox.comp.spv",
-              _min_buffer_alignment);
-
-    PipelineBuilder pb = {};
-    pb._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, skybox.module));
-
-    std::vector<VkDescriptorSetLayout> layouts = {
-        skybox.layout,
-    };
-
-    std::vector<VkPushConstantRange> push_constants = {};
-
-    pb.build_comp(_device, layouts, push_constants, &skybox.pipeline_layout,
-                  &skybox.pipeline);
-
-    skybox.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
-        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
-
-        /* camera_data camera_data;
-        camera_data.pos = _vk_camera.get_pos();
-        camera_data.dir = _vk_camera.get_dir();
-        camera_data.up = _vk_camera.get_up();
-        camera_data.fov = _vk_camera.get_fov();
-
-        void *data;
-        vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
-        std::memcpy(data, &camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
-        vmaUnmapMemory(cs->allocator.allocator,
-                       cs->allocator.get_buffer("camera").allocation); */
-
-        std::vector<uint32_t> doffsets = {
-            0,
-            // 0,
-        };
-
-        vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
-                                doffsets.data());
-
-        vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
-    };
-
-    // css.push_back(skybox);
-}
-
-void vk_engine::sphere_init()
-{
-    comp_allocator allocator(_device, _allocator);
-
-    std::vector<descriptor> descriptors = {
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
-    };
-
-    cs sphere(allocator, descriptors, "../shaders/sphere.comp.spv",
-              _min_buffer_alignment);
-
-    PipelineBuilder pb = {};
-    pb._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, sphere.module));
-
-    std::vector<VkDescriptorSetLayout> layouts = {
-        sphere.layout,
-    };
-
-    std::vector<VkPushConstantRange> push_constants = {};
-
-    pb.build_comp(_device, layouts, push_constants, &sphere.pipeline_layout,
-                  &sphere.pipeline);
-
-    sphere.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
-        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
-
-        std::vector<uint32_t> doffsets = {
-            0,
-            0,
-        };
-
-        vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
-                                doffsets.data());
-
-        vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
-    };
-
-    // css.push_back(sphere);
 }

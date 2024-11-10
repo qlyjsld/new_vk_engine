@@ -95,12 +95,7 @@ void vk_engine::init()
     // upload_meshes(_meshes.data(), _meshes.size());
     // upload_textures(_meshes.data(), _meshes.size());
 
-    // init computes
-    skybox_init();
-    cloudtex_init();
-    weather_init();
-    sphere_init();
-    cloud_init();
+    comp_init();
 
     _is_initialized = true;
 }
@@ -162,47 +157,46 @@ void vk_engine::descriptor_init()
 
 void vk_engine::pipeline_init()
 {
-    { /* build graphics pipeline */
-        load_shader_module("../shaders/.vert.spv", &_vert);
-        load_shader_module("../shaders/.frag.spv", &_frag);
+    /* build graphics pipeline */
+    load_shader_module("../shaders/.vert.spv", &_vert);
+    load_shader_module("../shaders/.frag.spv", &_frag);
 
-        PipelineBuilder gfx_pipeline_builder = {};
-        gfx_pipeline_builder._shader_stage_infos.push_back(
-            vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
-        gfx_pipeline_builder._shader_stage_infos.push_back(
-            vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
+    PipelineBuilder gfx_pipeline_builder = {};
+    gfx_pipeline_builder._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, _vert));
+    gfx_pipeline_builder._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, _frag));
 
-        gfx_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
-        gfx_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
+    gfx_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
+    gfx_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
 
-        vertex_input_description description = vertex::get_vertex_input_description();
+    vertex_input_description description = vertex::get_vertex_input_description();
 
-        gfx_pipeline_builder._vertex_input_state_info =
-            vk_boiler::vertex_input_state_create_info(&description);
-        gfx_pipeline_builder._input_asm_state_info =
-            vk_boiler::input_asm_state_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-        gfx_pipeline_builder._rasterization_state_info =
-            vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-        gfx_pipeline_builder._color_blend_attachment_state =
-            vk_boiler::color_blend_attachment_state();
-        gfx_pipeline_builder._multisample_state_info =
-            vk_boiler::multisample_state_create_info();
-        gfx_pipeline_builder._depth_stencil_state_info =
-            vk_boiler::depth_stencil_state_create_info();
+    gfx_pipeline_builder._vertex_input_state_info =
+        vk_boiler::vertex_input_state_create_info(&description);
+    gfx_pipeline_builder._input_asm_state_info =
+        vk_boiler::input_asm_state_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    gfx_pipeline_builder._rasterization_state_info =
+        vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+    gfx_pipeline_builder._color_blend_attachment_state =
+        vk_boiler::color_blend_attachment_state();
+    gfx_pipeline_builder._multisample_state_info =
+        vk_boiler::multisample_state_create_info();
+    gfx_pipeline_builder._depth_stencil_state_info =
+        vk_boiler::depth_stencil_state_create_info();
 
-        std::vector<VkDescriptorSetLayout> layouts = {
-            _render_mat_layout,
-            _texture_layout,
-        };
+    std::vector<VkDescriptorSetLayout> layouts = {
+        _render_mat_layout,
+        _texture_layout,
+    };
 
-        std::vector<VkPushConstantRange> push_constants = {};
+    std::vector<VkPushConstantRange> push_constants = {};
 
-        gfx_pipeline_builder.build_layout(_device, layouts, push_constants,
-                                          &_gfx_pipeline_layout);
+    gfx_pipeline_builder.build_layout(_device, layouts, push_constants,
+                                        &_gfx_pipeline_layout);
 
-        gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format,
-                                       &_gfx_pipeline_layout, &_gfx_pipeline);
-    }
+    gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format,
+                                    &_gfx_pipeline_layout, &_gfx_pipeline);
 }
 
 void vk_engine::draw()
