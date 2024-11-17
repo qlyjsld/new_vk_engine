@@ -4,6 +4,8 @@ set(SDL_SHARED OFF CACHE INTERNAL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
 set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE INTERNAL "" FORCE)
+
+add_subdirectory(Vulkan-Headers)
 add_subdirectory(vk-bootstrap)
 add_subdirectory(SDL)
 add_subdirectory(vma)
