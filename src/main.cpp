@@ -27,9 +27,9 @@ struct cloud_data {
     alignas(4) float step;
     alignas(4) int max_steps;
     alignas(4) float cutoff;
-    alignas(4) float density;
     alignas(16) glm::vec3 sun_color;
     alignas(16) glm::vec3 sky_color;
+    alignas(4) float density;
 };
 
 /*
@@ -192,7 +192,7 @@ void vk_engine::cloudtex_init()
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        std::vector<uint32_t> doffsets = { 0, 0, };
+        std::vector<uint32_t> doffsets = { 0, 0 };
 
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
