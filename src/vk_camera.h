@@ -48,7 +48,7 @@ private:
     glm::vec3 dir = glm::vec3{ 0.f, 0.f, -1.f };
     glm::vec3 up = glm::vec3{ 0.f, 1.f, 0.f };
 
-    float fov = { 68.f };
+    static constexpr float fov = { 68.f };
     float speed = { 3.f };
     float sensitivity = { .3f };
     float yaw = { 0.f };

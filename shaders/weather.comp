@@ -6,11 +6,6 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout (set = 0, binding = 0, r16f) uniform writeonly image2D out_frame;
 
-layout (set = 0, binding = 1) uniform readonly EXTENT
-{
-    vec2 value;
-} extent;
-
 layout (push_constant) uniform readonly U_TIME
 {
     float value;
@@ -125,8 +120,8 @@ void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    float ux = x / extent.value.x * infreq;
-    float uy = y / extent.value.x * infreq;
+    float ux = x / 1024.f * infreq;
+    float uy = y / 1024.f * infreq;
     vec4 color = vec4(fbm(ux + u_time.value * .03f, uy + u_time.value * .03f, octaves, h));
     color.x = remap(color.x, .3f, 1.f, 0.f, 1.f);
     imageStore(out_frame, ivec2(x, y), color);

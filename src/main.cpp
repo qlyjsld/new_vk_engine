@@ -14,8 +14,10 @@
 struct camera_data {
     glm::vec3 pos;
     float fov;
-    alignas(16) glm::vec3 dir;
-    alignas(16) glm::vec3 up;
+    glm::vec3 dir;
+    float width;
+    glm::vec3 up;
+    float height;
 };
 
 struct cloud_data {
@@ -42,6 +44,7 @@ static uint32_t cloudtex_size = 128;
 static uint32_t weather_size = 512;
 static bool cloud_ui = true;
 static cloud_data cloud_data;
+static camera_data camera_data;
 
 int main(int argc, char *argv[])
 {
@@ -112,22 +115,6 @@ void vk_engine::comp_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
 
-    allocator.create_buffer(pad_uniform_buffer_size(sizeof(glm::vec2)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "extent");
-
-    glm::vec2 extent = glm::vec2{
-        _resolution.width,
-        _resolution.height,
-    };
-
-    allocated_buffer buffer = allocator.get_buffer("extent");
-
-    void *data;
-    vmaMapMemory(_allocator, buffer.allocation, &data);
-    std::memcpy(data, &extent, sizeof(glm::vec2));
-    vmaUnmapMemory(_allocator, buffer.allocation);
-
     allocator.load_img("target", _target);
 
     cloudtex_init();
@@ -149,20 +136,9 @@ void vk_engine::cloudtex_init()
                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "size");
 
-    allocated_buffer buffer = allocator.get_buffer("size");
-
-    float dummy = (float)cloudtex_size;
-
-    void *data;
-    vmaMapMemory(_allocator, buffer.allocation, &data);
-    std::memcpy(data, (float *)&dummy, sizeof(float));
-    vmaUnmapMemory(_allocator, buffer.allocation);
-
     /* match set binding */
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "size"},
     };
 
     cs cloudtex(allocator, descriptors, "../shaders/cloudtex.comp.spv",
@@ -192,11 +168,8 @@ void vk_engine::cloudtex_init()
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        std::vector<uint32_t> doffsets = { 0, 0 };
-
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
-                                doffsets.data());
+                                cs->pipeline_layout, 0, 1, &cs->set, 0, nullptr);
 
         vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8, cloudtex_size / 8);
     };
@@ -215,7 +188,6 @@ void vk_engine::weather_init()
 
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
     };
 
     cs weather(allocator, descriptors, "../shaders/weather.comp.spv",
@@ -244,9 +216,8 @@ void vk_engine::weather_init()
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        uint32_t doffset = 0;
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cs->pipeline_layout, 0, 1, &cs->set, 1, &doffset);
+                                cs->pipeline_layout, 0, 1, &cs->set, 0, nullptr);
 
         float u_time = SDL_GetTicks() / 1000.f;
         vkCmdPushConstants(cbuffer, cs->pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
@@ -282,7 +253,6 @@ void vk_engine::cloud_init()
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "target"},
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "cloud"},
     };
@@ -303,11 +273,12 @@ void vk_engine::cloud_init()
     cloud.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cs->pipeline);
 
-        camera_data camera_data;
         camera_data.pos = _vk_camera.get_pos();
-        camera_data.dir = _vk_camera.get_dir();
-        camera_data.up = _vk_camera.get_up();
         camera_data.fov = _vk_camera.get_fov();
+        camera_data.dir = _vk_camera.get_dir();
+        camera_data.width = _resolution.width;
+        camera_data.up = _vk_camera.get_up();
+        camera_data.height = _resolution.height;
 
         void *data;
         vmaMapMemory(_allocator, cs->allocator.get_buffer("camera").allocation, &data);
@@ -320,7 +291,7 @@ void vk_engine::cloud_init()
         vmaUnmapMemory(cs->allocator.allocator,
                        cs->allocator.get_buffer("cloud").allocation);
 
-        std::vector<uint32_t> doffsets = { 0, 0, 0 };
+        std::vector<uint32_t> doffsets = { 0, 0 };
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                 cs->pipeline_layout, 0, 1, &cs->set, doffsets.size(),
                                 doffsets.data());

@@ -6,16 +6,6 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 layout (set = 0, binding = 0, rgba16f) uniform writeonly image3D out_frame;
 
-layout (set = 0, binding = 1) uniform readonly EXTENT
-{
-    vec2 value;
-} extent;
-
-layout (set = 0, binding = 2) uniform readonly SIZE
-{
-    float value;
-} size;
-
 layout (push_constant) uniform readonly U_TIME
 {
     float value;
@@ -232,9 +222,9 @@ void main()
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     uint z = 8 * gl_WorkGroupID.z + gl_LocalInvocationID.z;
-    float ux = x / size.value;
-    float uy = y / size.value;
-    float uz = z / size.value;
+    float ux = x / 128.f;
+    float uy = y / 128.f;
+    float uz = z / 128.f;
     vec4 color = vec4(fade(fbm(ux, uy, uz, 3, 3)), fbm_worley(ux, uy, uz, 4, 4), fbm_worley(ux, uy, uz, 6, 6), fbm_worley(ux, uy, uz, 8, 8));
 
     imageStore(out_frame, ivec3(x, y, z), color);

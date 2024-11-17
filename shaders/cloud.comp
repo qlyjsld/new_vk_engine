@@ -8,20 +8,17 @@ layout (set = 0, binding = 1, rgba16f) uniform readonly image3D cloudtex;
 
 layout (set = 0, binding = 2, r16f) uniform readonly image2D weather;
 
-layout (set = 0, binding = 3) uniform readonly EXTENT
-{
-    vec2 value;
-} extent;
-
-layout (set = 0, binding = 4) uniform readonly CAMERA
+layout (set = 0, binding = 3) uniform readonly CAMERA
 {
     vec3 pos;
     float fov;
     vec3 dir;
+    float width;
     vec3 up;
+    float height;
 } camera;
 
-layout (set = 0, binding = 5) uniform readonly CLOUD
+layout (set = 0, binding = 4) uniform readonly CLOUD
 {
     float type;
     float freq;
@@ -128,14 +125,14 @@ void main()
     vec3 left = normalize(cross(camera.up, d));
     vec3 up = normalize(cross(d, left));
 
-    float ux = float(x) / res.x * extent.value.x;
-    float uy = float(y) / res.y * extent.value.y;
+    float ux = float(x) / res.x * camera.width;
+    float uy = float(y) / res.y * camera.height;
 
     float h = tan(radians(camera.fov) / 2.f);
-    vec3 upperleft = (o + res.y / 2.f / h * d) + left * extent.value.x / 2.f + up * extent.value.y / 2.f;
+    vec3 upperleft = (o + res.y / 2.f / h * d) + left * camera.width / 2.f + up * camera.height / 2.f;
     vec3 r = normalize(upperleft - left * ux - up * uy - o);
 
-    vec3 background = /* vec3(0.f) */ mix(cloud.sky_color, vec3(1.f), y / extent.value.y);
+    vec3 background = /* vec3(0.f) */ mix(cloud.sky_color, vec3(1.f), y / camera.height);
 
     // intersect
     sphere inner;
