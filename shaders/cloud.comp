@@ -16,9 +16,9 @@ layout (set = 0, binding = 3) uniform readonly EXTENT
 layout (set = 0, binding = 4) uniform readonly CAMERA
 {
     vec3 pos;
+    float fov;
     vec3 dir;
     vec3 up;
-    float fov;
 } camera;
 
 layout (set = 0, binding = 5) uniform readonly CLOUD
@@ -32,8 +32,8 @@ layout (set = 0, binding = 5) uniform readonly CLOUD
     int max_steps;
     float cutoff;
     vec3 sun_color;
-    vec3 sky_color;
     float density;
+    vec3 sky_color;
 } cloud;
 
 float rand(float x)

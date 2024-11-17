@@ -12,24 +12,24 @@
 #include "vk_type.h"
 
 struct camera_data {
-    alignas(16) glm::vec3 pos;
+    glm::vec3 pos;
+    float fov;
     alignas(16) glm::vec3 dir;
     alignas(16) glm::vec3 up;
-    alignas(4) float fov;
 };
 
 struct cloud_data {
-    alignas(4) float type;
-    alignas(4) float freq;
-    alignas(4) float ambient;
-    alignas(4) float sigma_a;
-    alignas(4) float sigma_s;
-    alignas(4) float step;
-    alignas(4) int max_steps;
-    alignas(4) float cutoff;
-    alignas(16) glm::vec3 sun_color;
-    alignas(16) glm::vec3 sky_color;
-    alignas(4) float density;
+    float type;
+    float freq;
+    float ambient;
+    float sigma_a;
+    float sigma_s;
+    float step;
+    int max_steps;
+    float cutoff;
+    glm::vec3 sun_color;
+    float density;
+    glm::vec3 sky_color;
 };
 
 /*
