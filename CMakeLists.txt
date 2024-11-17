@@ -1,37 +1,36 @@
 ﻿cmake_minimum_required (VERSION 3.22.1)
-project ("vk_engine")
+project (vk_engine)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Vulkan REQUIRED)
 add_subdirectory(vendor)
-add_subdirectory(src)
+add_subdirectory(shader)
 
-find_program(GLSL_VALIDATOR glslangValidator)
+add_executable(vk_engine
+    src/main.cpp
+    src/vk_boiler.cpp
+    src/vk_cmd.cpp
+    src/vk_comp.cpp
+    src/vk_engine.cpp
+    src/vk_init.cpp
+    src/vk_mesh.cpp
+    src/vk_pipeline.cpp
+    src/vk_util.cpp
+)
 
-file (GLOB GLSL_SRC
-    "${PROJECT_SOURCE_DIR}/shaders/*.vert"
-    "${PROJECT_SOURCE_DIR}/shaders/*.frag"
-    "${PROJECT_SOURCE_DIR}/shaders/*.comp")
+target_link_libraries(vk_engine PRIVATE 
+  volk 
+  SDL3::SDL3 
+  vk-bootstrap Vulkan::Headers
+  GPUOpen::VulkanMemoryAllocator 
+  tinygltf 
+  imgui
+  shader) #OpenVDB::openvdb
 
-foreach(GLSL ${GLSL_SRC})
-    get_filename_component(FILE_NAME ${GLSL} NAME)
-    set(SPIRV "${PROJECT_SOURCE_DIR}/shaders/${FILE_NAME}.spv")
-    add_custom_command(
-        OUTPUT ${SPIRV}
-        COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
-        DEPENDS ${GLSL})
-    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-endforeach(GLSL)
-
-add_custom_target(
-    shaders ALL
-    DEPENDS ${SPIRV_BINARY_FILES})
-
-# move duck model into build folder
-file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
-
-# move shaders into build folder 
-# file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})
+target_include_directories(vk_engine PRIVATE
+	"${PROJECT_SOURCE_DIR}/vendor/imgui"
+	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends"
+	"${PROJECT_SOURCE_DIR}/vendor/volk")

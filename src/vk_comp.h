@@ -59,7 +59,7 @@ private:
 struct cs {
 public:
     cs(comp_allocator allocator, std::vector<descriptor> descriptors,
-       std::string shader_file, VkDeviceSize min_buffer_alignment)
+       const uint32_t *code, uint32_t code_size, VkDeviceSize min_buffer_alignment)
         : allocator(allocator), min_buffer_alignment(min_buffer_alignment)
     {
         device = allocator.device;
@@ -76,7 +76,7 @@ public:
 
         write_descriptor_set(types, names);
 
-        load_shader_module(shader_file.data());
+        load_shader_module(code, code_size);
     };
 
     comp_allocator allocator;
@@ -102,6 +102,7 @@ private:
                               std::vector<std::string> names);
 
     bool load_shader_module(const char *filename);
+    bool load_shader_module(const uint32_t *code, uint32_t code_size);
     size_t pad_uniform_buffer_size(size_t original_size);
 };
 

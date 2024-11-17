@@ -164,9 +164,12 @@ void vk_engine::cloudtex_init()
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "size"},
     };
+    
+    constexpr uint32_t kCloudTexSpv[] = {
+#include <shader/cloudtex.comp.u32>
+	};
 
-    cs cloudtex(allocator, descriptors, "../shaders/cloudtex.comp.spv",
-                _min_buffer_alignment);
+    cs cloudtex(allocator, descriptors, kCloudTexSpv, sizeof(kCloudTexSpv), _min_buffer_alignment);
 
     /* build pipeline */
     PipelineBuilder pb = {};
@@ -217,8 +220,12 @@ void vk_engine::weather_init()
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "extent"},
     };
+    
+    constexpr uint32_t kWeatherSpv[] = {
+#include <shader/weather.comp.u32>
+	};
 
-    cs weather(allocator, descriptors, "../shaders/weather.comp.spv",
+    cs weather(allocator, descriptors, kWeatherSpv, sizeof(kWeatherSpv),
                _min_buffer_alignment);
 
     PipelineBuilder pb = {};
@@ -286,8 +293,12 @@ void vk_engine::cloud_init()
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "camera"},
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "cloud"},
     };
-
-    cs cloud(allocator, descriptors, "../shaders/cloud.comp.spv", _min_buffer_alignment);
+    
+    constexpr uint32_t kCloudSpv[] = {
+#include <shader/cloud.comp.u32>
+	};
+    
+    cs cloud(allocator, descriptors, kCloudSpv, sizeof(kCloudSpv), _min_buffer_alignment);
 
     PipelineBuilder pb = {};
     pb._shader_stage_infos.push_back(

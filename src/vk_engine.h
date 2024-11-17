@@ -87,8 +87,8 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
-    VkFormat _format = { VK_FORMAT_R16G16B16A16_SFLOAT };
-    VkColorSpaceKHR _colorspace = { VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+    VkFormat _format = VK_FORMAT_B8G8R8A8_UNORM;
+    VkColorSpaceKHR _colorspace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
     allocated_img _target;
     allocated_img _depth_img;
@@ -113,7 +113,10 @@ private:
     void sync_init();
 
     void descriptor_init();
+    
     bool load_shader_module(const char *file, VkShaderModule *shader_module);
+    bool load_shader_module(const uint32_t *code, uint32_t code_size, VkShaderModule *shader_module);
+
     void pipeline_init();
 
     void imgui_init();
