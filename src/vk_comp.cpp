@@ -140,6 +140,23 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
     }
 }
 
+
+bool cs::load_shader_module(const uint32_t *code, uint32_t code_size)
+{
+    VkShaderModuleCreateInfo shader_module_info = {};
+    shader_module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_module_info.pNext = nullptr;
+    shader_module_info.pCode = code;
+    shader_module_info.codeSize = code_size;
+    VK_CHECK(
+        vkCreateShaderModule(device, &shader_module_info, nullptr, &module)
+    );
+    deletion_queue.push_back([=]() { vkDestroyShaderModule(device, module, nullptr); });
+    return true;
+}
+
+
+
 bool cs::load_shader_module(const char *filename)
 {
     std::ifstream f(filename, std::ios::ate | std::ios::binary);

@@ -28,6 +28,27 @@ void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
     VK_CHECK(vkResetFences(_device, 1, &_upload_context.fence));
 }
 
+
+
+bool vk_engine::load_shader_module(
+  const uint32_t *code, 
+  uint32_t code_size, 
+  VkShaderModule *shader_module)
+{
+  VkShaderModuleCreateInfo shader_module_info = {};
+  shader_module_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  shader_module_info.pNext    = nullptr;
+  shader_module_info.pCode    = code;
+  shader_module_info.codeSize = code_size;
+  VK_CHECK(
+    vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module)
+  );
+  deletion_queue.push_back([=]() { vkDestroyShaderModule(_device, *shader_module, nullptr); });
+
+  return true;
+}
+
+
 bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_module)
 {
     std::ifstream f(filename, std::ios::ate | std::ios::binary);
@@ -45,10 +66,10 @@ bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_
     f.close();
 
     VkShaderModuleCreateInfo shader_module_info = {};
-    shader_module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_module_info.pNext = nullptr;
+    shader_module_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shader_module_info.pNext    = nullptr;
+    shader_module_info.pCode    = buffer.data();
     shader_module_info.codeSize = buffer.size() * sizeof(uint32_t);
-    shader_module_info.pCode = buffer.data();
 
     VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module));
 
