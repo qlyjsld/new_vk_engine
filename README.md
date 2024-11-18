@@ -25,10 +25,9 @@ This project uses CMake and Make, to clone and build:
 require: Vulkan SDK
 ```
 ## How to use
-See src/main.cpp and shaders/*.comp to begin.
+See src/main.cpp and shaders/*.comp.
 
 ## Demo
-
 ![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/screenshots/cloud2.gif)
 ** *Sky dome demo.*
 
@@ -44,4 +43,4 @@ See src/main.cpp and shaders/*.comp to begin.
 - [ ] PBR Lighting
 
 ## Contribution
-Make your pull requests. I am open to any kind of collaboration, email me if you want.
+Feel free to send me an email.
