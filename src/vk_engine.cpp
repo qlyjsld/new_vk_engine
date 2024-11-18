@@ -375,15 +375,15 @@ void vk_engine::run()
 
     // std::cout << "draw " << triangles << " triangels" << std::endl;
 
-    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_SetWindowRelativeMouseMode(_window, true);
 
     auto input = std::async([&]() {
         while (!bquit) {
-            const uint8_t *state = SDL_GetKeyboardState(NULL);
+            const bool *state = SDL_GetKeyboardState(NULL);
 
             float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
 
-            if (SDL_GetRelativeMouseMode()) {
+            if (SDL_GetWindowRelativeMouseMode(_window)) {
                 if (state[SDL_SCANCODE_W])
                     _vk_camera.w(ms);
 
@@ -412,17 +412,17 @@ void vk_engine::run()
                     bquit = true;
 
                 if (e.type == SDL_EVENT_KEY_DOWN)
-                    if (e.key.keysym.sym == SDLK_ESCAPE)
+                    if (e.key.key == SDLK_ESCAPE)
                         bquit = true;
 
                 if (e.type == SDL_EVENT_KEY_DOWN) {
-                    if (e.key.keysym.sym == SDLK_TAB) {
-                        if (SDL_GetRelativeMouseMode())
-                            SDL_SetRelativeMouseMode(SDL_FALSE);
+                    if (e.key.key == SDLK_TAB) {
+                        if (SDL_GetWindowRelativeMouseMode(_window))
+                            SDL_SetWindowRelativeMouseMode(_window, false);
                         else
-                            SDL_SetRelativeMouseMode(SDL_TRUE);
+                            SDL_SetWindowRelativeMouseMode(_window, true);
                     }
-                } else if (!SDL_GetRelativeMouseMode())
+                } else if (!SDL_GetWindowRelativeMouseMode(_window))
                     ImGui_ImplSDL3_ProcessEvent(&e);
             }
 

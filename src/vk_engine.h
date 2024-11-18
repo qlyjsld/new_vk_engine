@@ -87,7 +87,7 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
-    VkFormat _format = { VK_FORMAT_R16G16B16A16_SFLOAT };
+    VkFormat _format = { VK_FORMAT_B8G8R8A8_UNORM };
     VkColorSpaceKHR _colorspace = { VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 
     allocated_img _target;

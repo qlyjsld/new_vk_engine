@@ -30,8 +30,5 @@ add_custom_target(
     shaders ALL
     DEPENDS ${SPIRV_BINARY_FILES})
 
-# move duck model into build folder
-file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
-
 # move shaders into build folder 
 # file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR})

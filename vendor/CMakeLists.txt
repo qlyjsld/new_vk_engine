@@ -4,6 +4,8 @@ set(SDL_SHARED OFF CACHE INTERNAL "" FORCE)
 set(TINYGLTF_HEADER_ONLY ON CACHE INTERNAL "" FORCE)
 set(TINYGLTF_INSTALL OFF CACHE INTERNAL "" FORCE)
 set(TINYGLTF_BUILD_LOADER_EXAMPLE OFF CACHE INTERNAL "" FORCE)
+
+add_subdirectory(glm)
 add_subdirectory(vk-bootstrap)
 add_subdirectory(SDL)
 add_subdirectory(vma)
@@ -28,5 +30,3 @@ target_include_directories(imgui PRIVATE
 	"${PROJECT_SOURCE_DIR}/vendor/imgui"
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends"
 	"${PROJECT_SOURCE_DIR}/vendor/volk")
-
-# find_package(OpenVDB REQUIRED)
