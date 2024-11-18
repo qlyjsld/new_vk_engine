@@ -23,11 +23,7 @@ This project uses CMake and Make, to clone and build:
 6. ./src/vk_engine
 
 require: Vulkan SDK
-
 ```
-
-**Warning** ** may not build or run on your machine. **
-
 ## How to use
 See src/main.cpp and shaders/*.comp to begin.
 
