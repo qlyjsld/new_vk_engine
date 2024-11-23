@@ -41,7 +41,7 @@ struct material {
 
 struct node {
     std::string name;
-    uint32_t mesh_id;
+    int mesh_id;
     glm::mat4 transform_mat;
     std::vector<int> children;
     // material material;

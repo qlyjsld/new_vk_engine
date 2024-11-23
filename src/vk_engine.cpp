@@ -25,6 +25,8 @@
 #include "vk_pipeline.h"
 #include "vk_type.h"
 
+const static VkClearValue clear_value = {{{1.f}}};
+
 void vk_engine::init()
 {
     /* initialize SDL and create a window with it */
@@ -227,11 +229,11 @@ void vk_engine::draw()
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment = vk_boiler::rendering_attachment_info(
         _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
-        VkClearValue{1.f});
+        clear_value);
 
     VkRenderingAttachmentInfo depth_attachment = vk_boiler::rendering_attachment_info(
         _depth_img.img_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, true,
-        VkClearValue{1.f});
+        clear_value);
 
     /* start drawing */
     VkRenderingInfo rendering_info =
@@ -257,24 +259,7 @@ void vk_engine::draw()
         frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
 
-    // VkImageBlit region = {};
-    // region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    // region.srcSubresource.mipLevel = 0;
-    // region.srcSubresource.baseArrayLayer = 0;
-    // region.srcSubresource.layerCount = 1;
-    // region.srcOffsets[1] = VkOffset3D{(int)_resolution.width, (int)_resolution.height, 1};
-    // region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    // region.dstSubresource.mipLevel = 0;
-    // region.dstSubresource.baseArrayLayer = 0;
-    // region.dstSubresource.layerCount = 1;
-    // region.dstOffsets[1] =
-    //     VkOffset3D{(int)_window_extent.width, (int)_window_extent.height, 1};
-
-    // vkCmdBlitImage(frame->cbuffer, _target.img,
-    //                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _swapchain_imgs[_img_index],
-    //                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
-
-    /* only apply to window extent == resolution */
+    /* copy img to swapchain */
     vk_cmd::vk_img_copy(frame->cbuffer,
                         VkExtent3D{_window_extent.width, _window_extent.height, 1},
                         _target.img, _swapchain_imgs[_img_index]);

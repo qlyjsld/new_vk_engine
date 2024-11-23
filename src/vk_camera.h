@@ -8,14 +8,14 @@
 class vk_camera
 {
 public:
-    void w(float ms) { move(dir, ms); };
-    void a(float ms) { move(glm::cross(up, dir), ms); };
-    void s(float ms) { move(-dir, ms); };
-    void d(float ms) { move(-glm::cross(up, dir), ms); };
-    void space(float ms) { move(up, ms); };
-    void ctrl(float ms) { move(-up, ms); };
+    inline void w(float ms) { move(dir, ms); };
+    inline void a(float ms) { move(glm::cross(up, dir), ms); };
+    inline void s(float ms) { move(-dir, ms); };
+    inline void d(float ms) { move(-glm::cross(up, dir), ms); };
+    inline void space(float ms) { move(up, ms); };
+    inline void ctrl(float ms) { move(-up, ms); };
 
-    void motion(float x, float y)
+    inline void motion(float x, float y)
     {
         yaw += x * sensitivity / 10.f;
         pitch -= y * sensitivity / 10.f;
@@ -44,7 +44,7 @@ public:
     inline float get_fov() { return fov; };
 
 private:
-    glm::vec3 pos = glm::vec3{ 0.f, 0.f, 0.f };
+    glm::vec3 pos = glm::vec3{ 0.f, 100.f, 0.f };
     glm::vec3 dir = glm::vec3{ 0.f, 0.f, -1.f };
     glm::vec3 up = glm::vec3{ 0.f, 1.f, 0.f };
 
@@ -55,5 +55,5 @@ private:
     float pitch = { 0.f };
     float aspect = { 4.f / 3.f };
 
-    void move(glm::vec3 dir, float time) { pos += speed * dir * time; }
+    inline void move(glm::vec3 dir, float time) { pos += speed * dir * time; }
 };

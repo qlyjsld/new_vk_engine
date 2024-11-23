@@ -79,6 +79,8 @@ public:
         load_shader_module(shader_file.data());
     };
 
+    std::function<void(VkCommandBuffer, cs *cs)> draw;
+
     comp_allocator allocator;
 
     VkShaderModule module;
@@ -86,8 +88,6 @@ public:
     VkDescriptorSetLayout layout;
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
-
-    std::function<void(VkCommandBuffer, cs *cs)> draw;
 
     static void cc_init(uint32_t queue_index, VkDevice device);
     static void comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs);

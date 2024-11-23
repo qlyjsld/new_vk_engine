@@ -37,9 +37,9 @@ struct allocated_img {
 
 struct deletion_queue {
 public:
-    void push_back(std::function<void()> &&f) { fs.push_back(f); }
+    inline void push_back(std::function<void()> &&f) { fs.push_back(f); }
 
-    void flush()
+    inline void flush()
     {
         for (auto f = fs.rbegin(); f != fs.rend(); f++)
             (*f)();
