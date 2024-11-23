@@ -76,7 +76,7 @@ public:
         load_shader_module(shader_file.data());
     };
 
-    std::function<void(VkCommandBuffer, cs *cs)> immed_draw;
+    std::function<void(VkCommandBuffer)> immed_draw;
 
     comp_allocator allocator;
 

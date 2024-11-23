@@ -121,7 +121,7 @@ void vk_engine::cloudtex_init()
     pb.build_comp(_device, layouts, push_constants, &cloudtex.pipeline_layout,
                   &cloudtex.pipeline);
 
-    cloudtex.immed_draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+    cloudtex.immed_draw = [&, cloudtex](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.get_img("cloudtex").img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
@@ -169,7 +169,7 @@ void vk_engine::weather_init()
     pb.build_comp(_device, layouts, push_constants, &weather.pipeline_layout,
                   &weather.pipeline);
 
-    cs_draw.push_back([=](VkCommandBuffer cbuffer) {
+    cs_draw.push_back([&, weather](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.get_img("weather").img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
@@ -226,7 +226,7 @@ void vk_engine::cloud_init()
     pb.build_comp(_device, layouts, push_constants, &cloud.pipeline_layout,
                   &cloud.pipeline);
 
-    cs_draw.push_back([=](VkCommandBuffer cbuffer) {
+    cs_draw.push_back([&, cloud](VkCommandBuffer cbuffer) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cloud.pipeline);
 
         _camera_data.pos = _vk_camera.get_pos();

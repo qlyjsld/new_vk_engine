@@ -206,7 +206,7 @@ void cs::comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs)
     /* begin command buffer recording */
     VK_CHECK(vkBeginCommandBuffer(cc.cbuffer, &cbuffer_begin_info));
 
-    cs->immed_draw(cc.cbuffer, cs);
+    cs->immed_draw(cc.cbuffer);
 
     VK_CHECK(vkEndCommandBuffer(cc.cbuffer));
 
