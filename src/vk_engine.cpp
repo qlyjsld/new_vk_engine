@@ -88,7 +88,7 @@ void vk_engine::init()
     sync_init();
 
     descriptor_init();
-    pipeline_init();
+    // pipeline_init();
 
     imgui_init();
 
@@ -459,4 +459,31 @@ void vk_engine::imgui_init()
     ImGui_ImplVulkan_Init(&imgui_init_info);
     ImGui_ImplVulkan_CreateFontsTexture();
     ImGui_ImplVulkan_DestroyFontsTexture();
+
+    auto black = ImVec4(.1f, .1f, .1f, 1.f);
+    auto grey = ImVec4(.6f, .6f, .6f, 1.f);
+    auto lightgrey = ImVec4(.7f, .7f, .7f, 1.f);
+    auto white = ImVec4(.9f, .9f, .9f, 1.f);
+
+    ImGuiStyle &style = ImGui::GetStyle();
+    style.Alpha = .8f;
+    style.WindowRounding = 6.f;
+    style.PopupRounding = 6.f;
+    style.FrameRounding = 3.f;
+    style.GrabMinSize = 12.f;
+    style.GrabRounding = 3.f;
+    style.Colors[ImGuiCol_Text] = black;
+    style.Colors[ImGuiCol_WindowBg] = white;
+    style.Colors[ImGuiCol_FrameBg] = grey;
+    style.Colors[ImGuiCol_FrameBgHovered] = lightgrey;
+    style.Colors[ImGuiCol_FrameBgActive] = lightgrey;
+    style.Colors[ImGuiCol_TitleBg] = black;
+    style.Colors[ImGuiCol_TitleBgActive] = black;
+    style.Colors[ImGuiCol_TitleBgCollapsed] = black;
+    style.Colors[ImGuiCol_MenuBarBg] = black;
+    style.Colors[ImGuiCol_ScrollbarBg] = white;
+    style.Colors[ImGuiCol_SliderGrab] = style.Colors[ImGuiCol_ScrollbarGrab];
+    style.Colors[ImGuiCol_SliderGrabActive] = style.Colors[ImGuiCol_ScrollbarGrabActive];
+    style.Colors[ImGuiCol_ButtonHovered] = black;
+    style.Colors[ImGuiCol_ButtonActive] = black;
 }

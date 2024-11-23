@@ -45,13 +45,13 @@ void comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
     vma_allocation_info.flags = flags;
     vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    VK_CHECK(vmaCreateBuffer(allocator, &buffer_info, &vma_allocation_info,
+    VK_CHECK(vmaCreateBuffer(vma_allocator, &buffer_info, &vma_allocation_info,
                              &buffers[name].buffer, &buffers[name].allocation, nullptr));
 
     buffers[name].size = size;
 
     deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(allocator, buffers[name].buffer, buffers[name].allocation);
+        vmaDestroyBuffer(vma_allocator, buffers[name].buffer, buffers[name].allocation);
     });
 }
 
@@ -67,11 +67,11 @@ void comp_allocator::create_img(VkFormat format, VkExtent3D extent,
 
     imgs[name].format = format;
 
-    VK_CHECK(vmaCreateImage(allocator, &img_info, &vma_allocation_info, &imgs[name].img,
+    VK_CHECK(vmaCreateImage(vma_allocator, &img_info, &vma_allocation_info, &imgs[name].img,
                             &imgs[name].allocation, nullptr));
 
     deletion_queue.push_back(
-        [=]() { vmaDestroyImage(allocator, imgs[name].img, imgs[name].allocation); });
+        [=]() { vmaDestroyImage(vma_allocator, imgs[name].img, imgs[name].allocation); });
 
     VkImageViewCreateInfo img_view_info =
         vk_boiler::img_view_create_info(aspect, imgs[name].img, extent, format);
@@ -206,7 +206,7 @@ void cs::comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs)
     /* begin command buffer recording */
     VK_CHECK(vkBeginCommandBuffer(cc.cbuffer, &cbuffer_begin_info));
 
-    cs->draw(cc.cbuffer, cs);
+    cs->immed_draw(cc.cbuffer, cs);
 
     VK_CHECK(vkEndCommandBuffer(cc.cbuffer));
 

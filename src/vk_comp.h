@@ -20,10 +20,7 @@ struct comp_context {
 struct comp_allocator {
 public:
     VkDevice device;
-    VmaAllocator allocator;
-
-    comp_allocator(VkDevice device, VmaAllocator allocator)
-        : device(device), allocator(allocator){};
+    VmaAllocator vma_allocator;
 
     void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                        VmaAllocationCreateFlags flags, std::string name);
@@ -36,7 +33,7 @@ public:
 
     inline allocated_img get_img(std::string name) { return imgs[name]; };
 
-    void load_buffer(std::string name, allocated_buffer buffer)
+    inline void load_buffer(std::string name, allocated_buffer buffer)
     {
         buffers[name] = buffer;
     };
@@ -47,10 +44,10 @@ public:
                                  VkDescriptorSetLayout *layout, VkDescriptorSet *set);
 
 private:
-    inline static std::vector<VkDescriptorPool> pools;
-    inline static std::vector<VkDescriptorPool> full_pools;
-    inline static std::unordered_map<std::string, allocated_buffer> buffers;
-    inline static std::unordered_map<std::string, allocated_img> imgs;
+    std::vector<VkDescriptorPool> pools;
+    std::vector<VkDescriptorPool> full_pools;
+    std::unordered_map<std::string, allocated_buffer> buffers;
+    std::unordered_map<std::string, allocated_img> imgs;
 
     void create_new_pool();
     VkDescriptorPool get_pool();
@@ -79,7 +76,7 @@ public:
         load_shader_module(shader_file.data());
     };
 
-    std::function<void(VkCommandBuffer, cs *cs)> draw;
+    std::function<void(VkCommandBuffer, cs *cs)> immed_draw;
 
     comp_allocator allocator;
 
@@ -104,5 +101,3 @@ private:
     bool load_shader_module(const char *filename);
     size_t pad_uniform_buffer_size(size_t original_size);
 };
-
-inline static std::vector<cs> css;

@@ -10,6 +10,7 @@
 #include "vk_camera.h"
 #include "vk_mesh.h"
 #include "vk_type.h"
+#include "vk_comp.h"
 
 constexpr int FRAME_OVERLAP = 2;
 
@@ -37,13 +38,44 @@ struct render_mat {
     glm::mat4 model;
 };
 
+struct camera_data {
+    glm::vec3 pos;
+    float fov;
+    glm::vec3 dir;
+    float width;
+    glm::vec3 up;
+    float height;
+};
+
+struct cloud_data {
+    float type;
+    float freq;
+    float ambient;
+    float sigma_a;
+    float sigma_s;
+    float step;
+    int max_steps;
+    float cutoff;
+    glm::vec3 sun_color;
+    float density;
+    glm::vec3 sky_color;
+};
+
 class vk_engine
 {
 public:
+    // data used every frame
+    vk_camera _vk_camera;
+    float u_time = 0.f;
+    bool cloud_ui = true;
+    cloud_data _cloud_data;
+    camera_data _camera_data;
+    std::vector<std::function<void(VkCommandBuffer)>> cs_draw;
+
     bool _is_initialized = false;
-    uint64_t _frame_number = 0;
-    uint64_t _last_frame = 0;
-    uint64_t _frame_index = 0;
+    uint32_t _frame_number = 0;
+    uint32_t _last_frame = 0;
+    uint32_t _frame_index = 0;
     VkExtent2D _window_extent = { 1024, 768 };
     static constexpr VkExtent2D _resolution = { 1024, 768 };
     struct SDL_Window *_window = nullptr;
@@ -81,6 +113,8 @@ public:
     std::vector<mesh> _meshes;
     std::vector<node> _nodes;
 
+    comp_allocator _comp_allocator;
+
     VkShaderModule _vert;
     VkShaderModule _frag;
 
@@ -92,8 +126,6 @@ public:
 
     allocated_img _target;
     allocated_img _depth_img;
-
-    vk_camera _vk_camera;
 
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
@@ -130,9 +162,9 @@ private:
     void draw_comp(frame *frame);
     void draw_nodes(frame *frame);
 
-    frame *get_current_frame()
+    inline frame *get_current_frame()
     {
-        _frame_index = _frame_number % FRAME_OVERLAP;
+        _frame_index = !_frame_index;
         return &_frames[_frame_index];
     };
 
