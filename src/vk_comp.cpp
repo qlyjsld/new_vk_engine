@@ -34,9 +34,11 @@ VkDescriptorPool comp_allocator::get_pool()
     return pools.back();
 }
 
-void comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+uint32_t comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                                    VmaAllocationCreateFlags flags, std::string name)
 {
+    allocated_buffer buffer;
+
     VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     buffer_info.size = size;
     buffer_info.usage = usage;
@@ -46,40 +48,52 @@ void comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
     vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
 
     VK_CHECK(vmaCreateBuffer(vma_allocator, &buffer_info, &vma_allocation_info,
-                             &buffers[name].buffer, &buffers[name].allocation, nullptr));
+                             &buffer.buffer, &buffer.allocation, nullptr));
 
-    buffers[name].size = size;
+    buffer.size = size;
 
     deletion_queue.push_back([=]() {
-        vmaDestroyBuffer(vma_allocator, buffers[name].buffer, buffers[name].allocation);
+        vmaDestroyBuffer(vma_allocator, buffer.buffer, buffer.allocation);
     });
+
+    buffers.push_back(buffer);
+    uint32_t id = buffers.size() - 1;
+    buffer_id.push_back(name);
+    return id;
 }
 
-void comp_allocator::create_img(VkFormat format, VkExtent3D extent,
+uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
                                 VkImageAspectFlags aspect, VkImageUsageFlags usage,
                                 VmaAllocationCreateFlags flags, std::string name)
 {
+    allocated_img img;
+
     VkImageCreateInfo img_info = vk_boiler::img_create_info(format, extent, usage);
 
     VmaAllocationCreateInfo vma_allocation_info = {};
     vma_allocation_info.flags = flags;
     vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
 
-    imgs[name].format = format;
+    img.format = format;
 
-    VK_CHECK(vmaCreateImage(vma_allocator, &img_info, &vma_allocation_info, &imgs[name].img,
-                            &imgs[name].allocation, nullptr));
+    VK_CHECK(vmaCreateImage(vma_allocator, &img_info, &vma_allocation_info, &img.img,
+                            &img.allocation, nullptr));
 
     deletion_queue.push_back(
-        [=]() { vmaDestroyImage(vma_allocator, imgs[name].img, imgs[name].allocation); });
+        [=]() { vmaDestroyImage(vma_allocator, img.img, img.allocation); });
 
     VkImageViewCreateInfo img_view_info =
-        vk_boiler::img_view_create_info(aspect, imgs[name].img, extent, format);
+        vk_boiler::img_view_create_info(aspect, img.img, extent, format);
 
-    VK_CHECK(vkCreateImageView(device, &img_view_info, nullptr, &imgs[name].img_view));
+    VK_CHECK(vkCreateImageView(device, &img_view_info, nullptr, &img.img_view));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyImageView(device, imgs[name].img_view, nullptr); });
+        [=]() { vkDestroyImageView(device, img.img_view, nullptr); });
+
+    imgs.push_back(img);
+    uint32_t id = imgs.size() - 1;
+    img_id.push_back(name);
+    return id;
 }
 
 void comp_allocator::allocate_descriptor_set(std::vector<VkDescriptorType> types,
@@ -110,11 +124,12 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
         /* write descriptor sets with preset for each descriptor type */
         switch (type) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: {
+            uint32_t buffer_id = allocator->get_buffer_id(name);
             VkDescriptorBufferInfo descriptor_buffer_info = {};
-            descriptor_buffer_info.buffer = allocator->get_buffer(name).buffer;
+            descriptor_buffer_info.buffer = allocator->buffers[buffer_id].buffer;
             descriptor_buffer_info.offset = 0;
             descriptor_buffer_info.range =
-                pad_uniform_buffer_size(allocator->get_buffer(name).size);
+                pad_uniform_buffer_size(allocator->buffers[buffer_id].size);
 
             VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
                 &descriptor_buffer_info, set, i,
@@ -124,8 +139,9 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
         } break;
 
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
+            uint32_t img_id = allocator->get_img_id(name);
             VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.imageView = allocator->get_img(name).img_view;
+            descriptor_img_info.imageView = allocator->imgs[img_id].img_view;
             descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
             VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(

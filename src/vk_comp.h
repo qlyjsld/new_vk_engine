@@ -19,26 +19,46 @@ struct comp_context {
 
 struct comp_allocator {
 public:
+    std::vector<allocated_buffer> buffers;
+    std::vector<allocated_img> imgs;
+
     VkDevice device;
     VmaAllocator vma_allocator;
 
-    void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+    uint32_t create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                        VmaAllocationCreateFlags flags, std::string name);
 
-    void create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
+    uint32_t create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
                     VkImageUsageFlags usage, VmaAllocationCreateFlags flags,
                     std::string name);
 
-    inline allocated_buffer get_buffer(std::string name) { return buffers[name]; };
+    inline uint32_t get_buffer_id(std::string name) 
+    {
+        uint32_t i = 0;
+        for (i = 0; i < buffer_id.size(); ++i)
+            if (buffer_id[i] == name) return i;
+        return i;
+    };
 
-    inline allocated_img get_img(std::string name) { return imgs[name]; };
+    inline uint32_t get_img_id(std::string name)
+    {
+        uint32_t i = 0;
+        for (i = 0; i < img_id.size(); ++i)
+            if (img_id[i] == name) return i;
+        return i;
+    };
 
     inline void load_buffer(std::string name, allocated_buffer buffer)
     {
-        buffers[name] = buffer;
+        buffers.push_back(buffer);
+        buffer_id.push_back(name);
     };
 
-    void load_img(std::string name, allocated_img img) { imgs[name] = img; };
+    inline void load_img(std::string name, allocated_img img)
+    {
+        imgs.push_back(img);
+        img_id.push_back(name);
+    }
 
     void allocate_descriptor_set(std::vector<VkDescriptorType> types,
                                  VkDescriptorSetLayout *layout, VkDescriptorSet *set);
@@ -46,8 +66,8 @@ public:
 private:
     std::vector<VkDescriptorPool> pools;
     std::vector<VkDescriptorPool> full_pools;
-    std::unordered_map<std::string, allocated_buffer> buffers;
-    std::unordered_map<std::string, allocated_img> imgs;
+    std::vector<std::string> buffer_id;
+    std::vector<std::string> img_id;
 
     void create_new_pool();
     VkDescriptorPool get_pool();

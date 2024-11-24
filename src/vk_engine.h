@@ -93,8 +93,8 @@ public:
     VkQueue _transfer_queue;
     VkQueue _comp_queue;
 
-    bool cloud_ui = true;
     comp_allocator _comp_allocator;
+    bool cloud_ui = true;
 
     VkExtent2D _window_extent = { 1024, 768 };
     static constexpr VkExtent2D _resolution = { 1024, 768 };

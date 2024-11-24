@@ -92,7 +92,7 @@ void vk_engine::cloudtex_init()
 {
     constexpr uint32_t cloudtex_size = 128;
 
-    _comp_allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
+    uint32_t id = _comp_allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
                          VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
                          VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
                          "cloudtex");
@@ -121,8 +121,8 @@ void vk_engine::cloudtex_init()
     pb.build_comp(_device, layouts, push_constants,
                 &cloudtex.pipeline_layout, &cloudtex.pipeline);
 
-    cloudtex.immed_draw = [&, cloudtex](VkCommandBuffer cbuffer) {
-        vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.get_img("cloudtex").img,
+    cloudtex.immed_draw = [&, cloudtex, id](VkCommandBuffer cbuffer) {
+        vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
 
@@ -142,9 +142,10 @@ void vk_engine::weather_init()
 {
     constexpr uint32_t weather_size = 512;
 
-    _comp_allocator.create_img(VK_FORMAT_R16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
-                         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
-                         "weather");
+    uint32_t id = _comp_allocator.create_img(VK_FORMAT_R16_SFLOAT,
+                        VkExtent3D{weather_size, weather_size, 1},
+                        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
+                        "weather");
 
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
@@ -169,8 +170,8 @@ void vk_engine::weather_init()
     pb.build_comp(_device, layouts, push_constants, &weather.pipeline_layout,
                   &weather.pipeline);
 
-    cs_draw.push_back([&, weather](VkCommandBuffer cbuffer) {
-        vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.get_img("weather").img,
+    cs_draw.push_back([&, weather, id](VkCommandBuffer cbuffer) {
+        vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
 
@@ -189,9 +190,10 @@ void vk_engine::weather_init()
 
 void vk_engine::cloud_init()
 {
-    _comp_allocator.create_buffer(pad_uniform_buffer_size(sizeof(cloud_data)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
+    uint32_t cloud_id = _comp_allocator.create_buffer(
+                        pad_uniform_buffer_size(sizeof(cloud_data)),
+                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
     _cloud_data.type = .6f;
     _cloud_data.freq = .2f;
@@ -226,7 +228,9 @@ void vk_engine::cloud_init()
     pb.build_comp(_device, layouts, push_constants, &cloud.pipeline_layout,
                   &cloud.pipeline);
 
-    cs_draw.push_back([&, cloud](VkCommandBuffer cbuffer) {
+    uint32_t camera_id = _comp_allocator.get_buffer_id("camera");
+
+    cs_draw.push_back([&, cloud, camera_id, cloud_id](VkCommandBuffer cbuffer) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cloud.pipeline);
 
         _camera_data.pos = _vk_camera.get_pos();
@@ -237,13 +241,13 @@ void vk_engine::cloud_init()
         _camera_data.height = _resolution.height;
 
         void *data;
-        vmaMapMemory(_allocator, _comp_allocator.get_buffer("camera").allocation, &data);
+        vmaMapMemory(_allocator, _comp_allocator.buffers[camera_id].allocation, &data);
         std::memcpy(data, &_camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
-        vmaUnmapMemory(_allocator, _comp_allocator.get_buffer("camera").allocation);
+        vmaUnmapMemory(_allocator, _comp_allocator.buffers[camera_id].allocation);
 
-        vmaMapMemory(_allocator, _comp_allocator.get_buffer("cloud").allocation, &data);
+        vmaMapMemory(_allocator, _comp_allocator.buffers[cloud_id].allocation, &data);
         std::memcpy(data, &_cloud_data, pad_uniform_buffer_size(sizeof(cloud_data)));
-        vmaUnmapMemory(_allocator, _comp_allocator.get_buffer("cloud").allocation);
+        vmaUnmapMemory(_allocator, _comp_allocator.buffers[cloud_id].allocation);
 
         std::vector<uint32_t> doffsets = { 0, 0 };
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
