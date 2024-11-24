@@ -67,34 +67,48 @@ public:
     // data used every frame
     vk_camera _vk_camera;
     float u_time = 0.f;
-    bool cloud_ui = true;
-    cloud_data _cloud_data;
-    camera_data _camera_data;
-    std::vector<std::function<void(VkCommandBuffer)>> cs_draw;
-
-    bool _is_initialized = false;
-    uint32_t _frame_number = 0;
-    uint32_t _last_frame = 0;
     uint32_t _frame_index = 0;
+
+    cloud_data _cloud_data;
+    uint32_t _last_frame = 0;
+
+    camera_data _camera_data;
+    struct SDL_Window *_window = nullptr;
+    VkDevice _device;
+
+    frame _frames[FRAME_OVERLAP];
+
+    std::vector<std::function<void(VkCommandBuffer)>> cs_draw;
+    std::vector<VkImage> _swapchain_imgs;
+
+    VkSwapchainKHR _swapchain;
+    uint32_t _img_index;
+    uint32_t _gfx_index;
+    uint32_t _transfer_index;
+    uint32_t _comp_index;
+    allocated_img _target;
+
+    allocated_img _depth_img;
+    VkQueue _gfx_queue;
+    VkQueue _transfer_queue;
+    VkQueue _comp_queue;
+
+    bool cloud_ui = true;
+    comp_allocator _comp_allocator;
+
     VkExtent2D _window_extent = { 1024, 768 };
     static constexpr VkExtent2D _resolution = { 1024, 768 };
-    struct SDL_Window *_window = nullptr;
 
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
     VkPhysicalDevice _physical_device;
-    VkDevice _device;
     VkSurfaceKHR _surface;
-    VkDeviceSize _min_buffer_alignment;
-
-    VkSwapchainKHR _swapchain;
     VkFormat _swapchain_format;
-    std::vector<VkImage> _swapchain_imgs;
+    VkFormat _format = { VK_FORMAT_B8G8R8A8_UNORM };
     std::vector<VkImageView> _swapchain_img_views;
-    uint32_t _img_index;
 
-    frame _frames[FRAME_OVERLAP];
     VkSampler _sampler;
+    VkDeviceSize _min_buffer_alignment;
 
     VkDescriptorPool _descriptor_pool;
     VkDescriptorSetLayout _render_mat_layout;
@@ -102,18 +116,9 @@ public:
     allocated_buffer _render_mat_buffer;
     VkDescriptorSetLayout _texture_layout;
 
-    VkQueue _gfx_queue;
-    uint32_t _gfx_index;
-    VkQueue _transfer_queue;
-    uint32_t _transfer_index;
-    VkQueue _comp_queue;
-    uint32_t _comp_index;
-
     VmaAllocator _allocator;
     std::vector<mesh> _meshes;
     std::vector<node> _nodes;
-
-    comp_allocator _comp_allocator;
 
     VkShaderModule _vert;
     VkShaderModule _frag;
@@ -121,11 +126,7 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
-    VkFormat _format = { VK_FORMAT_B8G8R8A8_UNORM };
     VkColorSpaceKHR _colorspace = { VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-
-    allocated_img _target;
-    allocated_img _depth_img;
 
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);

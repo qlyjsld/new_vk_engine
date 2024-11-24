@@ -111,10 +111,10 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
         switch (type) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: {
             VkDescriptorBufferInfo descriptor_buffer_info = {};
-            descriptor_buffer_info.buffer = allocator.get_buffer(name).buffer;
+            descriptor_buffer_info.buffer = allocator->get_buffer(name).buffer;
             descriptor_buffer_info.offset = 0;
             descriptor_buffer_info.range =
-                pad_uniform_buffer_size(allocator.get_buffer(name).size);
+                pad_uniform_buffer_size(allocator->get_buffer(name).size);
 
             VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
                 &descriptor_buffer_info, set, i,
@@ -125,7 +125,7 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
 
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
             VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.imageView = allocator.get_img(name).img_view;
+            descriptor_img_info.imageView = allocator->get_img(name).img_view;
             descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
             VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(

@@ -98,8 +98,6 @@ void vk_engine::init()
     // upload_textures(_meshes.data(), _meshes.size());
 
     comp_init();
-
-    _is_initialized = true;
 }
 
 void vk_engine::descriptor_init()
@@ -283,8 +281,6 @@ void vk_engine::draw()
         vk_boiler::present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
 
     vkQueuePresentKHR(_gfx_queue, &present_info);
-
-    _frame_number++;
 }
 
 void vk_engine::draw_nodes(frame *frame)
@@ -343,8 +339,7 @@ void vk_engine::cleanup()
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 
-    if (_is_initialized)
-        deletion_queue.flush();
+    deletion_queue.flush();
 }
 
 void vk_engine::run()
@@ -352,11 +347,11 @@ void vk_engine::run()
     SDL_Event e;
     bool bquit = false;
 
-    uint32_t triangles = 0;
-    for (uint32_t i = 0; i < _nodes.size(); ++i) {
-        if (_nodes[i].mesh_id != -1)
-            triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
-    }
+    // uint32_t triangles = 0;
+    // for (uint32_t i = 0; i < _nodes.size(); ++i) {
+    //     if (_nodes[i].mesh_id != -1)
+    //         triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
+    // }
 
     // std::cout << "draw " << triangles << " triangels" << std::endl;
 

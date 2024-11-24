@@ -30,9 +30,9 @@ struct allocated_buffer {
 struct allocated_img {
     VkImage img;
     VkExtent3D extent;
+    VkFormat format;
     VmaAllocation allocation;
     VkImageView img_view;
-    VkFormat format;
 };
 
 struct deletion_queue {

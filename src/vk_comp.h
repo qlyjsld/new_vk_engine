@@ -55,11 +55,11 @@ private:
 
 struct cs {
 public:
-    cs(comp_allocator allocator, std::vector<descriptor> descriptors,
+    cs(comp_allocator* allocator, std::vector<descriptor> descriptors,
        std::string shader_file, VkDeviceSize min_buffer_alignment)
         : allocator(allocator), min_buffer_alignment(min_buffer_alignment)
     {
-        device = allocator.device;
+        device = allocator->device;
 
         std::vector<VkDescriptorType> types;
         std::vector<std::string> names;
@@ -69,7 +69,7 @@ public:
             names.push_back(descriptors[i].second);
         }
 
-        allocator.allocate_descriptor_set(types, &layout, &set);
+        allocator->allocate_descriptor_set(types, &layout, &set);
 
         write_descriptor_set(types, names);
 
@@ -78,7 +78,7 @@ public:
 
     std::function<void(VkCommandBuffer)> immed_draw;
 
-    comp_allocator allocator;
+    comp_allocator* allocator;
 
     VkShaderModule module;
     VkDescriptorSet set;
