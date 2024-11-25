@@ -255,7 +255,6 @@ void vk_engine::draw()
     // draw_nodes(frame);
 
     /* imgui rendering */
-    // ImGui::ShowDemoWindow();
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cbuffer);
 

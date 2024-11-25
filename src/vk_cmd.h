@@ -2,8 +2,6 @@
 
 #include <volk.h>
 
-#include "vk_boiler.h"
-
 namespace vk_cmd
 {
 inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
