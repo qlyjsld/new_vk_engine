@@ -80,29 +80,15 @@ void vk_engine::device_init()
 
     deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
 
-    auto queue_ret = device.get_queue(vkb::QueueType::graphics);
-    if (!queue_ret) {
-        std::cerr << "failed to get graphics queue:" << queue_ret.error()
-                  << std::endl;
-        abort();
-    }
-    _gfx_queue = queue_ret.value();
+    auto queue_ret = device.get_queue(vkb::QueueType::compute);
 
-    queue_ret = device.get_queue(vkb::QueueType::graphics);
-    if (!queue_ret) {
-        std::cerr << "failed to get transfer queue:" << queue_ret.error()
-                  << std::endl;
-        abort();
-    }
-    _transfer_queue = queue_ret.value();
-
-    queue_ret = device.get_queue(vkb::QueueType::graphics);
     if (!queue_ret) {
         std::cerr << "failed to get compute queue:" << queue_ret.error()
                   << std::endl;
         abort();
     }
-    _comp_queue = queue_ret.value();
+
+    _queue = queue_ret.value();
 }
 
 void vk_engine::vma_init()
@@ -131,7 +117,6 @@ void vk_engine::swapchain_init()
             .value();
 
     _swapchain = vkb_swapchain.swapchain;
-    _swapchain_format = vkb_swapchain.image_format;
     _swapchain_imgs = vkb_swapchain.get_images().value();
     _swapchain_img_views = vkb_swapchain.get_image_views().value();
 
@@ -191,7 +176,7 @@ void vk_engine::command_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
         VkCommandPoolCreateInfo cpool_info =
-            vk_boiler::cpool_create_info(_gfx_index);
+            vk_boiler::cpool_create_info(_fam_index);
 
         VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
                                      &_frames[i].cpool));
@@ -208,7 +193,7 @@ void vk_engine::command_init()
     }
 
     VkCommandPoolCreateInfo cpool_info =
-        vk_boiler::cpool_create_info(_comp_index);
+        vk_boiler::cpool_create_info(_fam_index);
 
     VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
                                  &_immed_context.cpool));

@@ -228,7 +228,7 @@ void vk_engine::draw()
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _gfx_index);
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _fam_index);
 
     draw_imgui();
 
@@ -263,11 +263,11 @@ void vk_engine::draw()
     /* transition image format for transfering */
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _transfer_index);
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _fam_index);
 
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _transfer_index);
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _fam_index);
 
     /* copy img to swapchain */
     vk_cmd::vk_img_copy(
@@ -279,7 +279,7 @@ void vk_engine::draw()
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _swapchain_imgs[_img_index],
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        _gfx_index);
+        _fam_index);
 
     VK_CHECK(vkEndCommandBuffer(frame->cbuffer));
 
@@ -291,12 +291,12 @@ void vk_engine::draw()
         vk_boiler::submit_info(&frame->cbuffer, &frame->present_sem,
                                &frame->sumbit_sem, &pipeline_stage_flags);
 
-    VK_CHECK(vkQueueSubmit(_gfx_queue, 1, &submit_info, frame->fence));
+    VK_CHECK(vkQueueSubmit(_queue, 1, &submit_info, frame->fence));
 
     VkPresentInfoKHR present_info =
         vk_boiler::present_info(&_swapchain, &frame->sumbit_sem, &_img_index);
 
-    vkQueuePresentKHR(_gfx_queue, &present_info);
+    vkQueuePresentKHR(_queue, &present_info);
 }
 
 void vk_engine::draw_nodes(frame *frame)
@@ -461,8 +461,8 @@ void vk_engine::imgui_init()
     imgui_init_info.Instance = _instance;
     imgui_init_info.PhysicalDevice = _physical_device;
     imgui_init_info.Device = _device;
-    imgui_init_info.QueueFamily = _gfx_index;
-    imgui_init_info.Queue = _gfx_queue;
+    imgui_init_info.QueueFamily = _fam_index;
+    imgui_init_info.Queue = _queue;
     imgui_init_info.DescriptorPool = _descriptor_pool;
     imgui_init_info.MinImageCount = 2;
     imgui_init_info.ImageCount = 2;

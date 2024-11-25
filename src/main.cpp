@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
         cs::cc_init(_comp_index, _device);
         cs::push_back(compute_shader_example);
-        cs::comp_immediate_submit(_device, _comp_queue,
+        cs::comp_immediate_submit(_device, _queue,
    &compute_shader_example);
 
 */
@@ -127,8 +127,7 @@ void vk_engine::cloudtex_init()
         [&, cloudtex, cloudtex_size, id](VkCommandBuffer cbuffer) {
             vk_cmd::vk_img_layout_transition(
                 cbuffer, _comp_allocator.imgs[id].img,
-                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                _comp_index);
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, _fam_index);
 
             vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                               cloudtex.pipeline);
@@ -140,7 +139,7 @@ void vk_engine::cloudtex_init()
             vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8,
                           cloudtex_size / 8);
         },
-        _comp_queue);
+        _queue);
 }
 
 void vk_engine::weather_init()
@@ -173,7 +172,7 @@ void vk_engine::weather_init()
     cs_draw.push_back([&, weather, weather_size, id](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
-                                         VK_IMAGE_LAYOUT_GENERAL, _comp_index);
+                                         VK_IMAGE_LAYOUT_GENERAL, _fam_index);
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           weather.pipeline);
@@ -270,12 +269,12 @@ void vk_engine::draw_comp(frame *frame)
 {
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_GENERAL, _comp_index);
+                                     VK_IMAGE_LAYOUT_GENERAL, _fam_index);
 
     for (const auto &draw : cs_draw)
         draw(frame->cbuffer);
 
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _comp_index);
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _fam_index);
 }
