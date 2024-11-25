@@ -7,8 +7,9 @@
 namespace vk_cmd
 {
 inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
-                              VkImageLayout old_layout, VkImageLayout new_layout,
-                              uint32_t family_index)
+                                     VkImageLayout old_layout,
+                                     VkImageLayout new_layout,
+                                     uint32_t family_index)
 {
     VkImageSubresourceRange subresource_range = {};
     subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -29,11 +30,12 @@ inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
     img_mem_barrier.subresourceRange = subresource_range;
 
     vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
-                         &img_mem_barrier);
+                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &img_mem_barrier);
 }
 
-inline void vk_img_copy(VkCommandBuffer cbuffer, VkExtent3D extent, VkImage src, VkImage dst)
+inline void vk_img_copy(VkCommandBuffer cbuffer, VkExtent3D extent, VkImage src,
+                        VkImage dst)
 {
     VkImageCopy img_copy = {};
     img_copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

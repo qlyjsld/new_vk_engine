@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <utility>
+#include <string>
 #include <vector>
 #include <volk.h>
 
@@ -26,17 +26,18 @@ public:
     VmaAllocator vma_allocator;
 
     uint32_t create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                       VmaAllocationCreateFlags flags, std::string name);
+                           VmaAllocationCreateFlags flags, std::string name);
 
-    uint32_t create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
-                    VkImageUsageFlags usage, VmaAllocationCreateFlags flags,
-                    std::string name);
+    uint32_t create_img(VkFormat format, VkExtent3D extent,
+                        VkImageAspectFlags aspect, VkImageUsageFlags usage,
+                        VmaAllocationCreateFlags flags, std::string name);
 
-    inline uint32_t get_buffer_id(std::string name) 
+    inline uint32_t get_buffer_id(std::string name)
     {
         uint32_t i = 0;
         for (i = 0; i < buffer_id.size(); ++i)
-            if (buffer_id[i] == name) return i;
+            if (buffer_id[i] == name)
+                return i;
         return i;
     };
 
@@ -44,7 +45,8 @@ public:
     {
         uint32_t i = 0;
         for (i = 0; i < img_id.size(); ++i)
-            if (img_id[i] == name) return i;
+            if (img_id[i] == name)
+                return i;
         return i;
     };
 
@@ -61,7 +63,8 @@ public:
     }
 
     void allocate_descriptor_set(std::vector<VkDescriptorType> types,
-                                 VkDescriptorSetLayout *layout, VkDescriptorSet *set);
+                                 VkDescriptorSetLayout *layout,
+                                 VkDescriptorSet *set);
 
 private:
     std::vector<VkDescriptorPool> pools;
@@ -75,7 +78,7 @@ private:
 
 struct cs {
 public:
-    cs(comp_allocator* allocator, std::vector<descriptor> descriptors,
+    cs(comp_allocator *allocator, std::vector<descriptor> descriptors,
        std::string shader_file, VkDeviceSize min_buffer_alignment)
         : allocator(allocator), min_buffer_alignment(min_buffer_alignment)
     {
@@ -98,7 +101,7 @@ public:
 
     std::function<void(VkCommandBuffer)> immed_draw;
 
-    comp_allocator* allocator;
+    comp_allocator *allocator;
 
     VkShaderModule module;
     VkDescriptorSet set;

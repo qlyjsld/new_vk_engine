@@ -1,6 +1,7 @@
 #include "vk_engine.h"
 
 #include <fstream>
+#include <iostream>
 
 #include "vk_boiler.h"
 #include "vk_type.h"
@@ -8,27 +9,32 @@
 void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
 {
     /* prepare command buffer */
-    VkCommandBufferBeginInfo cbuffer_begin_info = vk_boiler::cbuffer_begin_info();
+    VkCommandBufferBeginInfo cbuffer_begin_info =
+        vk_boiler::cbuffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(_upload_context.cbuffer, &cbuffer_begin_info));
+    VK_CHECK(
+        vkBeginCommandBuffer(_upload_context.cbuffer, &cbuffer_begin_info));
 
     fs(_upload_context.cbuffer);
 
     VK_CHECK(vkEndCommandBuffer(_upload_context.cbuffer));
 
-    VkSubmitInfo submit_info =
-        vk_boiler::submit_info(&_upload_context.cbuffer, nullptr, nullptr, nullptr);
+    VkSubmitInfo submit_info = vk_boiler::submit_info(
+        &_upload_context.cbuffer, nullptr, nullptr, nullptr);
 
     submit_info.waitSemaphoreCount = 0;
     submit_info.signalSemaphoreCount = 0;
 
-    VK_CHECK(vkQueueSubmit(_transfer_queue, 1, &submit_info, _upload_context.fence));
-    VK_CHECK(vkWaitForFences(_device, 1, &_upload_context.fence, VK_TRUE, UINT64_MAX));
+    VK_CHECK(
+        vkQueueSubmit(_transfer_queue, 1, &submit_info, _upload_context.fence));
+    VK_CHECK(vkWaitForFences(_device, 1, &_upload_context.fence, VK_TRUE,
+                             UINT64_MAX));
     VK_CHECK(vkResetFences(_device, 1, &_upload_context.fence));
 }
 
-bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_module)
+bool vk_engine::load_shader_module(const char *filename,
+                                   VkShaderModule *shader_module)
 {
     std::ifstream f(filename, std::ios::ate | std::ios::binary);
 
@@ -50,7 +56,8 @@ bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_
     shader_module_info.codeSize = buffer.size() * sizeof(uint32_t);
     shader_module_info.pCode = buffer.data();
 
-    VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr, shader_module));
+    VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr,
+                                  shader_module));
 
     deletion_queue.push_back(
         [=]() { vkDestroyShaderModule(_device, *shader_module, nullptr); });
@@ -59,7 +66,8 @@ bool vk_engine::load_shader_module(const char *filename, VkShaderModule *shader_
 }
 
 void vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                              VmaAllocationCreateFlags flags, allocated_buffer *buffer)
+                              VmaAllocationCreateFlags flags,
+                              allocated_buffer *buffer)
 {
     VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     buffer_info.size = size;
@@ -72,15 +80,17 @@ void vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
     VK_CHECK(vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
                              &buffer->buffer, &buffer->allocation, nullptr));
 
-    deletion_queue.push_back(
-        [=]() { vmaDestroyBuffer(_allocator, buffer->buffer, buffer->allocation); });
+    deletion_queue.push_back([=]() {
+        vmaDestroyBuffer(_allocator, buffer->buffer, buffer->allocation);
+    });
 }
 
-void vk_engine::create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
-                           VkImageUsageFlags usage, VmaAllocationCreateFlags flags,
-                           allocated_img *img)
+void vk_engine::create_img(VkFormat format, VkExtent3D extent,
+                           VkImageAspectFlags aspect, VkImageUsageFlags usage,
+                           VmaAllocationCreateFlags flags, allocated_img *img)
 {
-    VkImageCreateInfo img_info = vk_boiler::img_create_info(format, extent, usage);
+    VkImageCreateInfo img_info =
+        vk_boiler::img_create_info(format, extent, usage);
 
     VmaAllocationCreateInfo vma_allocation_info = {};
     vma_allocation_info.flags = flags;
@@ -88,8 +98,8 @@ void vk_engine::create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlag
 
     img->format = format;
 
-    VK_CHECK(vmaCreateImage(_allocator, &img_info, &vma_allocation_info, &img->img,
-                            &img->allocation, nullptr));
+    VK_CHECK(vmaCreateImage(_allocator, &img_info, &vma_allocation_info,
+                            &img->img, &img->allocation, nullptr));
 
     deletion_queue.push_back(
         [=]() { vmaDestroyImage(_allocator, img->img, img->allocation); });
@@ -97,7 +107,8 @@ void vk_engine::create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlag
     VkImageViewCreateInfo img_view_info =
         vk_boiler::img_view_create_info(aspect, img->img, extent, format);
 
-    VK_CHECK(vkCreateImageView(_device, &img_view_info, nullptr, &img->img_view));
+    VK_CHECK(
+        vkCreateImageView(_device, &img_view_info, nullptr, &img->img_view));
 
     deletion_queue.push_back(
         [=]() { vkDestroyImageView(_device, img->img_view, nullptr); });
@@ -107,7 +118,7 @@ size_t vk_engine::pad_uniform_buffer_size(size_t original_size)
 {
     size_t aligned_size = original_size;
     if (_min_buffer_alignment > 0)
-        aligned_size =
-            (aligned_size + _min_buffer_alignment - 1) & ~(_min_buffer_alignment - 1);
+        aligned_size = (aligned_size + _min_buffer_alignment - 1) &
+                       ~(_min_buffer_alignment - 1);
     return aligned_size;
 }

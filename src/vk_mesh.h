@@ -47,4 +47,5 @@ struct node {
     // material material;
 };
 
-std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes);
+std::vector<mesh> load_from_gltf(const char *filename,
+                                 std::vector<node> &nodes);

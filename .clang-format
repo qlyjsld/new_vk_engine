@@ -1,5 +1,5 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
-ColumnLimit: 90
+ColumnLimit: 80
 AccessModifierOffset: -4
 BreakBeforeBraces: Linux

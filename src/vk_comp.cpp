@@ -16,7 +16,8 @@ void comp_allocator::create_new_pool()
     };
 
     VkDescriptorPoolCreateInfo pool_info =
-        vk_boiler::descriptor_pool_create_info(pool_sizes.size(), pool_sizes.data());
+        vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
+                                               pool_sizes.data());
 
     vkCreateDescriptorPool(device, &pool_info, nullptr, &new_pool);
 
@@ -34,8 +35,10 @@ VkDescriptorPool comp_allocator::get_pool()
     return pools.back();
 }
 
-uint32_t comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                                   VmaAllocationCreateFlags flags, std::string name)
+uint32_t comp_allocator::create_buffer(VkDeviceSize size,
+                                       VkBufferUsageFlags usage,
+                                       VmaAllocationCreateFlags flags,
+                                       std::string name)
 {
     allocated_buffer buffer;
 
@@ -63,12 +66,15 @@ uint32_t comp_allocator::create_buffer(VkDeviceSize size, VkBufferUsageFlags usa
 }
 
 uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
-                                VkImageAspectFlags aspect, VkImageUsageFlags usage,
-                                VmaAllocationCreateFlags flags, std::string name)
+                                    VkImageAspectFlags aspect,
+                                    VkImageUsageFlags usage,
+                                    VmaAllocationCreateFlags flags,
+                                    std::string name)
 {
     allocated_img img;
 
-    VkImageCreateInfo img_info = vk_boiler::img_create_info(format, extent, usage);
+    VkImageCreateInfo img_info =
+        vk_boiler::img_create_info(format, extent, usage);
 
     VmaAllocationCreateInfo vma_allocation_info = {};
     vma_allocation_info.flags = flags;
@@ -76,8 +82,8 @@ uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
 
     img.format = format;
 
-    VK_CHECK(vmaCreateImage(vma_allocator, &img_info, &vma_allocation_info, &img.img,
-                            &img.allocation, nullptr));
+    VK_CHECK(vmaCreateImage(vma_allocator, &img_info, &vma_allocation_info,
+                            &img.img, &img.allocation, nullptr));
 
     deletion_queue.push_back(
         [=]() { vmaDestroyImage(vma_allocator, img.img, img.allocation); });
@@ -96,14 +102,16 @@ uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
     return id;
 }
 
-void comp_allocator::allocate_descriptor_set(std::vector<VkDescriptorType> types,
-                                             VkDescriptorSetLayout *layout,
-                                             VkDescriptorSet *set)
+void comp_allocator::allocate_descriptor_set(
+    std::vector<VkDescriptorType> types, VkDescriptorSetLayout *layout,
+    VkDescriptorSet *set)
 {
     VkDescriptorSetLayoutCreateInfo layout_info =
-        vk_boiler::descriptor_set_layout_create_info(types, VK_SHADER_STAGE_COMPUTE_BIT);
+        vk_boiler::descriptor_set_layout_create_info(
+            types, VK_SHADER_STAGE_COMPUTE_BIT);
 
-    VK_CHECK(vkCreateDescriptorSetLayout(device, &layout_info, nullptr, layout));
+    VK_CHECK(
+        vkCreateDescriptorSetLayout(device, &layout_info, nullptr, layout));
 
     deletion_queue.push_back(
         [=]() { vkDestroyDescriptorSetLayout(device, *layout, nullptr); });
@@ -111,7 +119,8 @@ void comp_allocator::allocate_descriptor_set(std::vector<VkDescriptorType> types
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
         vk_boiler::descriptor_set_allocate_info(get_pool(), layout);
 
-    VK_CHECK(vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, set));
+    VK_CHECK(
+        vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, set));
 };
 
 void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
@@ -126,7 +135,8 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: {
             uint32_t buffer_id = allocator->get_buffer_id(name);
             VkDescriptorBufferInfo descriptor_buffer_info = {};
-            descriptor_buffer_info.buffer = allocator->buffers[buffer_id].buffer;
+            descriptor_buffer_info.buffer =
+                allocator->buffers[buffer_id].buffer;
             descriptor_buffer_info.offset = 0;
             descriptor_buffer_info.range =
                 pad_uniform_buffer_size(allocator->buffers[buffer_id].size);
@@ -178,9 +188,11 @@ bool cs::load_shader_module(const char *filename)
     shader_module_info.codeSize = buffer.size() * sizeof(uint32_t);
     shader_module_info.pCode = buffer.data();
 
-    VK_CHECK(vkCreateShaderModule(device, &shader_module_info, nullptr, &module));
+    VK_CHECK(
+        vkCreateShaderModule(device, &shader_module_info, nullptr, &module));
 
-    deletion_queue.push_back([=]() { vkDestroyShaderModule(device, module, nullptr); });
+    deletion_queue.push_back(
+        [=]() { vkDestroyShaderModule(device, module, nullptr); });
 
     return true;
 }
@@ -189,35 +201,40 @@ size_t cs::pad_uniform_buffer_size(size_t original_size)
 {
     size_t aligned_size = original_size;
     if (min_buffer_alignment > 0)
-        aligned_size =
-            (aligned_size + min_buffer_alignment - 1) & ~(min_buffer_alignment - 1);
+        aligned_size = (aligned_size + min_buffer_alignment - 1) &
+                       ~(min_buffer_alignment - 1);
     return aligned_size;
 }
 
 void cs::cc_init(uint32_t queue_index, VkDevice device)
 {
-    VkCommandPoolCreateInfo cpool_info = vk_boiler::cpool_create_info(queue_index);
+    VkCommandPoolCreateInfo cpool_info =
+        vk_boiler::cpool_create_info(queue_index);
 
     VK_CHECK(vkCreateCommandPool(device, &cpool_info, nullptr, &cc.cpool));
 
-    deletion_queue.push_back([=]() { vkDestroyCommandPool(device, cc.cpool, nullptr); });
+    deletion_queue.push_back(
+        [=]() { vkDestroyCommandPool(device, cc.cpool, nullptr); });
 
     VkCommandBufferAllocateInfo cbuffer_allocate_info =
         vk_boiler::cbuffer_allocate_info(1, cc.cpool);
 
-    VK_CHECK(vkAllocateCommandBuffers(device, &cbuffer_allocate_info, &cc.cbuffer));
+    VK_CHECK(
+        vkAllocateCommandBuffers(device, &cbuffer_allocate_info, &cc.cbuffer));
 
     VkFenceCreateInfo fence_info = vk_boiler::fence_create_info(false);
 
     VK_CHECK(vkCreateFence(device, &fence_info, nullptr, &cc.fence));
 
-    deletion_queue.push_back([=]() { vkDestroyFence(device, cc.fence, nullptr); });
+    deletion_queue.push_back(
+        [=]() { vkDestroyFence(device, cc.fence, nullptr); });
 }
 
 void cs::comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs)
 {
     /* prepare command buffer */
-    VkCommandBufferBeginInfo cbuffer_begin_info = vk_boiler::cbuffer_begin_info();
+    VkCommandBufferBeginInfo cbuffer_begin_info =
+        vk_boiler::cbuffer_begin_info();
 
     /* begin command buffer recording */
     VK_CHECK(vkBeginCommandBuffer(cc.cbuffer, &cbuffer_begin_info));

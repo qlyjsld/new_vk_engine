@@ -19,10 +19,11 @@ inline VkCommandPoolCreateInfo cpool_create_info(uint32_t index)
 }
 
 inline VkCommandBufferAllocateInfo cbuffer_allocate_info(uint32_t cbuffer_count,
-                                                             VkCommandPool cpool)
+                                                         VkCommandPool cpool)
 {
     VkCommandBufferAllocateInfo cbuffer_allocate_info = {};
-    cbuffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cbuffer_allocate_info.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cbuffer_allocate_info.pNext = nullptr;
     cbuffer_allocate_info.commandPool = cpool;
     cbuffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -48,9 +49,9 @@ inline VkSemaphoreCreateInfo sem_create_info()
     return sem_info;
 }
 
-inline VkRenderingAttachmentInfo rendering_attachment_info(VkImageView img_view,
-                                                    VkImageLayout layout, bool clear,
-                                                    VkClearValue clear_value)
+inline VkRenderingAttachmentInfo
+rendering_attachment_info(VkImageView img_view, VkImageLayout layout,
+                          bool clear, VkClearValue clear_value)
 {
     VkRenderingAttachmentInfo attachment_info = {};
     attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -69,9 +70,9 @@ inline VkRenderingAttachmentInfo rendering_attachment_info(VkImageView img_view,
     return attachment_info;
 }
 
-inline VkRenderingInfo rendering_info(VkRenderingAttachmentInfo *color_attachments,
-                               VkRenderingAttachmentInfo *depth_attachments,
-                               VkExtent2D extent)
+inline VkRenderingInfo
+rendering_info(VkRenderingAttachmentInfo *color_attachments,
+               VkRenderingAttachmentInfo *depth_attachments, VkExtent2D extent)
 {
     VkRect2D render_area = {};
     render_area.offset = VkOffset2D{0, 0};
@@ -102,7 +103,8 @@ inline VkCommandBufferBeginInfo cbuffer_begin_info()
 }
 
 inline VkSubmitInfo submit_info(VkCommandBuffer *cbuffer, VkSemaphore *wait_sem,
-                         VkSemaphore *signal_sem, VkPipelineStageFlags *flags)
+                                VkSemaphore *signal_sem,
+                                VkPipelineStageFlags *flags)
 {
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -117,8 +119,8 @@ inline VkSubmitInfo submit_info(VkCommandBuffer *cbuffer, VkSemaphore *wait_sem,
     return submit_info;
 }
 
-inline VkPresentInfoKHR present_info(VkSwapchainKHR *swapchain, VkSemaphore *sem,
-                              uint32_t *img_indices)
+inline VkPresentInfoKHR present_info(VkSwapchainKHR *swapchain,
+                                     VkSemaphore *sem, uint32_t *img_indices)
 {
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -151,10 +153,11 @@ inline VkImageMemoryBarrier img_mem_barrier()
 
 inline VkPipelineShaderStageCreateInfo
 shader_stage_create_info(VkShaderStageFlagBits stage,
-                                    VkShaderModule shader_module)
+                         VkShaderModule shader_module)
 {
     VkPipelineShaderStageCreateInfo shader_stage_info = {};
-    shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shader_stage_info.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shader_stage_info.pNext = nullptr;
     // shader_stage_info.flags = ;
     shader_stage_info.stage = stage;
@@ -172,11 +175,14 @@ vertex_input_state_create_info(vertex_input_description *description)
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_info.pNext = nullptr;
     // vertex_input_state_info.flags = ;
-    vertex_input_state_info.vertexBindingDescriptionCount = description->bindings.size();
-    vertex_input_state_info.pVertexBindingDescriptions = description->bindings.data();
+    vertex_input_state_info.vertexBindingDescriptionCount =
+        description->bindings.size();
+    vertex_input_state_info.pVertexBindingDescriptions =
+        description->bindings.data();
     vertex_input_state_info.vertexAttributeDescriptionCount =
         description->attributes.size();
-    vertex_input_state_info.pVertexAttributeDescriptions = description->attributes.data();
+    vertex_input_state_info.pVertexAttributeDescriptions =
+        description->attributes.data();
     return vertex_input_state_info;
 }
 
@@ -225,8 +231,8 @@ inline VkPipelineColorBlendAttachmentState color_blend_attachment_state()
     // color_blend_attachment_state.dstAlphaBlendFactor = ;
     // color_blend_attachment_state.alphaBlendOp = ;
     color_blend_attachment_state.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-        VK_COLOR_COMPONENT_A_BIT;
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     return color_blend_attachment_state;
 }
 
@@ -248,7 +254,7 @@ inline VkPipelineMultisampleStateCreateInfo multisample_state_create_info()
 
 inline VkPipelineLayoutCreateInfo
 pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts,
-                                       std::vector<VkPushConstantRange> &push_constants)
+                            std::vector<VkPushConstantRange> &push_constants)
 {
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -262,14 +268,15 @@ pipeline_layout_create_info(std::vector<VkDescriptorSetLayout> &layouts,
 }
 
 inline VkImageCreateInfo img_create_info(VkFormat format, VkExtent3D extent,
-                                             VkImageUsageFlags usage)
+                                         VkImageUsageFlags usage)
 {
 
     VkImageCreateInfo img_info = {};
     img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     img_info.pNext = nullptr;
     // img_info.flags = ;
-    img_info.imageType = extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    img_info.imageType =
+        extent.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
     img_info.format = format;
     img_info.extent = extent;
     img_info.mipLevels = 1;
@@ -285,8 +292,9 @@ inline VkImageCreateInfo img_create_info(VkFormat format, VkExtent3D extent,
 }
 
 inline VkImageViewCreateInfo img_view_create_info(VkImageAspectFlags aspect,
-                                                      VkImage img, VkExtent3D extent,
-                                                      VkFormat format)
+                                                  VkImage img,
+                                                  VkExtent3D extent,
+                                                  VkFormat format)
 {
     VkImageSubresourceRange subresource_range = img_subresource_range(aspect);
     VkImageViewCreateInfo img_view_info = {};
@@ -323,12 +331,13 @@ inline VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info()
 
 inline VkDescriptorPoolCreateInfo
 descriptor_pool_create_info(uint32_t pool_size_count,
-                                       VkDescriptorPoolSize *pool_sizes)
+                            VkDescriptorPoolSize *pool_sizes)
 {
     VkDescriptorPoolCreateInfo descriptor_pool_info = {};
     descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool_info.pNext = nullptr;
-    descriptor_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    descriptor_pool_info.flags =
+        VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     descriptor_pool_info.maxSets = 1024;
     descriptor_pool_info.poolSizeCount = pool_size_count;
     descriptor_pool_info.pPoolSizes = pool_sizes;
@@ -337,7 +346,7 @@ descriptor_pool_create_info(uint32_t pool_size_count,
 
 inline VkDescriptorSetLayoutCreateInfo
 descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
-                                             VkShaderStageFlags stage)
+                                  VkShaderStageFlags stage)
 {
     std::vector<VkDescriptorSetLayoutBinding> *bindings =
         new std::vector<VkDescriptorSetLayoutBinding>;
@@ -366,10 +375,11 @@ descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
 
 inline VkDescriptorSetAllocateInfo
 descriptor_set_allocate_info(VkDescriptorPool pool,
-                                        VkDescriptorSetLayout *layouts)
+                             VkDescriptorSetLayout *layouts)
 {
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
-    descriptor_set_allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptor_set_allocate_info.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptor_set_allocate_info.pNext = nullptr;
     descriptor_set_allocate_info.descriptorPool = pool;
     descriptor_set_allocate_info.descriptorSetCount = 1;
@@ -377,10 +387,9 @@ descriptor_set_allocate_info(VkDescriptorPool pool,
     return descriptor_set_allocate_info;
 }
 
-inline VkWriteDescriptorSet write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
-                                                     VkDescriptorSet set,
-                                                     uint32_t binding,
-                                                     VkDescriptorType type)
+inline VkWriteDescriptorSet
+write_descriptor_set(VkDescriptorBufferInfo *buffer_info, VkDescriptorSet set,
+                     uint32_t binding, VkDescriptorType type)
 {
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -393,10 +402,9 @@ inline VkWriteDescriptorSet write_descriptor_set(VkDescriptorBufferInfo *buffer_
     return write_set;
 }
 
-inline VkWriteDescriptorSet write_descriptor_set(VkDescriptorImageInfo *img_info,
-                                                     VkDescriptorSet set,
-                                                     uint32_t binding,
-                                                     VkDescriptorType type)
+inline VkWriteDescriptorSet
+write_descriptor_set(VkDescriptorImageInfo *img_info, VkDescriptorSet set,
+                     uint32_t binding, VkDescriptorType type)
 {
     VkWriteDescriptorSet write_set = {};
     write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

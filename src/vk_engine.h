@@ -8,9 +8,9 @@
 #include <glm/vec4.hpp>
 
 #include "vk_camera.h"
+#include "vk_comp.h"
 #include "vk_mesh.h"
 #include "vk_type.h"
-#include "vk_comp.h"
 
 constexpr int FRAME_OVERLAP = 2;
 
@@ -96,15 +96,15 @@ public:
     comp_allocator _comp_allocator;
     bool cloud_ui = true;
 
-    VkExtent2D _window_extent = { 1024, 768 };
-    static constexpr VkExtent2D _resolution = { 1024, 768 };
+    VkExtent2D _window_extent = {1024, 768};
+    static constexpr VkExtent2D _resolution = {1024, 768};
 
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
     VkPhysicalDevice _physical_device;
     VkSurfaceKHR _surface;
     VkFormat _swapchain_format;
-    VkFormat _format = { VK_FORMAT_B8G8R8A8_UNORM };
+    VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
     std::vector<VkImageView> _swapchain_img_views;
 
     VkSampler _sampler;
@@ -126,7 +126,7 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
-    VkColorSpaceKHR _colorspace = { VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+    VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
 
     upload_context _upload_context;
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
@@ -170,11 +170,12 @@ private:
     };
 
     void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                       VmaAllocationCreateFlags flags, allocated_buffer *buffer);
+                       VmaAllocationCreateFlags flags,
+                       allocated_buffer *buffer);
 
-    void create_img(VkFormat format, VkExtent3D extent, VkImageAspectFlags aspect,
-                    VkImageUsageFlags usage, VmaAllocationCreateFlags flags,
-                    allocated_img *img);
+    void create_img(VkFormat format, VkExtent3D extent,
+                    VkImageAspectFlags aspect, VkImageUsageFlags usage,
+                    VmaAllocationCreateFlags flags, allocated_img *img);
 
     size_t pad_uniform_buffer_size(size_t original_size);
 };

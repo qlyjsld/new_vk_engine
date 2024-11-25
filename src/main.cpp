@@ -45,9 +45,10 @@ int main(int argc, char *argv[])
                                 "../shaders/example.spv",
                                 _min_buffer_alignment);
 
-    Descriptors binding is done with vector of "descriptor" which is std::pair of
-    <VkDescriptorType, std::string>, provided the name and arguments, create class cs.
-    Then start building pipeline using info from struct cs and comp_allocator.
+    Descriptors binding is done with vector of "descriptor" which is std::pair
+   of <VkDescriptorType, std::string>, provided the name and arguments, create
+   class cs. Then start building pipeline using info from struct cs and
+   comp_allocator.
 
         PipelineBuilder pb = {};
         pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
@@ -55,10 +56,11 @@ int main(int argc, char *argv[])
 
         pb.build_comp(...);
 
-    Finally, add draw commands. At this point, you have mutiple options, you have to run
-    cc_init(...) the first time. After that, you could push_back(...) to have it executed
-    in the main loop, or call comp_immediate_submit(...) to execute immediately, the latter
-    one is ofter used for preparing texture or data used later.
+    Finally, add draw commands. At this point, you have mutiple options, you
+   have to run cc_init(...) the first time. After that, you could push_back(...)
+   to have it executed in the main loop, or call comp_immediate_submit(...) to
+   execute immediately, the latter one is ofter used for preparing texture or
+   data used later.
 
         compute_shader_example.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
             vkCmdBindPipeline(...);
@@ -68,7 +70,8 @@ int main(int argc, char *argv[])
 
         cs::cc_init(_comp_index, _device);
         cs::push_back(compute_shader_example);
-        cs::comp_immediate_submit(_device, _comp_queue, &compute_shader_example);
+        cs::comp_immediate_submit(_device, _comp_queue,
+   &compute_shader_example);
 
 */
 
@@ -78,8 +81,9 @@ void vk_engine::comp_init()
     _comp_allocator.vma_allocator = _allocator;
 
     _comp_allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "camera");
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                                  "camera");
 
     _comp_allocator.load_img("target", _target);
 
@@ -92,14 +96,15 @@ void vk_engine::cloudtex_init()
 {
     constexpr uint32_t cloudtex_size = 128;
 
-    uint32_t id = _comp_allocator.create_img(VK_FORMAT_R16G16B16A16_SFLOAT,
-                         VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
-                         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
-                         "cloudtex");
+    uint32_t id = _comp_allocator.create_img(
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VkExtent3D{cloudtex_size, cloudtex_size, cloudtex_size},
+        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "cloudtex");
 
     _comp_allocator.create_buffer(pad_uniform_buffer_size(sizeof(float)),
-                            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "size");
+                                  VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                                  "size");
 
     /* match set binding */
     std::vector<descriptor> descriptors = {
@@ -114,24 +119,27 @@ void vk_engine::cloudtex_init()
     pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
         VK_SHADER_STAGE_COMPUTE_BIT, cloudtex.module));
 
-    std::vector<VkPushConstantRange> push_constants = { };
+    std::vector<VkPushConstantRange> push_constants = {};
 
-    std::vector<VkDescriptorSetLayout> layouts = { cloudtex.layout };
+    std::vector<VkDescriptorSetLayout> layouts = {cloudtex.layout};
 
-    pb.build_comp(_device, layouts, push_constants,
-                &cloudtex.pipeline_layout, &cloudtex.pipeline);
+    pb.build_comp(_device, layouts, push_constants, &cloudtex.pipeline_layout,
+                  &cloudtex.pipeline);
 
     cloudtex.immed_draw = [&, cloudtex, id](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
 
-        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cloudtex.pipeline);
+        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          cloudtex.pipeline);
 
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cloudtex.pipeline_layout, 0, 1, &cloudtex.set, 0, nullptr);
+                                cloudtex.pipeline_layout, 0, 1, &cloudtex.set,
+                                0, nullptr);
 
-        vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8, cloudtex_size / 8);
+        vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8,
+                      cloudtex_size / 8);
     };
 
     cs::cc_init(_comp_index, _device);
@@ -142,10 +150,9 @@ void vk_engine::weather_init()
 {
     constexpr uint32_t weather_size = 512;
 
-    uint32_t id = _comp_allocator.create_img(VK_FORMAT_R16_SFLOAT,
-                        VkExtent3D{weather_size, weather_size, 1},
-                        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0,
-                        "weather");
+    uint32_t id = _comp_allocator.create_img(
+        VK_FORMAT_R16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
+        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_STORAGE_BIT, 0, "weather");
 
     std::vector<descriptor> descriptors = {
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
@@ -155,17 +162,17 @@ void vk_engine::weather_init()
                _min_buffer_alignment);
 
     PipelineBuilder pb = {};
-    pb._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, weather.module));
+    pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
+        VK_SHADER_STAGE_COMPUTE_BIT, weather.module));
 
     VkPushConstantRange u_time_pc = {};
     u_time_pc.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     u_time_pc.offset = 0;
     u_time_pc.size = sizeof(float);
 
-    std::vector<VkPushConstantRange> push_constants = { u_time_pc };
+    std::vector<VkPushConstantRange> push_constants = {u_time_pc};
 
-    std::vector<VkDescriptorSetLayout> layouts = { weather.layout };
+    std::vector<VkDescriptorSetLayout> layouts = {weather.layout};
 
     pb.build_comp(_device, layouts, push_constants, &weather.pipeline_layout,
                   &weather.pipeline);
@@ -175,14 +182,17 @@ void vk_engine::weather_init()
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
 
-        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, weather.pipeline);
+        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          weather.pipeline);
 
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                weather.pipeline_layout, 0, 1, &weather.set, 0, nullptr);
+                                weather.pipeline_layout, 0, 1, &weather.set, 0,
+                                nullptr);
 
         u_time = SDL_GetTicks() / 1000.f;
-        vkCmdPushConstants(cbuffer, weather.pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                           sizeof(float), &u_time);
+        vkCmdPushConstants(cbuffer, weather.pipeline_layout,
+                           VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float),
+                           &u_time);
 
         vkCmdDispatch(cbuffer, weather_size / 8, weather_size / 8, 1);
     });
@@ -191,9 +201,9 @@ void vk_engine::weather_init()
 void vk_engine::cloud_init()
 {
     uint32_t cloud_id = _comp_allocator.create_buffer(
-                        pad_uniform_buffer_size(sizeof(cloud_data)),
-                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
+        pad_uniform_buffer_size(sizeof(cloud_data)),
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, "cloud");
 
     _cloud_data.type = .6f;
     _cloud_data.freq = .2f;
@@ -215,15 +225,16 @@ void vk_engine::cloud_init()
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "cloud"},
     };
 
-    cs cloud(&_comp_allocator, descriptors, "../shaders/cloud.comp.spv", _min_buffer_alignment);
+    cs cloud(&_comp_allocator, descriptors, "../shaders/cloud.comp.spv",
+             _min_buffer_alignment);
 
     PipelineBuilder pb = {};
-    pb._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, cloud.module));
+    pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
+        VK_SHADER_STAGE_COMPUTE_BIT, cloud.module));
 
     std::vector<VkPushConstantRange> push_constants = {};
 
-    std::vector<VkDescriptorSetLayout> layouts = { cloud.layout };
+    std::vector<VkDescriptorSetLayout> layouts = {cloud.layout};
 
     pb.build_comp(_device, layouts, push_constants, &cloud.pipeline_layout,
                   &cloud.pipeline);
@@ -231,7 +242,8 @@ void vk_engine::cloud_init()
     uint32_t camera_id = _comp_allocator.get_buffer_id("camera");
 
     cs_draw.push_back([&, cloud, camera_id, cloud_id](VkCommandBuffer cbuffer) {
-        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE, cloud.pipeline);
+        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          cloud.pipeline);
 
         _camera_data.pos = _vk_camera.get_pos();
         _camera_data.fov = _vk_camera.get_fov();
@@ -241,20 +253,27 @@ void vk_engine::cloud_init()
         _camera_data.height = _resolution.height;
 
         void *data;
-        vmaMapMemory(_allocator, _comp_allocator.buffers[camera_id].allocation, &data);
-        std::memcpy(data, &_camera_data, pad_uniform_buffer_size(sizeof(camera_data)));
-        vmaUnmapMemory(_allocator, _comp_allocator.buffers[camera_id].allocation);
+        vmaMapMemory(_allocator, _comp_allocator.buffers[camera_id].allocation,
+                     &data);
+        std::memcpy(data, &_camera_data,
+                    pad_uniform_buffer_size(sizeof(camera_data)));
+        vmaUnmapMemory(_allocator,
+                       _comp_allocator.buffers[camera_id].allocation);
 
-        vmaMapMemory(_allocator, _comp_allocator.buffers[cloud_id].allocation, &data);
-        std::memcpy(data, &_cloud_data, pad_uniform_buffer_size(sizeof(cloud_data)));
-        vmaUnmapMemory(_allocator, _comp_allocator.buffers[cloud_id].allocation);
+        vmaMapMemory(_allocator, _comp_allocator.buffers[cloud_id].allocation,
+                     &data);
+        std::memcpy(data, &_cloud_data,
+                    pad_uniform_buffer_size(sizeof(cloud_data)));
+        vmaUnmapMemory(_allocator,
+                       _comp_allocator.buffers[cloud_id].allocation);
 
-        std::vector<uint32_t> doffsets = { 0, 0 };
+        std::vector<uint32_t> doffsets = {0, 0};
         vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cloud.pipeline_layout, 0, 1, &cloud.set, doffsets.size(),
-                                doffsets.data());
+                                cloud.pipeline_layout, 0, 1, &cloud.set,
+                                doffsets.size(), doffsets.data());
 
-        vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8, 1);
+        vkCmdDispatch(cbuffer, _resolution.width / 8, _resolution.height / 8,
+                      1);
     });
 }
 
@@ -285,7 +304,7 @@ void vk_engine::draw_comp(frame *frame)
     for (const auto &draw : cs_draw)
         draw(frame->cbuffer);
 
-    vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
-                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     _comp_index);
+    vk_cmd::vk_img_layout_transition(
+        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _comp_index);
 }

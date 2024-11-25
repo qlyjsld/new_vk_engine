@@ -1,20 +1,21 @@
 ﻿#pragma once
 
 #include <functional>
-#include <iostream>
 #include <vector>
 #include <volk.h>
 
 #include <vk_mem_alloc.h>
 
 #ifndef NDEBUG
-#define VK_CHECK(x)                                                                      \
-    do {                                                                                 \
-        VkResult err = x;                                                                \
-        if (err) {                                                                       \
-            std::cerr << "vulkan error: " << err << std::endl;                           \
-            abort();                                                                     \
-        }                                                                                \
+#include <iostream>
+
+#define VK_CHECK(x)                                                            \
+    do {                                                                       \
+        VkResult err = x;                                                      \
+        if (err) {                                                             \
+            std::cerr << "vulkan error: " << err << std::endl;                 \
+            abort();                                                           \
+        }                                                                      \
     } while (0)
 
 #else
