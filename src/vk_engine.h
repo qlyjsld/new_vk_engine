@@ -82,12 +82,11 @@ public:
 
     VkSwapchainKHR _swapchain;
     allocated_img _target;
-    uint32_t _last_frame = 0;
+    uint64_t _last_frame = 0;
     uint32_t _img_index;
     uint32_t _gfx_index;
     uint32_t _transfer_index;
 
-    uint32_t _comp_index;
     VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
     VkFormat _swapchain_format;
     VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
@@ -97,11 +96,12 @@ public:
     VkQueue _comp_queue;
     comp_allocator _comp_allocator;
 
-    VkQueue _transfer_queue;
     VkExtent2D _window_extent = {1024, 768};
     VkExtent2D _resolution = {1024, 768};
     VmaAllocator _allocator;
     bool cloud_ui = true;
+    uint32_t _comp_index;
+    VkQueue _transfer_queue;
 
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
