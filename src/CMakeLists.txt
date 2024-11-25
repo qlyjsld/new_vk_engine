@@ -11,4 +11,5 @@ target_link_libraries(vk_engine volk SDL3::SDL3 vk-bootstrap GPUOpen::VulkanMemo
 include_directories(
 	"${PROJECT_SOURCE_DIR}/vendor/imgui"
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends"
-	"${PROJECT_SOURCE_DIR}/vendor/volk")
+	"${PROJECT_SOURCE_DIR}/vendor/volk"
+	"${PROJECT_SOURCE_DIR}/vendor/glm")
