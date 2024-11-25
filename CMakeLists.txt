@@ -13,7 +13,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -Os -DNDEBUG")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Vulkan REQUIRED)
 add_subdirectory(vendor)
 add_subdirectory(src)
 

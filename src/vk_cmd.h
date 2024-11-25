@@ -18,8 +18,8 @@ inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
     VkImageMemoryBarrier img_mem_barrier = {};
     img_mem_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     img_mem_barrier.pNext = nullptr;
-    // img_mem_barrier.srcAccessMask = ;
-    // img_mem_barrier.dstAccessMask = ;
+    img_mem_barrier.srcAccessMask = VK_ACCESS_NONE;
+    img_mem_barrier.dstAccessMask = VK_ACCESS_NONE;
     img_mem_barrier.oldLayout = old_layout;
     img_mem_barrier.newLayout = new_layout;
     img_mem_barrier.srcQueueFamilyIndex = family_index;
@@ -27,7 +27,7 @@ inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
     img_mem_barrier.image = img;
     img_mem_barrier.subresourceRange = subresource_range;
 
-    vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0,
                          nullptr, 1, &img_mem_barrier);
 }
