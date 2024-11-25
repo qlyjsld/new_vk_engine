@@ -67,14 +67,13 @@ public:
     // data used every frame
     vk_camera _vk_camera;
     float u_time = 0.f;
-    uint32_t _frame_index = 0;
 
+    uint32_t _frame_index = 0;
     cloud_data _cloud_data;
-    uint32_t _last_frame = 0;
 
     camera_data _camera_data;
-    struct SDL_Window *_window = nullptr;
     VkDevice _device;
+    struct SDL_Window *_window = nullptr;
 
     frame _frames[FRAME_OVERLAP];
 
@@ -82,29 +81,35 @@ public:
     std::vector<VkImage> _swapchain_imgs;
 
     VkSwapchainKHR _swapchain;
+    allocated_img _target;
+    uint32_t _last_frame = 0;
     uint32_t _img_index;
     uint32_t _gfx_index;
     uint32_t _transfer_index;
-    uint32_t _comp_index;
-    allocated_img _target;
 
+    uint32_t _comp_index;
+    VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
+    VkFormat _swapchain_format;
+    VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
     allocated_img _depth_img;
     VkQueue _gfx_queue;
-    VkQueue _transfer_queue;
+
     VkQueue _comp_queue;
-
     comp_allocator _comp_allocator;
-    bool cloud_ui = true;
 
+    VkQueue _transfer_queue;
     VkExtent2D _window_extent = {1024, 768};
     VkExtent2D _resolution = {1024, 768};
+    VmaAllocator _allocator;
+    bool cloud_ui = true;
+
+    VkPipeline _gfx_pipeline;
+    VkPipelineLayout _gfx_pipeline_layout;
 
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
     VkPhysicalDevice _physical_device;
     VkSurfaceKHR _surface;
-    VkFormat _swapchain_format;
-    VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
     std::vector<VkImageView> _swapchain_img_views;
 
     VkSampler _sampler;
@@ -116,17 +121,11 @@ public:
     allocated_buffer _render_mat_buffer;
     VkDescriptorSetLayout _texture_layout;
 
-    VmaAllocator _allocator;
     std::vector<mesh> _meshes;
     std::vector<node> _nodes;
 
     VkShaderModule _vert;
     VkShaderModule _frag;
-
-    VkPipeline _gfx_pipeline;
-    VkPipelineLayout _gfx_pipeline_layout;
-
-    VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
 
     immed_context _immed_context;
     void immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
@@ -161,6 +160,7 @@ private:
     void weather_init();
     void cloud_init();
 
+    void draw_imgui();
     void draw_comp(frame *frame);
     void draw_nodes(frame *frame);
 
