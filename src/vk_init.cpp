@@ -208,20 +208,20 @@ void vk_engine::command_init()
     }
 
     VkCommandPoolCreateInfo cpool_info =
-        vk_boiler::cpool_create_info(_transfer_index);
+        vk_boiler::cpool_create_info(_comp_index);
 
     VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
-                                 &_upload_context.cpool));
+                                 &_immed_context.cpool));
 
     deletion_queue.push_back([=]() {
-        vkDestroyCommandPool(_device, _upload_context.cpool, nullptr);
+        vkDestroyCommandPool(_device, _immed_context.cpool, nullptr);
     });
 
     VkCommandBufferAllocateInfo cbuffer_allocate_info =
-        vk_boiler::cbuffer_allocate_info(1, _upload_context.cpool);
+        vk_boiler::cbuffer_allocate_info(1, _immed_context.cpool);
 
     VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
-                                      &_upload_context.cbuffer));
+                                      &_immed_context.cbuffer));
 }
 
 void vk_engine::sync_init()
@@ -255,8 +255,8 @@ void vk_engine::sync_init()
     VkFenceCreateInfo fence_info = vk_boiler::fence_create_info(false);
 
     VK_CHECK(
-        vkCreateFence(_device, &fence_info, nullptr, &_upload_context.fence));
+        vkCreateFence(_device, &fence_info, nullptr, &_immed_context.fence));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyFence(_device, _upload_context.fence, nullptr); });
+        [=]() { vkDestroyFence(_device, _immed_context.fence, nullptr); });
 }

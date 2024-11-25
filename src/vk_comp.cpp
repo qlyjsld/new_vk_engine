@@ -5,34 +5,23 @@
 
 #include "vk_boiler.h"
 
-void comp_allocator::create_new_pool()
+void comp_allocator::init()
 {
-    VkDescriptorPool new_pool;
-
     std::vector<VkDescriptorPoolSize> pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 256},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 256},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
     };
 
     VkDescriptorPoolCreateInfo pool_info =
         vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
                                                pool_sizes.data());
 
-    vkCreateDescriptorPool(device, &pool_info, nullptr, &new_pool);
+    vkCreateDescriptorPool(device, &pool_info, nullptr, &comp_descriptor_pool);
 
-    deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorPool(device, new_pool, nullptr); });
-
-    pools.push_back(new_pool);
-}
-
-VkDescriptorPool comp_allocator::get_pool()
-{
-    if (!pools.size())
-        create_new_pool();
-
-    return pools.back();
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorPool(device, comp_descriptor_pool, nullptr);
+    });
 }
 
 uint32_t comp_allocator::create_buffer(VkDeviceSize size,
@@ -117,7 +106,7 @@ void comp_allocator::allocate_descriptor_set(
         [=]() { vkDestroyDescriptorSetLayout(device, *layout, nullptr); });
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(get_pool(), layout);
+        vk_boiler::descriptor_set_allocate_info(comp_descriptor_pool, layout);
 
     VK_CHECK(
         vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, set));
@@ -204,52 +193,4 @@ size_t cs::pad_uniform_buffer_size(size_t original_size)
         aligned_size = (aligned_size + min_buffer_alignment - 1) &
                        ~(min_buffer_alignment - 1);
     return aligned_size;
-}
-
-void cs::cc_init(uint32_t queue_index, VkDevice device)
-{
-    VkCommandPoolCreateInfo cpool_info =
-        vk_boiler::cpool_create_info(queue_index);
-
-    VK_CHECK(vkCreateCommandPool(device, &cpool_info, nullptr, &cc.cpool));
-
-    deletion_queue.push_back(
-        [=]() { vkDestroyCommandPool(device, cc.cpool, nullptr); });
-
-    VkCommandBufferAllocateInfo cbuffer_allocate_info =
-        vk_boiler::cbuffer_allocate_info(1, cc.cpool);
-
-    VK_CHECK(
-        vkAllocateCommandBuffers(device, &cbuffer_allocate_info, &cc.cbuffer));
-
-    VkFenceCreateInfo fence_info = vk_boiler::fence_create_info(false);
-
-    VK_CHECK(vkCreateFence(device, &fence_info, nullptr, &cc.fence));
-
-    deletion_queue.push_back(
-        [=]() { vkDestroyFence(device, cc.fence, nullptr); });
-}
-
-void cs::comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs)
-{
-    /* prepare command buffer */
-    VkCommandBufferBeginInfo cbuffer_begin_info =
-        vk_boiler::cbuffer_begin_info();
-
-    /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(cc.cbuffer, &cbuffer_begin_info));
-
-    cs->immed_draw(cc.cbuffer);
-
-    VK_CHECK(vkEndCommandBuffer(cc.cbuffer));
-
-    VkSubmitInfo submit_info =
-        vk_boiler::submit_info(&cc.cbuffer, nullptr, nullptr, nullptr);
-
-    submit_info.waitSemaphoreCount = 0;
-    submit_info.signalSemaphoreCount = 0;
-
-    VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, cc.fence));
-    VK_CHECK(vkWaitForFences(device, 1, &cc.fence, VK_TRUE, UINT64_MAX));
-    VK_CHECK(vkResetFences(device, 1, &cc.fence));
 }

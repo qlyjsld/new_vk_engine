@@ -6,31 +6,30 @@
 #include "vk_boiler.h"
 #include "vk_type.h"
 
-void vk_engine::immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs)
+void vk_engine::immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
+                               VkQueue queue)
 {
     /* prepare command buffer */
     VkCommandBufferBeginInfo cbuffer_begin_info =
         vk_boiler::cbuffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(
-        vkBeginCommandBuffer(_upload_context.cbuffer, &cbuffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(_immed_context.cbuffer, &cbuffer_begin_info));
 
-    fs(_upload_context.cbuffer);
+    fs(_immed_context.cbuffer);
 
-    VK_CHECK(vkEndCommandBuffer(_upload_context.cbuffer));
+    VK_CHECK(vkEndCommandBuffer(_immed_context.cbuffer));
 
     VkSubmitInfo submit_info = vk_boiler::submit_info(
-        &_upload_context.cbuffer, nullptr, nullptr, nullptr);
+        &_immed_context.cbuffer, nullptr, nullptr, nullptr);
 
     submit_info.waitSemaphoreCount = 0;
     submit_info.signalSemaphoreCount = 0;
 
-    VK_CHECK(
-        vkQueueSubmit(_transfer_queue, 1, &submit_info, _upload_context.fence));
-    VK_CHECK(vkWaitForFences(_device, 1, &_upload_context.fence, VK_TRUE,
+    VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, _immed_context.fence));
+    VK_CHECK(vkWaitForFences(_device, 1, &_immed_context.fence, VK_TRUE,
                              UINT64_MAX));
-    VK_CHECK(vkResetFences(_device, 1, &_upload_context.fence));
+    VK_CHECK(vkResetFences(_device, 1, &_immed_context.fence));
 }
 
 bool vk_engine::load_shader_module(const char *filename,

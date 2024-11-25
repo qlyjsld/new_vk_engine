@@ -21,7 +21,7 @@ struct frame {
     VkCommandBuffer cbuffer;
 };
 
-struct upload_context {
+struct immed_context {
     VkFence fence;
     VkCommandPool cpool;
     VkCommandBuffer cbuffer;
@@ -97,7 +97,7 @@ public:
     bool cloud_ui = true;
 
     VkExtent2D _window_extent = {1024, 768};
-    static constexpr VkExtent2D _resolution = {1024, 768};
+    VkExtent2D _resolution = {1024, 768};
 
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
@@ -128,8 +128,9 @@ public:
 
     VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
 
-    upload_context _upload_context;
-    void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&fs);
+    immed_context _immed_context;
+    void immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
+                        VkQueue queue);
 
     void init();
     void cleanup();

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <string>
 #include <vector>
 #include <volk.h>
@@ -10,12 +9,6 @@
 #include "vk_type.h"
 
 typedef std::pair<VkDescriptorType, std::string> descriptor;
-
-struct comp_context {
-    VkFence fence;
-    VkCommandPool cpool;
-    VkCommandBuffer cbuffer;
-};
 
 struct comp_allocator {
 public:
@@ -66,14 +59,12 @@ public:
                                  VkDescriptorSetLayout *layout,
                                  VkDescriptorSet *set);
 
+    void init();
+
 private:
-    std::vector<VkDescriptorPool> pools;
-    std::vector<VkDescriptorPool> full_pools;
+    VkDescriptorPool comp_descriptor_pool;
     std::vector<std::string> buffer_id;
     std::vector<std::string> img_id;
-
-    void create_new_pool();
-    VkDescriptorPool get_pool();
 };
 
 struct cs {
@@ -99,8 +90,6 @@ public:
         load_shader_module(shader_file.data());
     };
 
-    std::function<void(VkCommandBuffer)> immed_draw;
-
     comp_allocator *allocator;
 
     VkShaderModule module;
@@ -109,14 +98,9 @@ public:
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
 
-    static void cc_init(uint32_t queue_index, VkDevice device);
-    static void comp_immediate_submit(VkDevice device, VkQueue queue, cs *cs);
-
 private:
     VkDeviceSize min_buffer_alignment;
     VkDevice device;
-
-    inline static comp_context cc;
 
     void write_descriptor_set(std::vector<VkDescriptorType> types,
                               std::vector<std::string> names);

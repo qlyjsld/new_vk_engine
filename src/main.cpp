@@ -79,6 +79,7 @@ void vk_engine::comp_init()
 {
     _comp_allocator.device = _device;
     _comp_allocator.vma_allocator = _allocator;
+    _comp_allocator.init();
 
     _comp_allocator.create_buffer(pad_uniform_buffer_size(sizeof(camera_data)),
                                   VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -94,7 +95,7 @@ void vk_engine::comp_init()
 
 void vk_engine::cloudtex_init()
 {
-    constexpr uint32_t cloudtex_size = 128;
+    uint32_t cloudtex_size = 128;
 
     uint32_t id = _comp_allocator.create_img(
         VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -122,29 +123,29 @@ void vk_engine::cloudtex_init()
     std::vector<VkPushConstantRange> push_constants = {};
     pb.build_comp(_device, push_constants, &cloudtex);
 
-    cloudtex.immed_draw = [&, cloudtex, id](VkCommandBuffer cbuffer) {
-        vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
-                                         VK_IMAGE_LAYOUT_UNDEFINED,
-                                         VK_IMAGE_LAYOUT_GENERAL, _comp_index);
+    immediate_draw(
+        [&, cloudtex, cloudtex_size, id](VkCommandBuffer cbuffer) {
+            vk_cmd::vk_img_layout_transition(
+                cbuffer, _comp_allocator.imgs[id].img,
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                _comp_index);
 
-        vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                          cloudtex.pipeline);
+            vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                              cloudtex.pipeline);
 
-        vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                cloudtex.pipeline_layout, 0, 1, &cloudtex.set,
-                                0, nullptr);
+            vkCmdBindDescriptorSets(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                    cloudtex.pipeline_layout, 0, 1,
+                                    &cloudtex.set, 0, nullptr);
 
-        vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8,
-                      cloudtex_size / 8);
-    };
-
-    cs::cc_init(_comp_index, _device);
-    cs::comp_immediate_submit(_device, _comp_queue, &cloudtex);
+            vkCmdDispatch(cbuffer, cloudtex_size / 8, cloudtex_size / 8,
+                          cloudtex_size / 8);
+        },
+        _comp_queue);
 }
 
 void vk_engine::weather_init()
 {
-    constexpr uint32_t weather_size = 512;
+    uint32_t weather_size = 512;
 
     uint32_t id = _comp_allocator.create_img(
         VK_FORMAT_R16_SFLOAT, VkExtent3D{weather_size, weather_size, 1},
@@ -169,7 +170,7 @@ void vk_engine::weather_init()
     std::vector<VkPushConstantRange> push_constants = {u_time_pc};
     pb.build_comp(_device, push_constants, &weather);
 
-    cs_draw.push_back([&, weather, id](VkCommandBuffer cbuffer) {
+    cs_draw.push_back([&, weather, weather_size, id](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _comp_index);
