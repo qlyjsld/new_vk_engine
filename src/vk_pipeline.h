@@ -25,7 +25,6 @@ public:
                    VkPipelineLayout *pipeline_layout, VkPipeline *pipeline);
 
     void build_comp(VkDevice device,
-                    std::vector<VkDescriptorSetLayout> &layouts,
                     std::vector<VkPushConstantRange> &push_constants,
-                    VkPipelineLayout *pipeline_layout, VkPipeline *pipeline);
+                    struct cs *cs);
 };

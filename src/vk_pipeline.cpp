@@ -3,6 +3,7 @@
 #include <volk.h>
 
 #include "vk_boiler.h"
+#include "vk_comp.h"
 #include "vk_type.h"
 
 void PipelineBuilder::build_layout(
@@ -85,24 +86,24 @@ void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format,
 }
 
 void PipelineBuilder::build_comp(
-    VkDevice device, std::vector<VkDescriptorSetLayout> &layouts,
-    std::vector<VkPushConstantRange> &push_constants,
-    VkPipelineLayout *pipeline_layout, VkPipeline *pipeline)
+    VkDevice device, std::vector<VkPushConstantRange> &push_constants, cs *cs)
 {
-    build_layout(device, layouts, push_constants, pipeline_layout);
+    std::vector<VkDescriptorSetLayout> layouts = {cs->layout};
+    build_layout(device, layouts, push_constants, &cs->pipeline_layout);
 
     VkComputePipelineCreateInfo comp_pipeline_info = {};
     comp_pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     comp_pipeline_info.pNext = nullptr;
     // comp_pipeline_info.flags = ;
     comp_pipeline_info.stage = _shader_stage_infos[0];
-    comp_pipeline_info.layout = *pipeline_layout;
+    comp_pipeline_info.layout = cs->pipeline_layout;
     comp_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     // comp_pipeline_info.basePipelineIndex = ;
 
     VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1,
-                                      &comp_pipeline_info, nullptr, pipeline));
+                                      &comp_pipeline_info, nullptr,
+                                      &cs->pipeline));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyPipeline(device, *pipeline, nullptr); });
+        [=]() { vkDestroyPipeline(device, cs->pipeline, nullptr); });
 }

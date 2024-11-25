@@ -20,8 +20,6 @@
 
 using namespace tinygltf;
 
-static uint32_t mesh_base = 0;
-
 struct buffer_view {
     unsigned char *data;
     uint32_t stride;
@@ -176,6 +174,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
     std::string err;
     std::string warn;
     std::vector<mesh> meshes;
+    uint32_t mesh_base = 0;
     bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename);
 
     if (!warn.empty()) {

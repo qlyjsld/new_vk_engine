@@ -120,11 +120,7 @@ void vk_engine::cloudtex_init()
         VK_SHADER_STAGE_COMPUTE_BIT, cloudtex.module));
 
     std::vector<VkPushConstantRange> push_constants = {};
-
-    std::vector<VkDescriptorSetLayout> layouts = {cloudtex.layout};
-
-    pb.build_comp(_device, layouts, push_constants, &cloudtex.pipeline_layout,
-                  &cloudtex.pipeline);
+    pb.build_comp(_device, push_constants, &cloudtex);
 
     cloudtex.immed_draw = [&, cloudtex, id](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
@@ -171,11 +167,7 @@ void vk_engine::weather_init()
     u_time_pc.size = sizeof(float);
 
     std::vector<VkPushConstantRange> push_constants = {u_time_pc};
-
-    std::vector<VkDescriptorSetLayout> layouts = {weather.layout};
-
-    pb.build_comp(_device, layouts, push_constants, &weather.pipeline_layout,
-                  &weather.pipeline);
+    pb.build_comp(_device, push_constants, &weather);
 
     cs_draw.push_back([&, weather, id](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
@@ -233,11 +225,7 @@ void vk_engine::cloud_init()
         VK_SHADER_STAGE_COMPUTE_BIT, cloud.module));
 
     std::vector<VkPushConstantRange> push_constants = {};
-
-    std::vector<VkDescriptorSetLayout> layouts = {cloud.layout};
-
-    pb.build_comp(_device, layouts, push_constants, &cloud.pipeline_layout,
-                  &cloud.pipeline);
+    pb.build_comp(_device, push_constants, &cloud);
 
     uint32_t camera_id = _comp_allocator.get_buffer_id("camera");
 
