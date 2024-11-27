@@ -80,7 +80,7 @@ void vk_engine::device_init()
 
     deletion_queue.push_back([=]() { vkDestroyDevice(_device, nullptr); });
 
-    auto queue_ret = device.get_queue(vkb::QueueType::compute);
+    auto queue_ret = device.get_queue(vkb::QueueType::graphics);
 
     if (!queue_ret) {
         std::cerr << "failed to get compute queue:" << queue_ret.error()
