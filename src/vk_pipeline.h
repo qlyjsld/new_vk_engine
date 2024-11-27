@@ -16,13 +16,13 @@ public:
     VkPipelineMultisampleStateCreateInfo _multisample_state_info;
     VkPipelineDepthStencilStateCreateInfo _depth_stencil_state_info;
 
-    void build_layout(VkDevice device,
-                      std::vector<VkDescriptorSetLayout> &layouts,
-                      std::vector<VkPushConstantRange> &push_constants,
-                      VkPipelineLayout *pipeline_layout);
+    VkPipelineLayout
+    build_layout(VkDevice device, std::vector<VkDescriptorSetLayout> &layouts,
+                 std::vector<VkPushConstantRange> &push_constants);
 
-    void build_gfx(VkDevice device, VkFormat *format, VkFormat depth_format,
-                   VkPipelineLayout *pipeline_layout, VkPipeline *pipeline);
+    VkPipeline build_gfx(VkDevice device, VkFormat *format,
+                         VkFormat depth_format,
+                         VkPipelineLayout pipeline_layout);
 
     void build_comp(VkDevice device,
                     std::vector<VkPushConstantRange> &push_constants,

@@ -6,26 +6,31 @@
 #include "vk_comp.h"
 #include "vk_type.h"
 
-void PipelineBuilder::build_layout(
-    VkDevice device, std::vector<VkDescriptorSetLayout> &layouts,
-    std::vector<VkPushConstantRange> &push_constants,
-    VkPipelineLayout *pipeline_layout)
+VkPipelineLayout
+PipelineBuilder::build_layout(VkDevice device,
+                              std::vector<VkDescriptorSetLayout> &layouts,
+                              std::vector<VkPushConstantRange> &push_constants)
 {
+    VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+
     VkPipelineLayoutCreateInfo pipeline_layout_info =
         vk_boiler::pipeline_layout_create_info(layouts, push_constants);
 
     VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr,
-                                    pipeline_layout));
+                                    &pipeline_layout));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyPipelineLayout(device, *pipeline_layout, nullptr); });
+        [=]() { vkDestroyPipelineLayout(device, pipeline_layout, nullptr); });
+
+    return pipeline_layout;
 }
 
-void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format,
-                                VkFormat depth_format,
-                                VkPipelineLayout *pipeline_layout,
-                                VkPipeline *pipeline)
+VkPipeline PipelineBuilder::build_gfx(VkDevice device, VkFormat *format,
+                                      VkFormat depth_format,
+                                      VkPipelineLayout pipeline_layout)
 {
+    VkPipeline pipeline = VK_NULL_HANDLE;
+
     VkPipelineViewportStateCreateInfo viewport_state_info = {};
     viewport_state_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -72,24 +77,27 @@ void PipelineBuilder::build_gfx(VkDevice device, VkFormat *format,
     graphics_pipeline_info.pDepthStencilState = &_depth_stencil_state_info;
     graphics_pipeline_info.pColorBlendState = &color_blend_state_info;
     // graphics_pipeline_info.pDynamicState = ;
-    graphics_pipeline_info.layout = *pipeline_layout;
+    graphics_pipeline_info.layout = pipeline_layout;
     // graphics_pipeline_info.renderPass = ;
     // graphics_pipeline_info.subpass = ;
     graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     // graphics_pipeline_info.basePipelineIndex = ;
 
-    VK_CHECK(vkCreateGraphicsPipelines(
-        device, VK_NULL_HANDLE, 1, &graphics_pipeline_info, nullptr, pipeline));
+    VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1,
+                                       &graphics_pipeline_info, nullptr,
+                                       &pipeline));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyPipeline(device, *pipeline, nullptr); });
+        [=]() { vkDestroyPipeline(device, pipeline, nullptr); });
+
+    return pipeline;
 }
 
 void PipelineBuilder::build_comp(
     VkDevice device, std::vector<VkPushConstantRange> &push_constants, cs *cs)
 {
     std::vector<VkDescriptorSetLayout> layouts = {cs->layout};
-    build_layout(device, layouts, push_constants, &cs->pipeline_layout);
+    cs->pipeline_layout = build_layout(device, layouts, push_constants);
 
     VkComputePipelineCreateInfo comp_pipeline_info = {};
     comp_pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -104,6 +112,7 @@ void PipelineBuilder::build_comp(
                                       &comp_pipeline_info, nullptr,
                                       &cs->pipeline));
 
+    VkPipeline pipeline = cs->pipeline;
     deletion_queue.push_back(
-        [=]() { vkDestroyPipeline(device, cs->pipeline, nullptr); });
+        [=]() { vkDestroyPipeline(device, pipeline, nullptr); });
 }

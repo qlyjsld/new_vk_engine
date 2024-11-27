@@ -172,13 +172,10 @@ void vk_engine::pipeline_init()
     gfx_pipeline_builder._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,
                                             _frag));
-
     gfx_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
     gfx_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
-
     vertex_input_description description =
         vertex::get_vertex_input_description();
-
     gfx_pipeline_builder._vertex_input_state_info =
         vk_boiler::vertex_input_state_create_info(&description);
     gfx_pipeline_builder._input_asm_state_info =
@@ -200,11 +197,11 @@ void vk_engine::pipeline_init()
 
     std::vector<VkPushConstantRange> push_constants = {};
 
-    gfx_pipeline_builder.build_layout(_device, layouts, push_constants,
-                                      &_gfx_pipeline_layout);
+    _gfx_pipeline_layout =
+        gfx_pipeline_builder.build_layout(_device, layouts, push_constants);
 
-    gfx_pipeline_builder.build_gfx(_device, &_format, _depth_img.format,
-                                   &_gfx_pipeline_layout, &_gfx_pipeline);
+    _gfx_pipeline = gfx_pipeline_builder.build_gfx(
+        _device, &_format, _depth_img.format, _gfx_pipeline_layout);
 }
 
 void vk_engine::draw()
