@@ -24,7 +24,7 @@
 #include "vk_pipeline.h"
 #include "vk_type.h"
 
-const static VkClearValue clear_value = {{{1.f}}};
+constexpr static VkClearValue clear_value = {{{1.f}}};
 
 void vk_engine::init()
 {
@@ -376,10 +376,11 @@ void vk_engine::run()
     SDL_SetWindowRelativeMouseMode(_window, true);
 
     auto input = std::async([&]() {
-        while (!bquit) {
-            const bool *state = SDL_GetKeyboardState(NULL);
+        const bool *state = SDL_GetKeyboardState(NULL);
+        float ms = 0.f;
 
-            float ms = (SDL_GetTicksNS() - _last_frame) / 1000000.f;
+        while (!bquit) {
+            ms = (SDL_GetTicksNS() - _last_frame) * (1.f / 1000000.f);
 
             if (SDL_GetWindowRelativeMouseMode(_window)) {
                 if (state[SDL_SCANCODE_W])

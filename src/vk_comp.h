@@ -25,7 +25,7 @@ public:
                         VkImageAspectFlags aspect, VkImageUsageFlags usage,
                         VmaAllocationCreateFlags flags, std::string name);
 
-    inline uint32_t get_buffer_id(std::string name)
+    uint32_t get_buffer_id(std::string name)
     {
         uint32_t i = 0;
         for (i = 0; i < buffer_id.size(); ++i)
@@ -34,7 +34,7 @@ public:
         return i;
     };
 
-    inline uint32_t get_img_id(std::string name)
+    uint32_t get_img_id(std::string name)
     {
         uint32_t i = 0;
         for (i = 0; i < img_id.size(); ++i)
@@ -43,13 +43,13 @@ public:
         return i;
     };
 
-    inline void load_buffer(std::string name, allocated_buffer buffer)
+    void load_buffer(std::string name, allocated_buffer buffer)
     {
         buffers.push_back(buffer);
         buffer_id.push_back(name);
     };
 
-    inline void load_img(std::string name, allocated_img img)
+    void load_img(std::string name, allocated_img img)
     {
         imgs.push_back(img);
         img_id.push_back(name);

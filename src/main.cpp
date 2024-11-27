@@ -112,8 +112,8 @@ void vk_engine::cloudtex_init()
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "cloudtex"},
     };
 
-    cs cloudtex(&_comp_allocator, descriptors, "../shaders/cloudtex.comp.spv",
-                _min_buffer_alignment);
+    static cs cloudtex(&_comp_allocator, descriptors,
+                       "../shaders/cloudtex.comp.spv", _min_buffer_alignment);
 
     /* build pipeline */
     PipelineBuilder pb = {};
@@ -124,7 +124,7 @@ void vk_engine::cloudtex_init()
     pb.build_comp(_device, push_constants, &cloudtex);
 
     immediate_draw(
-        [&, cloudtex, cloudtex_size, id](VkCommandBuffer cbuffer) {
+        [&, cloudtex_size, id](VkCommandBuffer cbuffer) {
             vk_cmd::vk_img_layout_transition(
                 cbuffer, _comp_allocator.imgs[id].img,
                 VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, _fam_index);
@@ -154,8 +154,8 @@ void vk_engine::weather_init()
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, "weather"},
     };
 
-    cs weather(&_comp_allocator, descriptors, "../shaders/weather.comp.spv",
-               _min_buffer_alignment);
+    static cs weather(&_comp_allocator, descriptors,
+                      "../shaders/weather.comp.spv", _min_buffer_alignment);
 
     PipelineBuilder pb = {};
     pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
@@ -169,7 +169,7 @@ void vk_engine::weather_init()
     std::vector<VkPushConstantRange> push_constants = {u_time_pc};
     pb.build_comp(_device, push_constants, &weather);
 
-    cs_draw.push_back([&, weather, weather_size, id](VkCommandBuffer cbuffer) {
+    cs_draw.push_back([&, weather_size, id](VkCommandBuffer cbuffer) {
         vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
                                          VK_IMAGE_LAYOUT_UNDEFINED,
                                          VK_IMAGE_LAYOUT_GENERAL, _fam_index);
@@ -217,8 +217,8 @@ void vk_engine::cloud_init()
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, "cloud"},
     };
 
-    cs cloud(&_comp_allocator, descriptors, "../shaders/cloud.comp.spv",
-             _min_buffer_alignment);
+    static cs cloud(&_comp_allocator, descriptors, "../shaders/cloud.comp.spv",
+                    _min_buffer_alignment);
 
     PipelineBuilder pb = {};
     pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
@@ -229,7 +229,7 @@ void vk_engine::cloud_init()
 
     uint32_t camera_id = _comp_allocator.get_buffer_id("camera");
 
-    cs_draw.push_back([&, cloud, camera_id, cloud_id](VkCommandBuffer cbuffer) {
+    cs_draw.push_back([&, camera_id, cloud_id](VkCommandBuffer cbuffer) {
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           cloud.pipeline);
 

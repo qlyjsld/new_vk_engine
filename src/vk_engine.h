@@ -122,6 +122,7 @@ public:
     VkShaderModule _frag;
 
     immed_context _immed_context;
+
     void immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
                         VkQueue queue);
 
