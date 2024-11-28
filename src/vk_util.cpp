@@ -32,14 +32,14 @@ void vk_engine::immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
     VK_CHECK(vkResetFences(_device, 1, &_immed_context.fence));
 }
 
-bool vk_engine::load_shader_module(const char *filename,
-                                   VkShaderModule *shader_module)
+VkShaderModule vk_engine::load_shader_module(const char *filename)
 {
     std::ifstream f(filename, std::ios::ate | std::ios::binary);
+    VkShaderModule shader_module = VK_NULL_HANDLE;
 
     if (!f.is_open()) {
         std::cerr << "shader: " << filename << " not exist" << std::endl;
-        return false;
+        return shader_module;
     }
 
     size_t size = f.tellg();
@@ -56,12 +56,12 @@ bool vk_engine::load_shader_module(const char *filename,
     shader_module_info.pCode = buffer.data();
 
     VK_CHECK(vkCreateShaderModule(_device, &shader_module_info, nullptr,
-                                  shader_module));
+                                  &shader_module));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyShaderModule(_device, *shader_module, nullptr); });
+        [=]() { vkDestroyShaderModule(_device, shader_module, nullptr); });
 
-    return true;
+    return shader_module;
 }
 
 void vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,

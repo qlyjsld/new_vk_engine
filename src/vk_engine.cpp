@@ -163,8 +163,8 @@ void vk_engine::descriptor_init()
 void vk_engine::pipeline_init()
 {
     /* build graphics pipeline */
-    load_shader_module("../shaders/.vert.spv", &_vert);
-    load_shader_module("../shaders/.frag.spv", &_frag);
+    _vert = load_shader_module("../shaders/.vert.spv");
+    _frag = load_shader_module("../shaders/.frag.spv");
 
     PipelineBuilder gfx_pipeline_builder = {};
     gfx_pipeline_builder._shader_stage_infos.push_back(

@@ -141,7 +141,7 @@ private:
     void sync_init();
 
     void descriptor_init();
-    bool load_shader_module(const char *file, VkShaderModule *shader_module);
+    VkShaderModule load_shader_module(const char *file);
     void pipeline_init();
 
     void imgui_init();
