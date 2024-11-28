@@ -86,8 +86,8 @@ float perlin_noise(float x, float y)
     x -= floor(x);
     y -= floor(y);
 
-    float u = fade(x);
-    float v = fade(y);
+    float u = x;
+    float v = y;
 
     return lerp(lerp(grad(p[p[ix] + iy], vec2(x, y)),
                     grad(p[p[ix + 1] + iy], vec2(x - 1.f, y)), u),

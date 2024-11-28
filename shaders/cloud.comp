@@ -35,10 +35,7 @@ layout (set = 0, binding = 4) uniform readonly CLOUD
 
 float rand(float x)
 {
-    /* better performance worse result */
-    // return sqrt(fract(sin(x) * 100000.f));
-    // return sqrt(fract(sin(x) * 100000.f)) - .5f;
-    return fract(sin(x) * 100000.f) - .5f;
+    return fract(sin(x) * 100000.f);
 }
 
 float fade(float t)
@@ -49,16 +46,6 @@ float fade(float t)
 float remap(float value, float old_min, float old_max, float new_min, float new_max)
 {
     return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
-}
-
-/* reference: https://www.shadertoy.com/view/lslGzl */
-vec3 linearToneMapping(vec3 color)
-{
-    float exposure = .6f;
-    float gamma = 3.f;
-    color = clamp(exposure * color, 0.f, 1.f);
-    color = pow(color, vec3(1.f / gamma));
-    return color;
 }
 
 struct sphere {
@@ -114,8 +101,8 @@ float eval_density(vec3 p, float height)
 
 void main()
 {
-    int x = int(8 * gl_WorkGroupID.x + gl_LocalInvocationID.x);
-    int y = int(8 * gl_WorkGroupID.y + gl_LocalInvocationID.y);
+    uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
+    uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
 
     vec2 res = vec2(8 * gl_NumWorkGroups.x, 8 * gl_NumWorkGroups.y);
 
@@ -212,5 +199,4 @@ void main()
 
     color += background * transmittance;
     imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
-    // imageStore(out_frame, ivec2(x, y), vec4(linearToneMapping(color), 1.f));
 }
