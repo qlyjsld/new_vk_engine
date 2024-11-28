@@ -191,9 +191,10 @@ bool cs::load_shader_module(const char *filename)
     VK_CHECK(
         vkCreateShaderModule(device, &shader_module_info, nullptr, &module));
 
+    VkDevice copy_device = device;
     VkShaderModule copy_module = module;
     deletion_queue.push_back(
-        [=]() { vkDestroyShaderModule(device, copy_module, nullptr); });
+        [=]() { vkDestroyShaderModule(copy_device, copy_module, nullptr); });
 
     return true;
 }
