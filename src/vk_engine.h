@@ -134,6 +134,8 @@ public:
 private:
     VmaVulkanFunctions vma_vulkan_func;
 
+    constexpr static VkClearValue clear_value = {{{1.f}}};
+
     void device_init();
     void vma_init();
     void swapchain_init();

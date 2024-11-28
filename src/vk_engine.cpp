@@ -24,8 +24,6 @@
 #include "vk_pipeline.h"
 #include "vk_type.h"
 
-constexpr static VkClearValue clear_value = {{{1.f}}};
-
 void vk_engine::init()
 {
     /* initialize SDL and create a window with it */
