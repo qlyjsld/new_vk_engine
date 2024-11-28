@@ -55,8 +55,8 @@ public:
         img_id.push_back(name);
     }
 
-    VkDescriptorSetLayout create_descriptor_set_layout(
-        std::vector<VkDescriptorType>& types);
+    VkDescriptorSetLayout
+    create_descriptor_set_layout(std::vector<VkDescriptorType> &types);
 
     VkDescriptorSet allocate_descriptor_set(VkDescriptorSetLayout layout);
 

@@ -92,7 +92,7 @@ uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
 }
 
 VkDescriptorSetLayout comp_allocator::create_descriptor_set_layout(
-    std::vector<VkDescriptorType>& types)
+    std::vector<VkDescriptorType> &types)
 {
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 
@@ -109,8 +109,8 @@ VkDescriptorSetLayout comp_allocator::create_descriptor_set_layout(
     return layout;
 }
 
-VkDescriptorSet comp_allocator::allocate_descriptor_set(
-    VkDescriptorSetLayout layout)
+VkDescriptorSet
+comp_allocator::allocate_descriptor_set(VkDescriptorSetLayout layout)
 {
     VkDescriptorSet set = VK_NULL_HANDLE;
 
