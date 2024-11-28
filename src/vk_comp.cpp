@@ -91,25 +91,36 @@ uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
     return id;
 }
 
-void comp_allocator::allocate_descriptor_set(
-    std::vector<VkDescriptorType> types, VkDescriptorSetLayout *layout,
-    VkDescriptorSet *set)
+VkDescriptorSetLayout comp_allocator::create_descriptor_set_layout(
+    std::vector<VkDescriptorType>& types)
 {
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+
     VkDescriptorSetLayoutCreateInfo layout_info =
         vk_boiler::descriptor_set_layout_create_info(
             types, VK_SHADER_STAGE_COMPUTE_BIT);
 
     VK_CHECK(
-        vkCreateDescriptorSetLayout(device, &layout_info, nullptr, layout));
+        vkCreateDescriptorSetLayout(device, &layout_info, nullptr, &layout));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorSetLayout(device, *layout, nullptr); });
+        [=]() { vkDestroyDescriptorSetLayout(device, layout, nullptr); });
+
+    return layout;
+}
+
+VkDescriptorSet comp_allocator::allocate_descriptor_set(
+    VkDescriptorSetLayout layout)
+{
+    VkDescriptorSet set = VK_NULL_HANDLE;
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(comp_descriptor_pool, layout);
+        vk_boiler::descriptor_set_allocate_info(comp_descriptor_pool, &layout);
 
     VK_CHECK(
-        vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, set));
+        vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &set));
+
+    return set;
 };
 
 void cs::write_descriptor_set(std::vector<VkDescriptorType> types,

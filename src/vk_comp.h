@@ -55,9 +55,10 @@ public:
         img_id.push_back(name);
     }
 
-    void allocate_descriptor_set(std::vector<VkDescriptorType> types,
-                                 VkDescriptorSetLayout *layout,
-                                 VkDescriptorSet *set);
+    VkDescriptorSetLayout create_descriptor_set_layout(
+        std::vector<VkDescriptorType>& types);
+
+    VkDescriptorSet allocate_descriptor_set(VkDescriptorSetLayout layout);
 
     void init();
 
@@ -83,7 +84,8 @@ public:
             names.push_back(descriptors[i].second);
         }
 
-        allocator->allocate_descriptor_set(types, &layout, &set);
+        layout = allocator->create_descriptor_set_layout(types);
+        set = allocator->allocate_descriptor_set(layout);
 
         write_descriptor_set(types, names);
 
