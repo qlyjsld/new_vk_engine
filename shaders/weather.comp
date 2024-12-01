@@ -26,33 +26,7 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
             81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
-            222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180,
-            151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 233,   7, 225,
-            140,  36, 103,  30,  69, 142,   8,  99,  37, 240,  21,  10,  23, 190,   6, 148,
-            247, 120, 234,  75,   0,  26, 197,  62,  94, 252, 219, 203, 117,  35,  11,  32,
-            57, 177,  33,  88, 237, 149,  56,  87, 174,  20, 125, 136, 171, 168,  68, 175,
-            74, 165,  71, 134, 139,  48,  27, 166,  77, 146, 158, 231,  83, 111, 229, 122,
-            60, 211, 133, 230, 220, 105,  92,  41,  55,  46, 245,  40, 244, 102, 143,  54,
-            65,  25,  63, 161,   1, 216,  80,  73, 209,  76, 132, 187, 208,  89,  18, 169,
-            200, 196, 135, 130, 116, 188, 159,  86, 164, 100, 109, 198, 173, 186,   3,  64,
-            52, 217, 226, 250, 124, 123,   5, 202,  38, 147, 118, 126, 255,  82,  85, 212,
-            207, 206,  59, 227,  47,  16,  58,  17, 182, 189,  28,  42, 223, 183, 170, 213,
-            119, 248, 152,   2,  44, 154, 163,  70, 221, 153, 101, 155, 167,  43, 172,   9,
-            129,  22,  39, 253,  19,  98, 108, 110,  79, 113, 224, 232, 178, 185, 112, 104,
-            218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
-            81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
-            184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
-
-float rand(float x)
-{
-    return fract(sin(x) * 100000.f) - .5f;
-}
-
-float remap(float value, float old_min, float old_max, float new_min, float new_max)
-{
-    return clamp(new_min + ((value - old_min) / (old_max - old_min)) * (new_max - new_min), new_min, new_max);
-}
 
 float fade(float t)
 {
@@ -80,49 +54,41 @@ float grad(uint h, vec2 v)
 
 float perlin_noise(float x, float y)
 {
-    uint ix = uint(floor(x)) & 255;
-    uint iy = uint(floor(y)) & 255;
+    uint ix = uint(floor(x)) & 127;
+    uint iy = uint(floor(y)) & 127;
 
     x -= floor(x);
     y -= floor(y);
 
-    float u = x;
-    float v = y;
-
     return lerp(lerp(grad(p[p[ix] + iy], vec2(x, y)),
-                    grad(p[p[ix + 1] + iy], vec2(x - 1.f, y)), u),
+                    grad(p[p[ix + 1] + iy], vec2(x - 1.f, y)), x),
                 lerp(grad(p[p[ix]+ iy + 1], vec2(x, y - 1.f)),
-                    grad(p[p[ix + 1] + iy + 1], vec2(x - 1.f, y - 1.f)), u), v);
+                    grad(p[p[ix + 1] + iy + 1], vec2(x - 1.f, y - 1.f)), x), y);
 }
 
-float dist (vec2 a, vec2 b)
-{
-    return sqrt((b.y - a.y) * (b.y - a.y) + (b.x - a.x) * (b.x - a.x));
-}
-
-float fbm(float x, float y, uint octaves, float H)
+float fbm(float x, float y, uint octaves)
 {
     float t = 0.f;
-    float f = 1.f;
+    float a = 1.f;
     for (uint o = 0; o < octaves; ++o) {
-        t += 1.f / f * perlin_noise(f * x, f * y);
-        f *= 2.f;
+        t += a * perlin_noise(x, y);
+        a *= .5f;
+        x *= 2.f;
+        y *= 2.f;
     }
 
-    return (t + 1.f) / 2.f;
+    return t * .5f + .5f;
 }
 
 #define octaves 8
 #define infreq 8
-#define h 1.f
 
 void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    float ux = x / 1024.f * infreq;
-    float uy = y / 1024.f * infreq;
-    vec4 color = vec4(fbm(ux + u_time.value * .03f, uy + u_time.value * .03f, octaves, h));
-    color.x = remap(color.x, .3f, 1.f, 0.f, 1.f);
+    float ux = x * .001f * infreq + u_time.value * .03f;
+    float uy = y * .001f * infreq + u_time.value * .03f;
+    vec4 color = vec4(fbm(ux, uy, octaves));
     imageStore(out_frame, ivec2(x, y), color);
 }
