@@ -42,13 +42,13 @@ float grad(uint h, vec2 v)
 {
     switch(h & 3) {
     case 0:
-        return dot(v, vec2(0.707f, 0.707f));
+        return -v.x;
     case 1:
-        return dot(v, vec2(0.707f, -0.707f));
+        return v.x;
     case 2:
-        return dot(v, vec2(-0.707f, 0.707f));
+        return -v.y;
     case 3:
-        return dot(v, vec2(-0.707f, -0.707f));
+        return v.y;
     }
 }
 
@@ -60,13 +60,16 @@ float perlin_noise(float x, float y)
     x -= floor(x);
     y -= floor(y);
 
+    float u = fade(x);
+    float v = fade(y);
+
     return lerp(lerp(grad(p[p[ix] + iy], vec2(x, y)),
-                    grad(p[p[ix + 1] + iy], vec2(x - 1.f, y)), x),
+                    grad(p[p[ix + 1] + iy], vec2(x - 1.f, y)), u),
                 lerp(grad(p[p[ix]+ iy + 1], vec2(x, y - 1.f)),
-                    grad(p[p[ix + 1] + iy + 1], vec2(x - 1.f, y - 1.f)), x), y);
+                    grad(p[p[ix + 1] + iy + 1], vec2(x - 1.f, y - 1.f)), u), v);
 }
 
-float fbm(float x, float y, uint octaves)
+float fbm_perlin(float x, float y, uint octaves)
 {
     float t = 0.f;
     float a = 1.f;
@@ -76,19 +79,14 @@ float fbm(float x, float y, uint octaves)
         x *= 2.f;
         y *= 2.f;
     }
-
     return t * .5f + .5f;
 }
 
-#define octaves 8
-#define infreq 8
-
 void main()
 {
-    uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
-    uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    float ux = x * .001f * infreq + u_time.value * .03f;
-    float uy = y * .001f * infreq + u_time.value * .03f;
-    vec4 color = vec4(fbm(ux, uy, octaves));
-    imageStore(out_frame, ivec2(x, y), color);
+    vec3 frag_crood = 8 * gl_WorkGroupID + gl_LocalInvocationID;
+    float ux = frag_crood.x * .01f + u_time.value * .03f;
+    float uy = frag_crood.y * .01f + u_time.value * .03f;
+    float color = fbm_perlin(ux, uy, 6);
+    imageStore(out_frame, ivec2(frag_crood.x, frag_crood.y), vec4(color));
 }
