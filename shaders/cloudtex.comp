@@ -33,12 +33,6 @@ float fade(float t)
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
 }
 
-float remap(float value, float old_min, float old_max, float new_min, float new_max)
-{
-    return clamp(new_min + ((value - old_min) / (old_max - old_min))
-            * (new_max - new_min), new_min, new_max);
-}
-
 float lerp(float a, float b, float t)
 {
 	return a + t * (b - a);
@@ -46,23 +40,39 @@ float lerp(float a, float b, float t)
 
 float grad(uint h, vec3 v)
 {
-    switch(h & 7) {
+    switch(h & 15) {
     case 0:
-        return dot(v, vec3(.707f, .707f, .707f));
+        return v.x + v.y;
     case 1:
-        return dot(v, vec3(-.707f, .707f, .707f));
+        return v.x - v.y;
     case 2:
-        return dot(v, vec3(.707f, -.707f, .707f));
+        return -v.x + v.y;
     case 3:
-        return dot(v, vec3(-.707f, -.707f, .707f));
+        return -v.x - v.y;
     case 4:
-        return dot(v, vec3(.707f, .707f, -.707f));
+        return v.x + v.z;
     case 5:
-        return dot(v, vec3(-.707f, .707f, -.707f));
+        return v.x - v.z;
     case 6:
-        return dot(v, vec3(.707f, -.707f, -.707f));
+        return -v.x + v.z;
     case 7:
-        return dot(v, vec3(-.707f, -.707f, -.707f));
+        return -v.x - v.z;
+    case 8:
+        return v.y + v.z;
+    case 9:
+        return v.y - v.z;
+    case 10:
+        return -v.y + v.z;
+    case 11:
+        return -v.y - v.z;
+    case 12:
+        return v.z + v.x;
+    case 13:
+        return v.z - v.x;
+    case 14:
+        return -v.z + v.y;
+    case 15:
+        return -v.z - v.y;
     }
 }
 
@@ -75,6 +85,10 @@ float perlin_noise(float x, float y, float z, float f)
     x -= floor(x);
     y -= floor(y);
     z -= floor(z);
+
+    float u = fade(x);
+    float v = fade(y);
+    float w = fade(z);
 
     uint ix1 = ix + 1;
     uint iy1 = iy + 1;
@@ -102,13 +116,19 @@ float perlin_noise(float x, float y, float z, float f)
     vec3 dbb = vec3(x, y - 1.f, z - 1.f);
     vec3 dbc = vec3(x - 1.f, y - 1.f, z - 1.f);
 
-    float alerp = lerp(lerp(grad(a, da), grad(aa, daa), x),
-                lerp(grad(ab, dab), grad(ac, dac), x), y);
+    float alerp = lerp(lerp(grad(a, da), grad(aa, daa), u),
+                lerp(grad(ab, dab), grad(ac, dac), u), v);
 
-    float blerp = lerp(lerp(grad(b, db), grad(ba, dba), x),
-                lerp(grad(bb, dbb), grad(bc, dbc), x), y);
+    float blerp = lerp(lerp(grad(b, db), grad(ba, dba), u),
+                lerp(grad(bb, dbb), grad(bc, dbc), u), v);
 
-    return lerp(alerp, blerp, z);
+    return lerp(alerp, blerp, w);
+}
+
+float remap(float value, float old_min, float old_max, float new_min, float new_max)
+{
+    return clamp(new_min + ((value - old_min) / (old_max - old_min))
+            * (new_max - new_min), new_min, new_max);
 }
 
 float dist(vec3 a, vec3 b)
