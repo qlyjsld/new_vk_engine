@@ -214,7 +214,7 @@ float fbm_worley(float x, float y, float z, uint octaves, float infreq)
         t += a * worley_noise(f * x, f * y, f * z, f);
     }
 
-    return remap(t, 0.f, .6f, 0.f, 1.f);
+    return remap(t, 0.f, 1.f, 0.f, 2.f);
 }
 
 void main()
@@ -225,10 +225,10 @@ void main()
     float ux = x / 128.f;
     float uy = y / 128.f;
     float uz = z / 128.f;
-    vec4 color = vec4(fbm_comb(ux, uy, uz, 3, 3),
-                    fbm_worley(ux, uy, uz, 4, 4),
+    vec4 color = vec4(fbm_comb(ux, uy, uz, 3, 6),
                     fbm_worley(ux, uy, uz, 6, 6),
-                    fbm_worley(ux, uy, uz, 8, 8));
+                    fbm_worley(ux, uy, uz, 3, 9),
+                    fbm_worley(ux, uy, uz, 3, 9));
 
     imageStore(out_frame, ivec3(x, y, z), color);
 }
