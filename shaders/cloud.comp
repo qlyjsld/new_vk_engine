@@ -109,8 +109,8 @@ void main()
     vec3 o = camera.pos;
     vec3 d = camera.dir;
 
-    vec3 left = cross(camera.up, d);
-    vec3 up = cross(d, left);
+    vec3 left = normalize(cross(camera.up, d));
+    vec3 up = normalize(cross(d, left));
 
     float h = tan(radians(camera.fov) * .5f);
     vec3 upperleft = (o + camera.height * .5f / h * d) + left * camera.width * .5f
