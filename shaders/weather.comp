@@ -79,6 +79,7 @@ float fbm_perlin(float x, float y, uint octaves)
         x *= 2.f;
         y *= 2.f;
     }
+
     return t * .5f + .5f;
 }
 
