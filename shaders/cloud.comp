@@ -62,8 +62,8 @@ vec2 hit_sphere(sphere s, vec3 o, vec3 r)
     float discriminant = b * b - 4.f * a * c;
 
     if (discriminant >= 0.f)
-            return vec2((-b - sqrt(discriminant)) / 2.f * a,
-                        (-b + sqrt(discriminant)) / 2.f * a);
+            return vec2((-b - sqrt(discriminant)) * .5f * a,
+                        (-b + sqrt(discriminant)) * .5f * a);
 
     return vec2(-1.f);
 }
@@ -109,12 +109,12 @@ void main()
     vec3 o = camera.pos;
     vec3 d = camera.dir;
 
-    vec3 left = normalize(cross(camera.up, d));
-    vec3 up = normalize(cross(d, left));
+    vec3 left = cross(camera.up, d);
+    vec3 up = cross(d, left);
 
-    float h = tan(radians(camera.fov) / 2.f);
-    vec3 upperleft = (o + camera.height / 2.f / h * d) + left * camera.width / 2.f
-                    + up * camera.height / 2.f;
+    float h = tan(radians(camera.fov) * .5f);
+    vec3 upperleft = (o + camera.height * .5f / h * d) + left * camera.width * .5f
+                    + up * camera.height * .5f;
     vec3 r = normalize(upperleft - left * x - up * y - o);
 
     vec3 background = mix(cloud.sky_color, vec3(1.f), y / camera.height);

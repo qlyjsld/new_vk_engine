@@ -87,8 +87,8 @@ void main()
 {
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    float ux = x * .0078125f + u_time.value * .0078125f;
-    float uy = y * .0078125f + u_time.value * .0078125f;
-    float color = fbm_perlin(ux, uy, 6);
+    float ux = x * .0078125f + u_time.value;
+    float uy = y * .0078125f + u_time.value;
+    float color = fbm_perlin(ux, uy, 3);
     imageStore(out_frame, ivec2(x, y), vec4(color));
 }

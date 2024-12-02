@@ -181,7 +181,7 @@ void vk_engine::weather_init()
                                 weather.pipeline_layout, 0, 1, &weather.set, 0,
                                 nullptr);
 
-        u_time = SDL_GetTicks() / 1000.f;
+        u_time = SDL_GetTicks() / 10000.f;
         vkCmdPushConstants(cbuffer, weather.pipeline_layout,
                            VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(float),
                            &u_time);

@@ -225,5 +225,6 @@ void main()
     float color2 = fbm_worley(ux, uy, uz, 3, 3);
     float color3 = fbm_worley(ux, uy, uz, 3, 6);
     float color4 = fbm_worley(ux, uy, uz, 3, 9);
-    imageStore(out_frame, ivec3(x, y, z), vec4(color1, color2, color3, color4));
+    imageStore(out_frame, ivec3(x, y, z), vec4(.7f * color1 + .3f * color2,
+        color2, color3, color4));
 }
