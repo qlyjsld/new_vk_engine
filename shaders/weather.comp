@@ -74,8 +74,8 @@ float fbm_perlin(float x, float y, uint octaves)
     float t = 0.f;
     float a = 1.f;
     for (uint o = 0; o < octaves; ++o) {
-        t += a * perlin_noise(x, y);
         a *= .5f;
+        t += a * perlin_noise(x, y);
         x *= 2.f;
         y *= 2.f;
     }
@@ -85,8 +85,8 @@ float fbm_perlin(float x, float y, uint octaves)
 void main()
 {
     vec3 frag_crood = 8 * gl_WorkGroupID + gl_LocalInvocationID;
-    float ux = frag_crood.x * .01f + u_time.value * .03f;
-    float uy = frag_crood.y * .01f + u_time.value * .03f;
+    float ux = frag_crood.x * .0078125f + u_time.value * .0078125f;
+    float uy = frag_crood.y * .0078125f + u_time.value * .0078125f;
     float color = fbm_perlin(ux, uy, 6);
     imageStore(out_frame, ivec2(frag_crood.x, frag_crood.y), vec4(color));
 }

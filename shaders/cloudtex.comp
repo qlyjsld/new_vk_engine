@@ -175,46 +175,42 @@ float worley_noise(float x, float y, float z, float f)
     return 1.f - t;
 }
 
-float fbm_comb(float x, float y, float z, uint octaves, float infreq)
+float fbm_perlin(float x, float y, float z, uint octaves, float f)
 {
     float t = 0.f;
+    float a = 1.f;
+    x *= f;
+    y *= f;
+    z *= f;
     for (uint o = 0; o < octaves; ++o) {
-        float f = pow(2, o) * infreq;
-        float a = pow(f, -1);
-        t += a * perlin_noise(f * x, f * y, f * z, f);
-    }
-
-    for (int o = 0; o < octaves; ++o) {
-        float f = pow(2, o) * infreq;
-        float a = pow(f, -1);
-        t += a * (worley_noise(f * x, f * y, f * z, f) * 2.f - 1.f);
+        a *= .5f;
+        t += a * perlin_noise(x, y, z, f);
+        x *= 2.f;
+        y *= 2.f;
+        z *= 2.f;
+        f *= 2.f;
     }
 
     return (t + 1.f) / 2.f;
 }
 
-float fbm_perlin(float x, float y, float z, uint octaves, float infreq)
+float fbm_worley(float x, float y, float z, uint octaves, float f)
 {
     float t = 0.f;
+    float a = 1.f;
+    x *= f;
+    y *= f;
+    z *= f;
     for (uint o = 0; o < octaves; ++o) {
-        float f = pow(2, o) * infreq;
-        float a = pow(f, -1);
-        t += a * perlin_noise(f * x, f * y, f * z, f);
+        a *= .5f;
+        t += a * worley_noise(x, y, z, f);
+        x *= 2.f;
+        y *= 2.f;
+        z *= 2.f;
+        f *= 2.f;
     }
 
-    return (t + 1.f) / 2.f;
-}
-
-float fbm_worley(float x, float y, float z, uint octaves, float infreq)
-{
-    float t = 0.f;
-    for (int o = 0; o < octaves; ++o) {
-        float f = pow(2, o) * infreq;
-        float a = pow(f, -1);
-        t += a * worley_noise(f * x, f * y, f * z, f);
-    }
-
-    return remap(t, 0.f, 1.f, 0.f, 2.f);
+    return t;
 }
 
 void main()
@@ -222,13 +218,12 @@ void main()
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     uint z = 8 * gl_WorkGroupID.z + gl_LocalInvocationID.z;
-    float ux = x / 128.f;
-    float uy = y / 128.f;
-    float uz = z / 128.f;
-    vec4 color = vec4(fbm_comb(ux, uy, uz, 3, 6),
-                    fbm_worley(ux, uy, uz, 6, 6),
-                    fbm_worley(ux, uy, uz, 3, 9),
-                    fbm_worley(ux, uy, uz, 3, 9));
-
-    imageStore(out_frame, ivec3(x, y, z), color);
+    float ux = x * .0078125f;
+    float uy = y * .0078125f;
+    float uz = z * .0078125f;
+    float color1 = fbm_perlin(ux, uy, uz, 3, 3);
+    float color2 = fbm_worley(ux, uy, uz, 3, 3);
+    float color3 = fbm_worley(ux, uy, uz, 3, 6);
+    float color4 = fbm_worley(ux, uy, uz, 3, 9);
+    imageStore(out_frame, ivec3(x, y, z), vec4(color1, color2, color3, color4));
 }
