@@ -43,7 +43,7 @@ struct camera_data {
     float fov;
     glm::vec3 dir;
     float width;
-    glm::vec3 up;
+    glm::vec3 left;
     float height;
 };
 

@@ -14,7 +14,7 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
     float fov;
     vec3 dir;
     float width;
-    vec3 up;
+    vec3 left;
     float height;
 } camera;
 
@@ -109,13 +109,13 @@ void main()
     vec3 o = camera.pos;
     vec3 d = camera.dir;
 
-    vec3 left = normalize(cross(camera.up, d));
-    vec3 up = normalize(cross(d, left));
+    vec3 up = normalize(cross(d, camera.left));
 
     float h = tan(radians(camera.fov) * .5f);
-    vec3 upperleft = (o + camera.height * .5f / h * d) + left * camera.width * .5f
+    vec3 upperleft = (o + camera.height * .5f / h * d)
+                    + camera.left * camera.width * .5f
                     + up * camera.height * .5f;
-    vec3 r = normalize(upperleft - left * x - up * y - o);
+    vec3 r = normalize(upperleft - camera.left * x - up * y - o);
 
     vec3 background = mix(cloud.sky_color, vec3(1.f), y / camera.height);
 

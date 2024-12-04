@@ -40,7 +40,7 @@ public:
 
     inline glm::vec3 get_pos() { return pos; };
     inline glm::vec3 get_dir() { return dir; };
-    inline glm::vec3 get_up() { return up; };
+    inline glm::vec3 get_left() { return glm::normalize(glm::cross(up, dir)); };
     inline float get_fov() { return fov; };
 
 private:

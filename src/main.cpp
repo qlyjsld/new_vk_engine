@@ -237,7 +237,7 @@ void vk_engine::cloud_init()
         _camera_data.fov = _vk_camera.get_fov();
         _camera_data.dir = _vk_camera.get_dir();
         _camera_data.width = _resolution.width;
-        _camera_data.up = _vk_camera.get_up();
+        _camera_data.left = _vk_camera.get_left();
         _camera_data.height = _resolution.height;
 
         void *data;

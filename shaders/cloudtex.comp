@@ -26,6 +26,22 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
             81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
+            222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180,
+            151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 233,   7, 225,
+            140,  36, 103,  30,  69, 142,   8,  99,  37, 240,  21,  10,  23, 190,   6, 148,
+            247, 120, 234,  75,   0,  26, 197,  62,  94, 252, 219, 203, 117,  35,  11,  32,
+            57, 177,  33,  88, 237, 149,  56,  87, 174,  20, 125, 136, 171, 168,  68, 175,
+            74, 165,  71, 134, 139,  48,  27, 166,  77, 146, 158, 231,  83, 111, 229, 122,
+            60, 211, 133, 230, 220, 105,  92,  41,  55,  46, 245,  40, 244, 102, 143,  54,
+            65,  25,  63, 161,   1, 216,  80,  73, 209,  76, 132, 187, 208,  89,  18, 169,
+            200, 196, 135, 130, 116, 188, 159,  86, 164, 100, 109, 198, 173, 186,   3,  64,
+            52, 217, 226, 250, 124, 123,   5, 202,  38, 147, 118, 126, 255,  82,  85, 212,
+            207, 206,  59, 227,  47,  16,  58,  17, 182, 189,  28,  42, 223, 183, 170, 213,
+            119, 248, 152,   2,  44, 154, 163,  70, 221, 153, 101, 155, 167,  43, 172,   9,
+            129,  22,  39, 253,  19,  98, 108, 110,  79, 113, 224, 232, 178, 185, 112, 104,
+            218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
+            81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
+            184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
 
 float fade(float t)
@@ -76,45 +92,42 @@ float grad(uint h, vec3 v)
     }
 }
 
-float perlin_noise(float x, float y, float z, float f)
+float perlin_noise(vec3 uv, float f)
 {
-    uint ix = uint(floor(x)) & 127;
-    uint iy = uint(floor(y)) & 127;
-    uint iz = uint(floor(z)) & 127;
+    uint iu = uint(uv.x) & 255;
+    uint iv = uint(uv.y) & 255;
+    uint iw = uint(uv.z) & 255;
 
-    x -= floor(x);
-    y -= floor(y);
-    z -= floor(z);
+    uv -= floor(uv);
+    float u = fade(uv.x);
+    float v = fade(uv.y);
+    float w = fade(uv.z);
 
-    float u = fade(x);
-    float v = fade(y);
-    float w = fade(z);
+    uint iu1 = iu + 1;
+    uint iv1 = iv + 1;
+    uint iw1 = iw + 1;
 
-    uint ix1 = ix + 1;
-    uint iy1 = iy + 1;
-    uint iz1 = iz + 1;
+    if (iu1 == f) iu1 = 0;
+    if (iv1 == f) iv1 = 0;
+    if (iw1 == f) iw1 = 0;
 
-    if (ix1 == f) ix1 = 0;
-    if (iy1 == f) iy1 = 0;
-    if (iz1 == f) iz1 = 0;
+    uint a = p[p[p[iu] + iv] + iw];
+    uint aa = p[p[p[iu1] + iv] + iw];
+    uint ab = p[p[p[iu] + iv1] + iw];
+    uint ac = p[p[p[iu1] + iv1] + iw];
+    uint b = p[p[p[iu] + iv] + iw1];
+    uint ba = p[p[p[iu1] + iv] + iw1];
+    uint bb = p[p[p[iu] + iv1] + iw1];
+    uint bc = p[p[p[iu1] + iv1] + iw1];
 
-    uint a = p[p[p[ix] + iy] + iz];
-    uint aa = p[p[p[ix1] + iy] + iz];
-    uint ab = p[p[p[ix] + iy1] + iz];
-    uint ac = p[p[p[ix1] + iy1] + iz];
-    uint b = p[p[p[ix] + iy] + iz1];
-    uint ba = p[p[p[ix1] + iy] + iz1];
-    uint bb = p[p[p[ix] + iy1] + iz1];
-    uint bc = p[p[p[ix1] + iy1] + iz1];
-
-    vec3 da = vec3(x, y, z);
-    vec3 daa = vec3(x - 1.f, y, z);
-    vec3 dab = vec3(x, y - 1.f, z);
-    vec3 dac = vec3(x - 1.f, y - 1.f, z);
-    vec3 db = vec3(x, y, z - 1.f);
-    vec3 dba = vec3(x - 1.f, y, z - 1.f);
-    vec3 dbb = vec3(x, y - 1.f, z - 1.f);
-    vec3 dbc = vec3(x - 1.f, y - 1.f, z - 1.f);
+    vec3 da = uv;
+    vec3 daa = uv + vec3(-1.f, 0.f, 0.f);
+    vec3 dab = uv + vec3(0.f, -1.f, 0.f);
+    vec3 dac = uv + vec3(-1.f, -1.f, 0.f);
+    vec3 db = uv + vec3(0.f, 0.f, -1.f);
+    vec3 dba = uv + vec3(-1.f, 0.f, -1.f);
+    vec3 dbb = uv + vec3(0.f, -1.f, -1.f);
+    vec3 dbc = uv + vec3(-1.f, -1.f, -1.f);
 
     float alerp = lerp(lerp(grad(a, da), grad(aa, daa), u),
                 lerp(grad(ab, dab), grad(ac, dac), u), v);
@@ -125,16 +138,17 @@ float perlin_noise(float x, float y, float z, float f)
     return lerp(alerp, blerp, w);
 }
 
-float remap(float value, float old_min, float old_max, float new_min, float new_max)
+float fbm_perlin(vec3 uv, uint octaves, float f)
 {
-    return clamp(new_min + ((value - old_min) / (old_max - old_min))
-            * (new_max - new_min), new_min, new_max);
-}
+    float t = 0.f;
+    float a = 1.f;
+    for (uint o = 0; o < octaves; ++o) {
+        a *= .5f;
+        t += a * perlin_noise(f * uv, f);
+        f *= 2.f;
+    }
 
-float dist(vec3 a, vec3 b)
-{
-    return sqrt((b.z - a.z) * (b.z - a.z) + (b.y - a.y) *
-                (b.y - a.y) + (b.x - a.x) * (b.x - a.x));
+    return t;
 }
 
 vec3 random3f(vec3 st)
@@ -145,86 +159,74 @@ vec3 random3f(vec3 st)
     return fract(sin(st) * 43758.5453123f);
 }
 
-float worley_noise(float x, float y, float z, float f)
+float worley_noise(vec3 uv, float f)
 {
-    int ix = int(floor(x)) - 1;
-    int iy = int(floor(y)) - 1;
-    int iz = int(floor(z)) - 1;
-
+    int iu = int(uv.x) - 1;
+    int iv = int(uv.y) - 1;
+    int iw = int(uv.z) - 1;
     float t = 1.f;
+    uv -= vec3(iu, iv, iw);
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
             for (int k = 0; k < 3; ++k) {
-                int ixi = ix + i;
-                int iyj = iy + j;
-                int izk = iz + k;
+                int iui = iu + i;
+                int ivj = iv + j;
+                int iwk = iw + k;
 
-                if (ixi == f) ixi = 0;
-                if (iyj == f) iyj = 0;
-                if (izk == f) izk = 0;
+                if (iui == f) iui = 0;
+                if (ivj == f) ivj = 0;
+                if (iwk == f) iwk = 0;
 
-                if (ixi < 0) ixi = int(floor(f)) - 1;
-                if (iyj < 0) iyj = int(floor(f)) - 1;
-                if (izk < 0) izk = int(floor(f)) - 1;
+                if (iui < 0) iui = int(f) - 1;
+                if (ivj < 0) ivj = int(f) - 1;
+                if (iwk < 0) iwk = int(f) - 1;
 
-                vec3 r = random3f(vec3(ixi, iyj, izk)) + vec3(i, j, k);
-                t = min(t, dist(vec3(x - ix, y - iy, z - iz), r));
+                vec3 r = random3f(vec3(iui, ivj, iwk)) + vec3(i, j, k);
+                t = min(t, length(uv - r));
             }
-    
+
     return 1.f - t;
 }
 
-float fbm_perlin(float x, float y, float z, uint octaves, float f)
+float fbm_worley(vec3 uv, uint octaves, float f)
 {
     float t = 0.f;
     float a = 1.f;
-    x *= f;
-    y *= f;
-    z *= f;
     for (uint o = 0; o < octaves; ++o) {
         a *= .5f;
-        t += a * perlin_noise(x, y, z, f);
-        x *= 2.f;
-        y *= 2.f;
-        z *= 2.f;
-        f *= 2.f;
-    }
-
-    return (t + 1.f) / 2.f;
-}
-
-float fbm_worley(float x, float y, float z, uint octaves, float f)
-{
-    float t = 0.f;
-    float a = 1.f;
-    x *= f;
-    y *= f;
-    z *= f;
-    for (uint o = 0; o < octaves; ++o) {
-        a *= .5f;
-        t += a * worley_noise(x, y, z, f);
-        x *= 2.f;
-        y *= 2.f;
-        z *= 2.f;
+        t += a * worley_noise(f * uv, f);
         f *= 2.f;
     }
 
     return t;
 }
 
+float remap(float value, float old_min, float old_max, float new_min, float new_max)
+{
+    return clamp(new_min + ((value - old_min) / (old_max - old_min))
+            * (new_max - new_min), new_min, new_max);
+}
+
 void main()
 {
+    uint o = 6;
+    float f = .0078125f;
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
     uint z = 8 * gl_WorkGroupID.z + gl_LocalInvocationID.z;
-    float ux = x * .0078125f;
-    float uy = y * .0078125f;
-    float uz = z * .0078125f;
-    float color1 = fbm_perlin(ux, uy, uz, 3, 3);
-    float color2 = fbm_worley(ux, uy, uz, 3, 3);
-    float color3 = fbm_worley(ux, uy, uz, 3, 6);
-    float color4 = fbm_worley(ux, uy, uz, 3, 9);
-    imageStore(out_frame, ivec3(x, y, z), vec4(.7f * color1 + .3f * color2,
-        color2, color3, color4));
+
+    float p1 = fbm_perlin(vec3(x, y, z) * f, o, 3.f) * .5f + .5f;
+    float w1 = fbm_worley(vec3(x, y, z) * f, o, 3.f);
+    float w2 = fbm_worley(vec3(x, y, z) * f, o, 6.f);
+    float w3 = fbm_worley(vec3(x, y, z) * f, o, 9.f);
+
+    float t = p1;
+    t = remap(t, -w1 * .6f, 1.f, 0.f, 1.f);
+    t = remap(t, -w2 * .3f, 1.f, 0.f, 1.f);
+    t = remap(t, -w3 * .1f, 1.f, 0.f, 1.f);
+
+    vec4 col = vec4(t, w1, w2, w3);
+
+    imageStore(out_frame, ivec3(x, y, z), col);
 }

@@ -26,6 +26,22 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
             81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
+            222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180,
+            151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 233,   7, 225,
+            140,  36, 103,  30,  69, 142,   8,  99,  37, 240,  21,  10,  23, 190,   6, 148,
+            247, 120, 234,  75,   0,  26, 197,  62,  94, 252, 219, 203, 117,  35,  11,  32,
+            57, 177,  33,  88, 237, 149,  56,  87, 174,  20, 125, 136, 171, 168,  68, 175,
+            74, 165,  71, 134, 139,  48,  27, 166,  77, 146, 158, 231,  83, 111, 229, 122,
+            60, 211, 133, 230, 220, 105,  92,  41,  55,  46, 245,  40, 244, 102, 143,  54,
+            65,  25,  63, 161,   1, 216,  80,  73, 209,  76, 132, 187, 208,  89,  18, 169,
+            200, 196, 135, 130, 116, 188, 159,  86, 164, 100, 109, 198, 173, 186,   3,  64,
+            52, 217, 226, 250, 124, 123,   5, 202,  38, 147, 118, 126, 255,  82,  85, 212,
+            207, 206,  59, 227,  47,  16,  58,  17, 182, 189,  28,  42, 223, 183, 170, 213,
+            119, 248, 152,   2,  44, 154, 163,  70, 221, 153, 101, 155, 167,  43, 172,   9,
+            129,  22,  39, 253,  19,  98, 108, 110,  79, 113, 224, 232, 178, 185, 112, 104,
+            218, 246,  97, 228, 251,  34, 242, 193, 238, 210, 144,  12, 191, 179, 162, 241,
+            81,  51, 145, 235, 249,  14, 239, 107,  49, 192, 214,  31, 181, 199, 106, 157,
+            184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
 
 float fade(float t)
@@ -38,7 +54,7 @@ float lerp(float a, float b, float t)
 	return a + t * (b - a);
 }
 
-float grad(uint h, vec2 v)
+float grad(vec2 v, uint h)
 {
     switch(h & 3) {
     case 0:
@@ -52,43 +68,42 @@ float grad(uint h, vec2 v)
     }
 }
 
-float perlin_noise(float x, float y)
+float perlin_noise(vec2 uv)
 {
-    uint ix = uint(floor(x)) & 127;
-    uint iy = uint(floor(y)) & 127;
+    uint iu = uint(uv.x) & 255;
+    uint iv = uint(uv.y) & 255;
 
-    x -= floor(x);
-    y -= floor(y);
+    uv -= floor(uv);
+    float u = fade(uv.x);
+    float v = fade(uv.y);
 
-    float u = fade(x);
-    float v = fade(y);
-
-    return lerp(lerp(grad(p[p[ix] + iy], vec2(x, y)),
-                    grad(p[p[ix + 1] + iy], vec2(x - 1.f, y)), u),
-                lerp(grad(p[p[ix]+ iy + 1], vec2(x, y - 1.f)),
-                    grad(p[p[ix + 1] + iy + 1], vec2(x - 1.f, y - 1.f)), u), v);
+    float a = lerp(grad(uv, p[p[iu] + iv]),
+                grad(uv + vec2(-1.f, 0.f), p[p[iu + 1] + iv]), u);
+    float b = lerp(grad(uv + vec2(0.f, -1.f), p[p[iu] + iv + 1]),
+                grad(uv + vec2(-1.f, -1.f), p[p[iu + 1] + iv + 1]), u);
+    return lerp(a, b, v);
 }
 
-float fbm_perlin(float x, float y, uint octaves)
+float fbm_perlin(vec2 uv, uint octaves, float f)
 {
     float t = 0.f;
     float a = 1.f;
     for (uint o = 0; o < octaves; ++o) {
         a *= .5f;
-        t += a * perlin_noise(x, y);
-        x *= 2.f;
-        y *= 2.f;
+        t += a * perlin_noise(f * uv);
+        f *= 2.f;
     }
 
-    return t * .5f + .5f;
+    return t;
 }
 
 void main()
 {
+    uint o = 3;
+    float f = .0078125f;
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    float ux = x * .0078125f + u_time.value;
-    float uy = y * .0078125f + u_time.value;
-    float color = fbm_perlin(ux, uy, 3);
-    imageStore(out_frame, ivec2(x, y), vec4(color));
+    float t = fbm_perlin(vec2(x, y) + u_time.value, o, f) * .5f + .5f;
+    vec3 col = vec3(t);
+    imageStore(out_frame, ivec2(x, y), vec4(col, 1.f));
 }
