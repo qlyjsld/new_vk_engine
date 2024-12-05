@@ -44,14 +44,9 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
 
-float fade(float t)
+vec3 fade(vec3 t)
 {
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
-}
-
-float lerp(float a, float b, float t)
-{
-	return a + t * (b - a);
 }
 
 float grad(uint h, vec3 v)
@@ -98,10 +93,8 @@ float perlin_noise(vec3 uv, float f)
     uint iv = uint(uv.y) & 255;
     uint iw = uint(uv.z) & 255;
 
-    uv -= floor(uv);
-    float u = fade(uv.x);
-    float v = fade(uv.y);
-    float w = fade(uv.z);
+    uv = fract(uv);
+    vec3 fuv = fade(uv);
 
     uint iu1 = iu + 1;
     uint iv1 = iv + 1;
@@ -129,13 +122,13 @@ float perlin_noise(vec3 uv, float f)
     vec3 dbb = uv + vec3(0.f, -1.f, -1.f);
     vec3 dbc = uv + vec3(-1.f, -1.f, -1.f);
 
-    float alerp = lerp(lerp(grad(a, da), grad(aa, daa), u),
-                lerp(grad(ab, dab), grad(ac, dac), u), v);
+    float alerp = mix(mix(grad(a, da), grad(aa, daa), fuv.x),
+                mix(grad(ab, dab), grad(ac, dac), fuv.x), fuv.y);
 
-    float blerp = lerp(lerp(grad(b, db), grad(ba, dba), u),
-                lerp(grad(bb, dbb), grad(bc, dbc), u), v);
+    float blerp = mix(mix(grad(b, db), grad(ba, dba), fuv.x),
+                mix(grad(bb, dbb), grad(bc, dbc), fuv.x), fuv.y);
 
-    return lerp(alerp, blerp, w);
+    return mix(alerp, blerp, fuv.z);
 }
 
 float fbm_perlin(vec3 uv, uint octaves, float f)
@@ -161,28 +154,24 @@ vec3 random3f(vec3 st)
 
 float worley_noise(vec3 uv, float f)
 {
-    int iu = int(uv.x) - 1;
-    int iv = int(uv.y) - 1;
-    int iw = int(uv.z) - 1;
+    vec3 iuv = floor(uv) - 1.f;
     float t = 1.f;
-    uv -= vec3(iu, iv, iw);
+    uv -= iuv;
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
             for (int k = 0; k < 3; ++k) {
-                int iui = iu + i;
-                int ivj = iv + j;
-                int iwk = iw + k;
+                vec3 niuv = iuv + vec3(i, j, k);
 
-                if (iui == f) iui = 0;
-                if (ivj == f) ivj = 0;
-                if (iwk == f) iwk = 0;
+                if (niuv.x == f) niuv.x = 0.f;
+                if (niuv.y == f) niuv.y = 0.f;
+                if (niuv.z == f) niuv.z = 0.f;
 
-                if (iui < 0) iui = int(f) - 1;
-                if (ivj < 0) ivj = int(f) - 1;
-                if (iwk < 0) iwk = int(f) - 1;
+                if (niuv.x < 0) niuv.x = f - 1.f;
+                if (niuv.y < 0) niuv.y = f - 1.f;
+                if (niuv.z < 0) niuv.z = f - 1.f;
 
-                vec3 r = random3f(vec3(iui, ivj, iwk)) + vec3(i, j, k);
+                vec3 r = random3f(niuv) + vec3(i, j, k);
                 t = min(t, length(uv - r));
             }
 

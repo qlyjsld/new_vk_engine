@@ -44,14 +44,9 @@ uint p[] = { 151, 160, 137,  91,  90,  15, 131,  13, 201,  95,  96,  53, 194, 23
             184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
             222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180 };
 
-float fade(float t)
+vec2 fade(vec2 t)
 {
 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
-}
-
-float lerp(float a, float b, float t)
-{
-	return a + t * (b - a);
 }
 
 float grad(vec2 v, uint h)
@@ -73,15 +68,14 @@ float perlin_noise(vec2 uv)
     uint iu = uint(uv.x) & 255;
     uint iv = uint(uv.y) & 255;
 
-    uv -= floor(uv);
-    float u = fade(uv.x);
-    float v = fade(uv.y);
+    uv = fract(uv);
+    vec2 fuv = fade(uv);
 
-    float a = lerp(grad(uv, p[p[iu] + iv]),
-                grad(uv + vec2(-1.f, 0.f), p[p[iu + 1] + iv]), u);
-    float b = lerp(grad(uv + vec2(0.f, -1.f), p[p[iu] + iv + 1]),
-                grad(uv + vec2(-1.f, -1.f), p[p[iu + 1] + iv + 1]), u);
-    return lerp(a, b, v);
+    float a = mix(grad(uv, p[p[iu] + iv]),
+                grad(uv + vec2(-1.f, 0.f), p[p[iu + 1] + iv]), fuv.x);
+    float b = mix(grad(uv + vec2(0.f, -1.f), p[p[iu] + iv + 1]),
+                grad(uv + vec2(-1.f, -1.f), p[p[iu + 1] + iv + 1]), fuv.x);
+    return mix(a, b, fuv.y);
 }
 
 float fbm_perlin(vec2 uv, uint octaves, float f)
