@@ -507,10 +507,10 @@ void vk_engine::draw_imgui()
                 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::SliderFloat("type", &_cloud_data.type, 0.f, 1.f);
     ImGui::SliderFloat("freq", &_cloud_data.freq, 0.f, 1.f);
-    ImGui::SliderFloat("ambient", &_cloud_data.ambient, 0.f, 3.f);
-    ImGui::SliderFloat("sigma_a", &_cloud_data.sigma_a, 0.f, 3.f);
-    ImGui::SliderFloat("sigma_s", &_cloud_data.sigma_s, 0.f, 3.f);
-    ImGui::SliderFloat("step", &_cloud_data.step, .1f, 3.f);
+    ImGui::SliderFloat("ambient", &_cloud_data.ambient, 0.f, 1.f);
+    ImGui::SliderFloat("sigma_a", &_cloud_data.sigma_a, 0.f, 1.f);
+    ImGui::SliderFloat("sigma_s", &_cloud_data.sigma_s, 0.f, 1.f);
+    ImGui::SliderFloat("step", &_cloud_data.step, .1f, 2.f);
     ImGui::SliderInt("max_steps", &_cloud_data.max_steps, 0, 128);
     ImGui::SliderFloat("cutoff", &_cloud_data.cutoff, 0.f, 1.f);
     ImGui::SliderFloat("density", &_cloud_data.density, 0.f, 3.f);
