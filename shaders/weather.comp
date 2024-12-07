@@ -6,8 +6,7 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout (set = 0, binding = 0, r16f) uniform writeonly image2D out_frame;
 
-layout (push_constant) uniform readonly U_TIME
-{
+layout (push_constant) uniform readonly U_TIME {
     float value;
 } u_time;
 
@@ -97,7 +96,7 @@ void main()
     float f = .0078125f;
     uint x = 8 * gl_WorkGroupID.x + gl_LocalInvocationID.x;
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
-    float t = fbm_perlin(vec2(x, y) + u_time.value, o, f) * .5f + .5f;
+    float t = fbm_perlin(vec2(x, y) + u_time.value * 128.f, o, f) * .5f + .5f;
     vec3 col = vec3(t);
     imageStore(out_frame, ivec2(x, y), vec4(col, 1.f));
 }

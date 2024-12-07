@@ -8,8 +8,7 @@ layout (set = 0, binding = 1, rgba16f) uniform readonly image3D cloudtex;
 
 layout (set = 0, binding = 2, r16f) uniform readonly image2D weather;
 
-layout (set = 0, binding = 3) uniform readonly CAMERA
-{
+layout (set = 0, binding = 3) uniform readonly CAMERA {
     vec3 pos;
     float fov;
     vec3 dir;
@@ -18,8 +17,7 @@ layout (set = 0, binding = 3) uniform readonly CAMERA
     float height;
 } camera;
 
-layout (set = 0, binding = 4) uniform readonly CLOUD
-{
+layout (set = 0, binding = 4) uniform readonly CLOUD {
     float type;
     float freq;
     float ambient;
@@ -33,14 +31,14 @@ layout (set = 0, binding = 4) uniform readonly CLOUD
     vec3 sky_color;
 } cloud;
 
+struct sphere {
+    vec3 centre;
+    float radius;
+};
+
 float rand(float x)
 {
     return fract(sin(x) * 100000.f);
-}
-
-float fade(float t)
-{
-	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
 }
 
 float remap(float value, float old_min, float old_max, float new_min, float new_max)
@@ -48,11 +46,6 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
     return clamp(new_min + ((value - old_min) / (old_max - old_min))
             * (new_max - new_min), new_min, new_max);
 }
-
-struct sphere {
-    vec3 centre;
-    float radius;
-};
 
 vec2 hit_sphere(sphere s, vec3 o, vec3 r)
 {
@@ -62,8 +55,8 @@ vec2 hit_sphere(sphere s, vec3 o, vec3 r)
     float discriminant = b * b - 4.f * a * c;
 
     if (discriminant >= 0.f)
-            return vec2((-b - sqrt(discriminant)) * .5f * a,
-                        (-b + sqrt(discriminant)) * .5f * a);
+        return vec2((-b - sqrt(discriminant)) * .5f * a,
+                    (-b + sqrt(discriminant)) * .5f * a);
 
     return vec2(-1.f);
 }
@@ -75,15 +68,12 @@ float phase(float g, vec3 a, vec3 b)
     return 1.f / (4.f * 3.14f) * (1.f - g * g) / (denom * sqrt(denom));
 }
 
-float eval_density(vec3 p, float height)
+float eval_density(vec3 p, float h, float c)
 {
-    float coverage = imageLoad(weather, ivec2(p.xz * .19f - vec2(-256.f))).x;
-    if (coverage < .02f) return 0.f;
-
     vec4 d = imageLoad(cloudtex, ivec3(p * cloud.freq) & 127);
     float low_freq_worley = d.y + d.z + d.w;
     d.x = remap(d.x, 1.f - cloud.density, 1.f, 0.f, 1.f);
-    d.x = remap(d.x, 1.f - coverage, 1.f, 0.f, 1.f);
+    d.x = remap(d.x, 1.f - c, 1.f, 0.f, 1.f);
     d.x = remap(d.x, low_freq_worley - 1.3f, 1.f, 0.f, 1.f);
 
     float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
@@ -91,14 +81,13 @@ float eval_density(vec3 p, float height)
     float upperupperlimit = remap(cloud.type, 0.f, 1.f, .14f, .89f);
 
     float type = 1.f;
-    if (height < lowerupperlimit)
-        type = smoothstep(.1f, lowerupperlimit, height);
-    if (height > upperlowerlimit)
-        type = smoothstep(upperupperlimit, upperlowerlimit, height);
-    d.x = remap(d.x, 1.f - type, 1.f, 0.f, 1.f);
+    type = h < lowerupperlimit ? smoothstep(.1f, lowerupperlimit, h) : type;
+    type = h > upperlowerlimit ?
+        smoothstep(upperupperlimit, upperlowerlimit, h) : type;
 
+    d.x = remap(d.x, 1.f - type, 1.f, 0.f, 1.f);
     d.x = remap(d.x, cloud.cutoff, 1.f, 0.f, 1.f);
-    return d.x * cloud.density * coverage * type * height;
+    return d.x * cloud.density * c * type * h;
 }
 
 void main()
@@ -107,15 +96,10 @@ void main()
     uint y = 8 * gl_WorkGroupID.y + gl_LocalInvocationID.y;
 
     vec3 o = camera.pos;
-    vec3 d = camera.dir;
-
-    vec3 up = normalize(cross(d, camera.left));
-
-    float h = tan(radians(camera.fov) * .5f);
-    vec3 upperleft = (o + camera.height * .5f / h * d)
-                    + camera.left * camera.width * .5f
-                    + up * camera.height * .5f;
-    vec3 r = normalize(upperleft - camera.left * x - up * y - o);
+    vec3 up = normalize(cross(camera.dir, camera.left));
+    vec3 r = normalize(camera.height * .74128048534f * camera.dir
+                    + camera.left * (camera.width * .5f - x)
+                    + up * (camera.height * .5f - y));
 
     vec3 background = mix(cloud.sky_color, vec3(1.f), y / camera.height);
 
@@ -129,75 +113,67 @@ void main()
     outer.radius = inner.radius + 800.f;
 
     vec2 innert = hit_sphere(inner, o, r);
-    if ((innert.x < 0.f) && (innert.y >= 0.f)) { innert.x = 0.f; }
+    innert.x = innert.x < 0.f && innert.y >= 0.f ? 0.f : innert.x;
 
     vec2 outert = hit_sphere(outer, o, r);
-    if ((outert.x < 0.f) && (outert.y >= 0.f)) { outert.x = 0.f; }
+    outert.x = outert.x < 0.f && outert.y >= 0.f ? 0.f : outert.x;
 
     float camera_radius = length(o);
     vec2 t = vec2(-1.f);
 
-    if (camera_radius < inner.radius) t = vec2(innert.y, outert.y);
-    if ((camera_radius > inner.radius) && (camera_radius < outer.radius))
-        t = vec2(0.f, outert.y);
-    if (camera_radius > outer.radius) t = outert;
+    t = camera_radius < inner.radius ? vec2(innert.y, outert.y) : t;
+    t = camera_radius > inner.radius && camera_radius < outer.radius ? vec2(0.f, outert.y) : t;
+    t = camera_radius > outer.radius ? outert : t;
 
     float transmittance = 1.f;
     vec3 color = vec3(0.f);
 
     // in volume marching
-    if (t.x >= 0.f)
-    {
-        vec3 np = (o + t.y * r);
-        float sigma_s = cloud.sigma_s;
+    if (t.x >= 0.f) {
         float sigma_t = cloud.sigma_a + cloud.sigma_s;
-        float step = cloud.step;
         int step_count = 0;
-        t += step + step * rand(t.y);
+        t += cloud.step + cloud.step * rand(t.y);
 
-        while (t.x < t.y)
-        {
+        while (t.x < t.y && step_count < cloud.max_steps && transmittance > .6f) {
             vec3 p = o + t.x * r;
+            float tstep = cloud.step + cloud.step * rand(t.x);
+
+            t.x += tstep;
+            step_count++;
 
             // dome check
-            if (p.y < 0.f) {
-                if (np.y < 0.f) break;
-                t.x += 10.f * (step + step * rand(t.x)); continue;
-            }
+            if (p.y < 0.f) { t.x += 16.f * tstep; continue; }
+            float c = imageLoad(weather, ivec2(p.xz * .3f + vec2(256.f))).x;
+            if (c < .01f) { t.x += 16.f * tstep; continue; }
+            float h = (length(p) - inner.radius) / 800.f;
+            float d = eval_density(p, h, c);
+            if (d < .01f) { t.x += 16.f * tstep; continue; }
 
-            float height = (length(p) - inner.radius) / 800.f;
-            float density = eval_density(p, height);
-            if (density < .02f) { t.x += 20.f * (step + step * rand(t.x)); continue; }
-
-            transmittance *= exp(-step * sigma_t * density);
+            transmittance *= exp(-tstep * sigma_t * d);
 
             // estimate in-scattering to p in volume
             vec3 ld = normalize(vec3(0.f, .6f, 1.f));
-            float nstep = 6.f * step;
-            int nsteps = 6;
             float tau = 0.f;
 
-            for (int j = 0; j < nsteps; ++j)
-            {
-                p += (nstep + nstep * rand(p.x + p.y + p.z)) * ld;
-                float nheight = (length(p) - inner.radius) / 800.f;
-                tau += eval_density(p, nheight);
+            for (int j = 0; j < 6; ++j) {
+                p += 6.f * tstep * ld;
+                c = imageLoad(weather, ivec2(p.xz * .3f + vec2(256.f))).x;
+                h = (length(p) - inner.radius) / 800.f;
+                tau += eval_density(p, h, c);
             }
 
-            float fr = 3.f * phase(.3f, ld, r) + 1.5f * phase(.6f, ld, r)
+            float fr = 3.f * phase(.3f, ld, r) + 1.f * phase(.6f, ld, r)
                     + .3f * phase(.9f, ld, r) + .3f * phase(-.3f, ld, r);
-            vec3 ambient = vec3(.6f, .9f, 1.f) * cloud.ambient
-                        * remap(height, 0.f, 1.f, .6f, 1.f)
-                        * exp(-nstep * sigma_t * tau);
-            vec3 li = cloud.sun_color * fr * exp(-nstep * sigma_t * tau) + ambient;
-            color += transmittance * sigma_s * density * li * step;
 
-            t.x += step + step * rand(t.x);
-            if (++step_count > cloud.max_steps) break;
-            if (transmittance < (step + step * rand(t.x))) break;
+            vec3 ambient = vec3(.6f, .9f, 1.f) * cloud.ambient
+                        * remap(h, 0.f, 1.f, .6f, 1.f)
+                        * exp(-6.f * tstep * sigma_t * tau);
+
+            vec3 li = cloud.sun_color * fr * exp(-6.f * tstep * sigma_t * tau) + ambient;
+            color += transmittance * cloud.sigma_s * d * li * tstep;
         }
     }
 
-    color += background * transmittance;
+    color += transmittance * background;
     imageStore(out_frame, ivec2(x, y), vec4(color, 1.f));
 }
