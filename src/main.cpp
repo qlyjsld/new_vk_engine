@@ -204,7 +204,7 @@ void vk_engine::cloud_init()
     _cloud_data.sigma_s = .2f;
     _cloud_data.step = 1.3f;
     _cloud_data.max_steps = 64;
-    _cloud_data.cutoff = 0.f;
+    _cloud_data.cutoff = .5f;
     _cloud_data.density = 1.f;
     _cloud_data.sun_color = glm::vec3(.99f, .36f, .32f);
     _cloud_data.sky_color = glm::vec3(.98f, .83f, .64f);

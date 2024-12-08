@@ -93,10 +93,11 @@ float eval_density(vec3 p, float h, float c)
 
     vec4 d = imageLoad(cloudtex, ivec3(p * cloud.freq) & 127);
 
-    float low_freq_worley = d.y + d.z + d.w;
-    d.x = remap(d.x, 1.f - cloud.density, 1.f, 0.f, 1.f);
     d.x = remap(d.x, 1.f - c, 1.f, 0.f, 1.f);
-    d.x = remap(d.x, low_freq_worley - 1.3f, 1.f, 0.f, 1.f);
+    d.x = remap(d.x, 1.f - cloud.density, 1.f, 0.f, 1.f);
+
+    float worley = .625f * d.y + .25f * d.z + .125f * d.w;
+    d.x = remap(d.x, -worley, 1.f, 0.f, 1.f);
 
     float lowerupperlimit = remap(cloud.type, 0.f, 1.f, .11f, .25f);
     float upperlowerlimit = remap(cloud.type, 0.f, 1.f, .13f, .75f);
@@ -109,7 +110,8 @@ float eval_density(vec3 p, float h, float c)
 
     d.x = remap(d.x, 1.f - type, 1.f, 0.f, 1.f);
     d.x = remap(d.x, cloud.cutoff, 1.f, 0.f, 1.f);
-    return d.x * cloud.density * c * type * h;
+
+    return d.x * h;
 }
 
 void main()
