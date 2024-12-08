@@ -187,9 +187,7 @@ void main()
             float fr = 3.f * phase(.3f, ld, r) + 1.f * phase(.6f, ld, r)
                     + .3f * phase(.9f, ld, r) + .3f * phase(-.3f, ld, r);
 
-            vec3 ambient = vec3(.6f, .9f, 1.f) * cloud.ambient
-                        * remap(h, 0.f, 1.f, .6f, 1.f)
-                        * exp(-6.f * tstep * sigma_t * tau);
+            vec3 ambient = vec3(1.f) * cloud.ambient * exp(-6.f * tstep * sigma_t * tau);
 
             vec3 li = cloud.sun_color * fr * exp(-6.f * tstep * sigma_t * tau) + ambient;
             color += transmittance * cloud.sigma_s * d * li * tstep;
