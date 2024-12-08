@@ -186,11 +186,9 @@ void main()
                 tau += eval_density(p, h, c);
             }
 
-            float fr = 3.f * phase(.3f, ld, r) + 1.f * phase(.6f, ld, r)
-                    + .3f * phase(.9f, ld, r) + .3f * phase(-.3f, ld, r);
-
+            float fr = phase(.3f, ld, r) + phase(.6f, ld, r) + phase(.8f, ld, r)
+                    + phase(-.3f, ld, r);
             vec3 ambient = vec3(1.f) * cloud.ambient * exp(-6.f * tstep * sigma_t * tau);
-
             vec3 li = cloud.sun_color * fr * exp(-6.f * tstep * sigma_t * tau) + ambient;
             color += transmittance * cloud.sigma_s * d * li * tstep;
         }
