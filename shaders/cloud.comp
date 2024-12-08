@@ -68,9 +68,31 @@ float phase(float g, vec3 a, vec3 b)
     return 1.f / (4.f * 3.14f) * (1.f - g * g) / (denom * sqrt(denom));
 }
 
+// vec3 fade(vec3 t)
+// {
+// 	return t * t * t * (t * (t * 6.f - 15.f) + 10.f);
+// }
+
 float eval_density(vec3 p, float h, float c)
 {
+    // p *= cloud.freq;
+
+    // vec4 d0 = imageLoad(cloudtex, (ivec3(p) + ivec3(0, 0, 0)) & 127);
+    // vec4 d1 = imageLoad(cloudtex, (ivec3(p) + ivec3(0, 0, 1)) & 127);
+    // vec4 d2 = imageLoad(cloudtex, (ivec3(p) + ivec3(0, 1, 0)) & 127);
+    // vec4 d3 = imageLoad(cloudtex, (ivec3(p) + ivec3(0, 1, 1)) & 127);
+    // vec4 d4 = imageLoad(cloudtex, (ivec3(p) + ivec3(1, 0, 0)) & 127);
+    // vec4 d5 = imageLoad(cloudtex, (ivec3(p) + ivec3(1, 0, 1)) & 127);
+    // vec4 d6 = imageLoad(cloudtex, (ivec3(p) + ivec3(1, 1, 0)) & 127);
+    // vec4 d7 = imageLoad(cloudtex, (ivec3(p) + ivec3(1, 1, 1)) & 127);
+
+    // vec3 lerp = fade(fract(p));
+
+    // vec4 d = mix(mix(mix(d0, d1, lerp.x), mix(d2, d3, lerp.x), lerp.y),
+    //         mix(mix(d4, d5, lerp.x), mix(d6, d7, lerp.x), lerp.y), lerp.z);
+
     vec4 d = imageLoad(cloudtex, ivec3(p * cloud.freq) & 127);
+
     float low_freq_worley = d.y + d.z + d.w;
     d.x = remap(d.x, 1.f - cloud.density, 1.f, 0.f, 1.f);
     d.x = remap(d.x, 1.f - c, 1.f, 0.f, 1.f);
