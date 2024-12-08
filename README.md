@@ -28,7 +28,7 @@ require: Vulkan SDK
 See src/main.cpp and shaders/*.comp.
 
 ## Demo
-![alt text](https://github.com/qlyjsld/new_vk_engine/blob/main/screenshots/cloud.gif)
+![alt text](https://github.com/qlyjsld/new_vk_engine/blob/vol/screenshots/cloud.gif)
 ** *Sunset with phase function, and ambient lighting. highly recommend a HDR monitor for original results.*
 
 ## Todo
