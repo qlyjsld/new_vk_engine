@@ -4,6 +4,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
 #include <iostream>
+#include <vulkan/vulkan_core.h>
 
 #include "vk_boiler.h"
 #include "vk_type.h"
@@ -42,17 +43,29 @@ void vk_engine::device_init()
     deletion_queue.push_back(
         [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
 
-    VkPhysicalDeviceDynamicRenderingFeatures features = {};
-    features.sType =
+    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
+    dynamic_rendering_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-    features.pNext = nullptr;
-    features.dynamicRendering = VK_TRUE;
+    dynamic_rendering_features.pNext = nullptr;
+    dynamic_rendering_features.dynamicRendering = VK_TRUE;
+
+    VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
+    mesh_shader_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    mesh_shader_features.pNext = nullptr;
+    mesh_shader_features.taskShader = VK_FALSE;
+    mesh_shader_features.meshShader = VK_TRUE;
+    mesh_shader_features.multiviewMeshShader = VK_FALSE;
+    mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+    mesh_shader_features.meshShaderQueries = VK_FALSE;
 
     // create physical device
     vkb::PhysicalDeviceSelector selector(instance);
-    auto phys_ret = selector.add_required_extension_features(features)
-                        .set_surface(_surface)
-                        .select();
+    auto phys_ret =
+        selector.add_required_extension_features(dynamic_rendering_features)
+            .add_required_extension_features(mesh_shader_features)
+            .set_surface(_surface)
+            .select();
 
     if (!phys_ret) {
         std::cerr << "failed to find suitable physical device: "
