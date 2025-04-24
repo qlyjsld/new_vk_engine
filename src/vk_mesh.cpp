@@ -272,7 +272,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             }
         }
 
-        // /* TEXTURE */
+        /* TEXTURE */
         if (primitive.material != -1) {
             texture_view texture_view =
                 retreive_texture(&model, primitive.material);
@@ -293,8 +293,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
 void vk_engine::load_meshes()
 {
-    std::vector<mesh> example = load_from_gltf(
-        "./assets/glTF-Sample-Assets/Models/Duck/glTF-Binary/Duck.glb", _nodes);
+    std::vector<mesh> example = load_from_gltf("../assets/Duck.glb", _nodes);
 
     _meshes.insert(_meshes.end(), example.begin(), example.end());
 

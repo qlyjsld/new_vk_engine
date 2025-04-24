@@ -1,6 +1,7 @@
 ﻿#include "vk_engine.h"
 
 #include <future>
+#include <iostream>
 #include <vector>
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
@@ -90,14 +91,15 @@ void vk_engine::init()
     sync_init();
 
     descriptor_init();
-    // pipeline_init();
+    pipeline_init();
 
     imgui_init();
 
-    // load_meshes();
-    // std::cout << "meshes size " << _meshes.size() << std::endl;
-    // upload_meshes(_meshes.data(), _meshes.size());
-    // upload_textures(_meshes.data(), _meshes.size());
+    load_meshes();
+
+    std::cout << "meshes size " << _meshes.size() << std::endl;
+    upload_meshes(_meshes.data(), _meshes.size());
+    upload_textures(_meshes.data(), _meshes.size());
 
     comp_init();
 }
@@ -247,7 +249,7 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cbuffer, &rendering_info);
 
-    // draw_nodes(frame);
+    draw_nodes(frame);
 
     /* imgui rendering */
     ImGui::Render();
@@ -360,13 +362,13 @@ void vk_engine::run()
     SDL_Event e;
     bool bquit = false;
 
-    // uint32_t triangles = 0;
-    // for (uint32_t i = 0; i < _nodes.size(); ++i) {
-    //     if (_nodes[i].mesh_id != -1)
-    //         triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
-    // }
+    uint32_t triangles = 0;
+    for (uint32_t i = 0; i < _nodes.size(); ++i) {
+        if (_nodes[i].mesh_id != -1)
+            triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
+    }
 
-    // std::cout << "draw " << triangles << " triangels" << std::endl;
+    std::cout << "draw " << triangles << " triangels" << std::endl;
 
     SDL_SetWindowRelativeMouseMode(_window, true);
 
@@ -500,21 +502,23 @@ void vk_engine::imgui_init()
 
 void vk_engine::draw_imgui()
 {
-    ImGui::Begin("cloud", &cloud_ui, ImGuiWindowFlags_NoResize);
-    ImGui::SetWindowSize(ImVec2(290.f, 290.f));
-    ImGui::Text("'tab' to toggle; 'ese' to close");
-    ImGui::Text("application average %.3f ms/frame \n (%.1f FPS)",
-                1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::SliderFloat("type", &_cloud_data.type, 0.f, 1.f);
-    ImGui::SliderFloat("freq", &_cloud_data.freq, 0.f, 1.f);
-    ImGui::SliderFloat("ambient", &_cloud_data.ambient, 0.f, 1.f);
-    ImGui::SliderFloat("sigma_a", &_cloud_data.sigma_a, 0.f, 1.f);
-    ImGui::SliderFloat("sigma_s", &_cloud_data.sigma_s, 0.f, 1.f);
-    ImGui::SliderFloat("step", &_cloud_data.step, .1f, 2.f);
-    ImGui::SliderInt("max_steps", &_cloud_data.max_steps, 0, 128);
-    ImGui::SliderFloat("cutoff", &_cloud_data.cutoff, 0.f, 1.f);
-    ImGui::SliderFloat("density", &_cloud_data.density, 0.f, 3.f);
-    ImGui::ColorEdit3("sun_color", (float *)&_cloud_data.sun_color);
-    ImGui::ColorEdit3("sky_color", (float *)&_cloud_data.sky_color);
-    ImGui::End();
+    // vol branch
+    // ImGui::Begin("cloud", &cloud_ui, ImGuiWindowFlags_NoResize);
+    // ImGui::SetWindowSize(ImVec2(290.f, 290.f));
+    // ImGui::Text("'tab' to toggle; 'ese' to close");
+    // ImGui::Text("application average %.3f ms/frame \n (%.1f FPS)",
+    //             1000.0f / ImGui::GetIO().Framerate,
+    //             ImGui::GetIO().Framerate);
+    // ImGui::SliderFloat("type", &_cloud_data.type, 0.f, 1.f);
+    // ImGui::SliderFloat("freq", &_cloud_data.freq, 0.f, 1.f);
+    // ImGui::SliderFloat("ambient", &_cloud_data.ambient, 0.f, 1.f);
+    // ImGui::SliderFloat("sigma_a", &_cloud_data.sigma_a, 0.f, 1.f);
+    // ImGui::SliderFloat("sigma_s", &_cloud_data.sigma_s, 0.f, 1.f);
+    // ImGui::SliderFloat("step", &_cloud_data.step, .1f, 2.f);
+    // ImGui::SliderInt("max_steps", &_cloud_data.max_steps, 0, 128);
+    // ImGui::SliderFloat("cutoff", &_cloud_data.cutoff, 0.f, 1.f);
+    // ImGui::SliderFloat("density", &_cloud_data.density, 0.f, 3.f);
+    // ImGui::ColorEdit3("sun_color", (float *)&_cloud_data.sun_color);
+    // ImGui::ColorEdit3("sky_color", (float *)&_cloud_data.sky_color);
+    // ImGui::End();
 }
