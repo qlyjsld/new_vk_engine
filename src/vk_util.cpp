@@ -84,6 +84,23 @@ void vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
     });
 }
 
+void vk_engine::create_staging_buffer(VkDeviceSize size,
+                                      VkBufferUsageFlags usage,
+                                      VmaAllocationCreateFlags flags,
+                                      allocated_buffer *buffer)
+{
+    VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    buffer_info.size = size;
+    buffer_info.usage = usage;
+
+    VmaAllocationCreateInfo vma_allocation_info = {};
+    vma_allocation_info.flags = flags;
+    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VK_CHECK(vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
+                             &buffer->buffer, &buffer->allocation, nullptr));
+}
+
 void vk_engine::create_img(VkFormat format, VkExtent3D extent,
                            VkImageAspectFlags aspect, VkImageUsageFlags usage,
                            VmaAllocationCreateFlags flags, allocated_img *img)

@@ -171,6 +171,10 @@ private:
                        VmaAllocationCreateFlags flags,
                        allocated_buffer *buffer);
 
+    void create_staging_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                               VmaAllocationCreateFlags flags,
+                               allocated_buffer *buffer);
+
     void create_img(VkFormat format, VkExtent3D extent,
                     VkImageAspectFlags aspect, VkImageUsageFlags usage,
                     VmaAllocationCreateFlags flags, allocated_img *img);

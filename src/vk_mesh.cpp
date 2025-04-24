@@ -321,10 +321,10 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         allocated_buffer staging_buffer;
 
         /* create vertex buffer */
-        create_buffer(mesh->vertices.size() * sizeof(vertex),
-                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                      &staging_buffer);
+        create_staging_buffer(mesh->vertices.size() * sizeof(vertex),
+                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                              &staging_buffer);
 
         void *data;
         vmaMapMemory(_allocator, staging_buffer.allocation, &data);
@@ -336,11 +336,6 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                           VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->vertex_buffer);
-
-        deletion_queue.push_back([=]() {
-            vmaDestroyBuffer(_allocator, _meshes[i].vertex_buffer.buffer,
-                             _meshes[i].vertex_buffer.allocation);
-        });
 
         immediate_draw(
             [=](VkCommandBuffer cbuffer) {
@@ -355,10 +350,10 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                          staging_buffer.allocation);
 
         /* create index buffer */
-        create_buffer(mesh->indices.size() * sizeof(uint16_t),
-                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                      &staging_buffer);
+        create_staging_buffer(mesh->indices.size() * sizeof(uint16_t),
+                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                              &staging_buffer);
 
         vmaMapMemory(_allocator, staging_buffer.allocation, &data);
         std::memcpy(data, mesh->indices.data(),
@@ -391,10 +386,10 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         allocated_buffer staging_buffer;
 
         if (mesh->texture.size() != 0) {
-            create_buffer(mesh->texture.size() * sizeof(unsigned char),
-                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                          VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                          &staging_buffer);
+            create_staging_buffer(mesh->texture.size() * sizeof(unsigned char),
+                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                                  &staging_buffer);
 
             void *data;
             vmaMapMemory(_allocator, staging_buffer.allocation, &data);
