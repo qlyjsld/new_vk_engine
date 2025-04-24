@@ -235,7 +235,7 @@ void vk_engine::draw()
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment =
         vk_boiler::rendering_attachment_info(
-            _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
+            _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true,
             clear_value);
 
     VkRenderingAttachmentInfo depth_attachment =
