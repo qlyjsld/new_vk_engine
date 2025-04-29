@@ -100,6 +100,9 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
+    VkPipeline _mesh_pipeline;
+    VkPipelineLayout _mesh_pipeline_layout;
+
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
     VkPhysicalDevice _physical_device;
@@ -120,6 +123,8 @@ public:
 
     VkShaderModule _vert;
     VkShaderModule _frag;
+    VkShaderModule _mesh;
+    VkShaderModule _pixel;
 
     immed_context _immed_context;
 
@@ -145,6 +150,7 @@ private:
     void descriptor_init();
     VkShaderModule load_shader_module(const char *file);
     void pipeline_init();
+    void mesh_init();
 
     void imgui_init();
 

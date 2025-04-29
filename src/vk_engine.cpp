@@ -92,6 +92,7 @@ void vk_engine::init()
 
     descriptor_init();
     pipeline_init();
+    mesh_init();
 
     imgui_init();
 
@@ -202,6 +203,41 @@ void vk_engine::pipeline_init()
 
     _gfx_pipeline = gfx_pipeline_builder.build_gfx(
         _device, &_format, _depth_img.format, _gfx_pipeline_layout);
+}
+
+void vk_engine::mesh_init()
+{
+    /* build graphics pipeline */
+    _mesh = load_shader_module("../shaders/m.mesh.spv");
+    _pixel = load_shader_module("../shaders/p.frag.spv");
+
+    PipelineBuilder mesh_pipeline_builder = {};
+    mesh_pipeline_builder._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_MESH_BIT_NV,
+                                            _mesh));
+    mesh_pipeline_builder._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,
+                                            _pixel));
+    mesh_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
+    mesh_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
+
+    mesh_pipeline_builder._rasterization_state_info =
+        vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+    mesh_pipeline_builder._color_blend_attachment_state =
+        vk_boiler::color_blend_attachment_state();
+    mesh_pipeline_builder._multisample_state_info =
+        vk_boiler::multisample_state_create_info();
+    mesh_pipeline_builder._depth_stencil_state_info =
+        vk_boiler::depth_stencil_state_create_info();
+
+    std::vector<VkDescriptorSetLayout> layouts = {};
+    std::vector<VkPushConstantRange> push_constants = {};
+
+    _mesh_pipeline_layout =
+        mesh_pipeline_builder.build_layout(_device, layouts, push_constants);
+
+    _mesh_pipeline = mesh_pipeline_builder.build_gfx(
+        _device, &_format, _depth_img.format, _mesh_pipeline_layout);
 }
 
 void vk_engine::draw()
