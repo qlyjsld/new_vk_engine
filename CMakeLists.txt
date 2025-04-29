@@ -21,7 +21,8 @@ find_program(GLSL_VALIDATOR glslangValidator)
 file (GLOB GLSL_SRC
     "${PROJECT_SOURCE_DIR}/shaders/*.vert"
     "${PROJECT_SOURCE_DIR}/shaders/*.frag"
-    "${PROJECT_SOURCE_DIR}/shaders/*.comp")
+    "${PROJECT_SOURCE_DIR}/shaders/*.comp"
+    "${PROJECT_SOURCE_DIR}/shaders/*.mesh")
 
 foreach(GLSL ${GLSL_SRC})
     get_filename_component(FILE_NAME ${GLSL} NAME)
