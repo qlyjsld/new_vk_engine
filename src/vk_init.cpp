@@ -51,7 +51,7 @@ void vk_engine::device_init()
 
     VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
     mesh_shader_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
     mesh_shader_features.pNext = nullptr;
     mesh_shader_features.taskShader = VK_FALSE;
     mesh_shader_features.meshShader = VK_TRUE;

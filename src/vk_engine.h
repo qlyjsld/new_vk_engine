@@ -166,6 +166,7 @@ private:
     void draw_imgui();
     void draw_comp(frame *frame);
     void draw_nodes(frame *frame);
+    void draw_mesh(frame *frame);
 
     inline frame *get_current_frame()
     {

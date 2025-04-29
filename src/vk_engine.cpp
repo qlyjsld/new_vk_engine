@@ -208,8 +208,8 @@ void vk_engine::pipeline_init()
 void vk_engine::mesh_init()
 {
     /* build graphics pipeline */
-    _mesh = load_shader_module("../shaders/m.mesh.spv");
-    _pixel = load_shader_module("../shaders/p.frag.spv");
+    _mesh = load_shader_module("../shaders/mesh.mesh.spv");
+    _pixel = load_shader_module("../shaders/mesh.frag.spv");
 
     PipelineBuilder mesh_pipeline_builder = {};
     mesh_pipeline_builder._shader_stage_infos.push_back(
@@ -285,7 +285,8 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cbuffer, &rendering_info);
 
-    draw_nodes(frame);
+    // draw_nodes(frame);
+    draw_mesh(frame);
 
     /* imgui rendering */
     ImGui::Render();
@@ -380,6 +381,14 @@ void vk_engine::draw_nodes(frame *frame)
             vkCmdDrawIndexed(frame->cbuffer, mesh->indices.size(), 1, 0, 0, 0);
         }
     }
+}
+
+void vk_engine::draw_mesh(frame *frame)
+{
+    vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      _mesh_pipeline);
+
+    vkCmdDrawMeshTasksNV(frame->cbuffer, 1, 0);
 }
 
 void vk_engine::cleanup()
