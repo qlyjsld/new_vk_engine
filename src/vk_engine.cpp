@@ -388,7 +388,7 @@ void vk_engine::draw_mesh(frame *frame)
     vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       _mesh_pipeline);
 
-    vkCmdDrawMeshTasksNV(frame->cbuffer, 1, 0);
+    vkCmdDrawMeshTasksEXT(frame->cbuffer, 1, 0, 0);
 }
 
 void vk_engine::cleanup()

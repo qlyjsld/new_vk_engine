@@ -49,12 +49,15 @@ void vk_engine::device_init()
     dynamic_rendering_features.pNext = nullptr;
     dynamic_rendering_features.dynamicRendering = VK_TRUE;
 
-    VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
+    VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
     mesh_shader_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
     mesh_shader_features.pNext = nullptr;
     mesh_shader_features.taskShader = VK_FALSE;
     mesh_shader_features.meshShader = VK_TRUE;
+    mesh_shader_features.multiviewMeshShader = VK_FALSE;
+    mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+    mesh_shader_features.meshShaderQueries = VK_FALSE;
 
     // create physical device
     vkb::PhysicalDeviceSelector selector(instance);
