@@ -62,8 +62,7 @@ void vk_engine::device_init()
     // create physical device
     vkb::PhysicalDeviceSelector selector(instance);
     auto phys_ret =
-        selector.add_required_extension_features(dynamic_rendering_features)
-            .add_required_extension_features(mesh_shader_features)
+        selector.add_required_extension_features(mesh_shader_features)
             .set_surface(_surface)
             .select();
 
@@ -74,6 +73,7 @@ void vk_engine::device_init()
     }
 
     auto physical_device = phys_ret.value();
+    physical_device.enable_extension_if_present("VK_EXT_mesh_shader");
     _physical_device = physical_device.physical_device;
     _min_buffer_alignment =
         physical_device.properties.limits.minUniformBufferOffsetAlignment;
