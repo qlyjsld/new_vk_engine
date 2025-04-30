@@ -95,12 +95,12 @@ void vk_engine::draw_comp(frame *frame)
 {
     vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                     VK_IMAGE_LAYOUT_GENERAL, _fam_index);
+                                     VK_IMAGE_LAYOUT_GENERAL, _family_index);
 
     for (const auto &draw : cs_draw)
         draw(frame->cbuffer);
 
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _fam_index);
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _family_index);
 }

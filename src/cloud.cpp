@@ -42,7 +42,8 @@ void vk_engine::cloudtex_init()
         [&, cloudtex, cloudtex_size, id](VkCommandBuffer cbuffer) {
             vk_cmd::vk_img_layout_transition(
                 cbuffer, _comp_allocator.imgs[id].img,
-                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, _fam_index);
+                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                _family_index);
 
             vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                               cloudtex.pipeline);
@@ -85,9 +86,9 @@ void vk_engine::weather_init()
     pb.build_comp(_device, push_constants, &weather);
 
     cs_draw.push_back([&, weather, weather_size, id](VkCommandBuffer cbuffer) {
-        vk_cmd::vk_img_layout_transition(cbuffer, _comp_allocator.imgs[id].img,
-                                         VK_IMAGE_LAYOUT_UNDEFINED,
-                                         VK_IMAGE_LAYOUT_GENERAL, _fam_index);
+        vk_cmd::vk_img_layout_transition(
+            cbuffer, _comp_allocator.imgs[id].img, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_GENERAL, _family_index);
 
         vkCmdBindPipeline(cbuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           weather.pipeline);

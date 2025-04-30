@@ -261,7 +261,7 @@ void vk_engine::draw()
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _fam_index);
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _family_index);
 
     draw_imgui();
 
@@ -297,11 +297,11 @@ void vk_engine::draw()
     /* transition image format for transfering */
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _fam_index);
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _family_index);
 
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _fam_index);
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _family_index);
 
     /* copy img to swapchain */
     vk_cmd::vk_img_copy(
@@ -313,7 +313,7 @@ void vk_engine::draw()
     vk_cmd::vk_img_layout_transition(
         frame->cbuffer, _swapchain_imgs[_img_index],
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        _fam_index);
+        _family_index);
 
     VK_CHECK(vkEndCommandBuffer(frame->cbuffer));
 
@@ -504,7 +504,7 @@ void vk_engine::imgui_init()
     imgui_init_info.Instance = _instance;
     imgui_init_info.PhysicalDevice = _physical_device;
     imgui_init_info.Device = _device;
-    imgui_init_info.QueueFamily = _fam_index;
+    imgui_init_info.QueueFamily = _family_index;
     imgui_init_info.Queue = _queue;
     imgui_init_info.DescriptorPool = _descriptor_pool;
     imgui_init_info.MinImageCount = 2;

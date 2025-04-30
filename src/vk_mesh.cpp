@@ -412,7 +412,7 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                     vk_cmd::vk_img_layout_transition(
                         cbuffer, mesh->texture_buffer.img,
                         VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _fam_index);
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _family_index);
 
                     VkBufferImageCopy region =
                         vk_boiler::buffer_img_copy(extent);
@@ -425,7 +425,8 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                     vk_cmd::vk_img_layout_transition(
                         cbuffer, mesh->texture_buffer.img,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _fam_index);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        _family_index);
                 },
                 _queue);
 

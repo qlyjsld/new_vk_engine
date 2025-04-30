@@ -186,7 +186,7 @@ void vk_engine::command_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
         VkCommandPoolCreateInfo cpool_info =
-            vk_boiler::cpool_create_info(_fam_index);
+            vk_boiler::cpool_create_info(_family_index);
 
         VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
                                      &_frames[i].cpool));
@@ -203,7 +203,7 @@ void vk_engine::command_init()
     }
 
     VkCommandPoolCreateInfo cpool_info =
-        vk_boiler::cpool_create_info(_fam_index);
+        vk_boiler::cpool_create_info(_family_index);
 
     VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
                                  &_immed_context.cpool));

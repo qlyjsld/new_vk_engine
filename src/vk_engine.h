@@ -84,7 +84,7 @@ public:
     allocated_img _target;
     uint64_t _last_frame = 0;
     uint32_t _img_index;
-    uint32_t _fam_index = 0;
+    uint32_t _family_index = 0;
 
     VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
     VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
