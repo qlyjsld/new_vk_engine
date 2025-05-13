@@ -213,7 +213,7 @@ void vk_engine::mesh_init()
 
     PipelineBuilder mesh_pipeline_builder = {};
     mesh_pipeline_builder._shader_stage_infos.push_back(
-        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_MESH_BIT_NV,
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_MESH_BIT_EXT,
                                             _mesh));
     mesh_pipeline_builder._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -387,6 +387,11 @@ void vk_engine::draw_mesh(frame *frame)
 {
     vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       _mesh_pipeline);
+
+    for (const auto &mesh : _meshes) {
+        /* bind descriptor sets */
+        vkCmdBindDescriptorSets(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ??, ??);
+    }
 
     vkCmdDrawMeshTasksEXT(frame->cbuffer, 1, 1, 1);
 }
