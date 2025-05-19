@@ -5,6 +5,20 @@
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout (triangles, max_vertices = 64, max_primitives = 126) out;
 
+struct vertex
+{
+    vec3 pos;
+    vec3 normal;
+    vec3 texcrood;
+};
+
+struct meshlet
+{
+    vertex vertices[64];
+    uint indices[186];
+    uint vertices_count;
+};
+
 layout (set = 0, binding = 0) uniform readonly RENDER_MAT
 {
     mat4 view;
@@ -12,15 +26,11 @@ layout (set = 0, binding = 0) uniform readonly RENDER_MAT
     mat4 model;
 } render_mat;
 
-struct meshlet
-{
-};
-
 layout (set = 0, binding = 1) buffer readonly MESHLETS
 {
-    meshlet mshel[];
+    meshlet mshlets[];
     uint count;
-};
+} meshlets;
 
 layout (location = 0) out per_vertex_data
 {
@@ -29,13 +39,22 @@ layout (location = 0) out per_vertex_data
 
 void main()
 {
+    meshlet = meshlets[groupid];
+    for (i = 0; i < vertices_count; ++i) {
+        vertex = meshlet.vertices[i];
+        v_pos = vertex.pos;
+        vertices[i].gl_Position =
+            render_mat.proj * render_mat.view * render_mat.model * vec4(v_pos, 1.f);
+        v_out[i].texcrood = vertex.texcrood;
+    }
+
     // gl_MeshVerticesNV[0].gl_Position = ;
     // gl_MeshVerticesNV[1].gl_Position = ;
     // gl_MeshVerticesNV[2].gl_Position = ;
 
-    gl_PrimitiveIndicesNV[0] = 0;
-    gl_PrimitiveIndicesNV[1] = 1;
-    gl_PrimitiveIndicesNV[2] = 2;
+    // gl_PrimitiveIndicesNV[0] = 0;
+    // gl_PrimitiveIndicesNV[1] = 1;
+    // gl_PrimitiveIndicesNV[2] = 2;
 
-    gl_PrimitiveCountNV = 1;
+    gl_PrimitiveCountNV = vertices_count / 3;
 }

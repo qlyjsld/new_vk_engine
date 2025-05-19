@@ -22,6 +22,16 @@ struct vertex {
     static vertex_input_description get_vertex_input_description();
 };
 
+struct meshlet {
+    std::vector<vertex> vertices;
+    std::vector<uint16_t> indices;
+};
+
+struct meshlets {
+    std::vector<meshlet> mshlets;
+    uint32_t count;
+};
+
 struct mesh {
     std::vector<vertex> vertices;
     allocated_buffer vertex_buffer;
