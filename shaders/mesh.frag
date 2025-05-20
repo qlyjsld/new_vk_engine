@@ -11,6 +11,6 @@ layout (set = 1, binding = 0) uniform sampler2D tex;
 
 void main()
 {
-    vec3 color = texture(tex, texcrood).xyz;
-    frag_color = v_in.color;
+    vec3 color = texture(tex, v_in.texcrood).xyz;
+    frag_color = vec4(color, 1.f);
 }

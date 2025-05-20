@@ -390,7 +390,8 @@ void vk_engine::draw_mesh(frame *frame)
 
     for (const auto &mesh : _meshes) {
         /* bind descriptor sets */
-        vkCmdBindDescriptorSets(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, ??, ??);
+        // vkCmdBindDescriptorSets(frame->cbuffer,
+        // VK_PIPELINE_BIND_POINT_GRAPHICS, ??, ??);
     }
 
     vkCmdDrawMeshTasksEXT(frame->cbuffer, 1, 1, 1);
