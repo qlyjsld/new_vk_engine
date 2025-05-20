@@ -9,7 +9,7 @@ struct vertex
 {
     vec3 pos;
     vec3 normal;
-    vec3 texcrood;
+    vec2 texcrood;
 };
 
 struct meshlet
@@ -17,6 +17,7 @@ struct meshlet
     vertex vertices[64];
     uint indices[186];
     uint vertices_count;
+    uint indices_count;
 };
 
 layout (set = 0, binding = 0) uniform readonly RENDER_MAT
@@ -29,7 +30,6 @@ layout (set = 0, binding = 0) uniform readonly RENDER_MAT
 layout (set = 0, binding = 1) buffer readonly MESHLETS
 {
     meshlet mshlets[];
-    uint count;
 } meshlets;
 
 layout (location = 0) out per_vertex_data
@@ -39,22 +39,16 @@ layout (location = 0) out per_vertex_data
 
 void main()
 {
-    meshlet = meshlets[groupid];
-    for (i = 0; i < vertices_count; ++i) {
-        vertex = meshlet.vertices[i];
-        v_pos = vertex.pos;
-        vertices[i].gl_Position =
-            render_mat.proj * render_mat.view * render_mat.model * vec4(v_pos, 1.f);
-        v_out[i].texcrood = vertex.texcrood;
+    meshlet m = meshlets.mshlets[gl_WorkGroupID.x];
+    for (uint i = 0; i < m.vertices_count; ++i) {
+        vertex v = m.vertices[i];
+        gl_MeshVerticesNV[i].gl_Position =
+            render_mat.proj * render_mat.view * render_mat.model * vec4(v.pos, 1.f);
+        v_out[i].texcrood = v.texcrood;
     }
 
-    // gl_MeshVerticesNV[0].gl_Position = ;
-    // gl_MeshVerticesNV[1].gl_Position = ;
-    // gl_MeshVerticesNV[2].gl_Position = ;
+    for (uint i = 0; i < m.vertices_count; ++i)
+        gl_PrimitiveIndicesNV[i] = m.indices[i];
 
-    // gl_PrimitiveIndicesNV[0] = 0;
-    // gl_PrimitiveIndicesNV[1] = 1;
-    // gl_PrimitiveIndicesNV[2] = 2;
-
-    gl_PrimitiveCountNV = vertices_count / 3;
+    gl_PrimitiveCountNV = m.indices_count / 3;
 }
