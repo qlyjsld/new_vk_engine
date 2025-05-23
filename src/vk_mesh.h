@@ -25,11 +25,8 @@ struct vertex {
 struct meshlet {
     std::vector<vertex> vertices;
     std::vector<uint16_t> indices;
-};
-
-struct meshlets {
-    std::vector<meshlet> mshlets;
-    uint32_t count;
+    uint32_t vertex_count;
+    uint32_t index_count;
 };
 
 struct mesh {
@@ -42,6 +39,10 @@ struct mesh {
     std::vector<unsigned char> texture;
     allocated_img texture_buffer;
     VkDescriptorSet texture_set;
+
+    std::vector<meshlet> mshlets;
+    allocated_buffer mshlets_buffer;
+    VkDescriptorSet mshlets_set;
 };
 
 struct material {

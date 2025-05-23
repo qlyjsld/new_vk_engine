@@ -1,6 +1,7 @@
 #include "vk_mesh.h"
 
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -280,6 +281,33 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             mesh.texture_buffer.extent.width = texture_view.width;
             mesh.texture_buffer.extent.height = texture_view.height;
             mesh.texture_buffer.format = VK_FORMAT_R8G8B8A8_SRGB;
+        }
+
+        /* fill up meshlets */
+        std::unordered_map<uint32_t, uint32_t> unique_vertex;
+        uint32_t vertex_count = 0;
+        uint32_t index_offset = 0;
+        meshlet mshlet;
+        for (uint32_t i = 0; i < mesh.indices.size(); ++i) {
+            uint32_t index = mesh.indices[i];
+            mshlet.indices.push_back(mesh.indices[i] - index_offset);
+            if (!unique_vertex.count(index)) {
+                unique_vertex[index] = 1;
+                mshlet.vertices.push_back(mesh.vertices[index]);
+                vertex_count++;
+            }
+
+            if (vertex_count == 64) {
+                // new meshlet
+                mesh.mshlets.push_back(mshlet);
+                unique_vertex.clear();
+                vertex_count = 0;
+                index_offset = i;
+                mshlet.vertices.clear();
+                mshlet.indices.clear();
+                mshlet.vertex_count = 0;
+                mshlet.index_count = 0;
+            }
         }
 
         meshes.push_back(mesh);

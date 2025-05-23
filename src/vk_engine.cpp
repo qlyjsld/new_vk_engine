@@ -385,16 +385,31 @@ void vk_engine::draw_nodes(frame *frame)
 
 void vk_engine::draw_mesh(frame *frame)
 {
-    vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      _mesh_pipeline);
+    std::vector<node> nodes(_nodes);
 
-    for (const auto &mesh : _meshes) {
-        /* bind descriptor sets */
-        // vkCmdBindDescriptorSets(frame->cbuffer,
-        // VK_PIPELINE_BIND_POINT_GRAPHICS, ??, ??);
+    for (uint32_t i = 0; i < nodes.size(); ++i) {
+        node *node = &nodes[i];
+
+        for (auto c = node->children.cbegin(); c != node->children.cend(); ++c)
+            nodes[*c].transform_mat =
+                node->transform_mat * nodes[*c].transform_mat;
+
+        if (node->mesh_id != -1) {
+            mesh *mesh = &_meshes[node->mesh_id];
+            vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              _mesh_pipeline);
+
+            std::vector<VkDescriptorSet> sets = {
+                _render_mat_set,
+                mesh->texture_set,
+            };
+            vkCmdBindDescriptorSets(
+                frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                _mesh_pipeline_layout, 0, sets.size(), sets.data(), 0, nullptr);
+
+            vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->mshlets.size(), 1, 1);
+        }
     }
-
-    vkCmdDrawMeshTasksEXT(frame->cbuffer, 1, 1, 1);
 }
 
 void vk_engine::cleanup()

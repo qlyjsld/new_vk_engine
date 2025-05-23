@@ -27,7 +27,7 @@ layout (set = 0, binding = 0) uniform readonly RENDER_MAT
     mat4 model;
 } render_mat;
 
-layout (set = 0, binding = 1) buffer readonly MESHLETS
+layout (set = 1, binding = 0) buffer readonly MESHLETS
 {
     meshlet mshlets[];
 } meshlets;
