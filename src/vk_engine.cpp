@@ -399,8 +399,22 @@ void vk_engine::draw_mesh(frame *frame)
             vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                               _mesh_pipeline);
 
+            render_mat mat;
+            mat.view = _vk_camera.get_view_mat();
+            mat.proj = _vk_camera.get_proj_mat();
+            mat.proj[1][1] *= -1;
+            mat.model = node->transform_mat;
+
+            void *data;
+            vmaMapMemory(_allocator, _render_mat_buffer.allocation, &data);
+            std::memcpy((char *)data +
+                            i * pad_uniform_buffer_size(sizeof(render_mat)),
+                        &mat, sizeof(render_mat));
+            vmaUnmapMemory(_allocator, _render_mat_buffer.allocation);
+
             std::vector<VkDescriptorSet> sets = {
                 _render_mat_set,
+                mesh->mshlets_set,
                 mesh->texture_set,
             };
             vkCmdBindDescriptorSets(
