@@ -290,24 +290,35 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         meshlet mshlet;
         for (uint32_t i = 0; i < mesh.indices.size(); ++i) {
             uint32_t index = mesh.indices[i];
-            mshlet.indices.push_back(mesh.indices[i] - index_offset);
+
             if (!unique_vertex.count(index)) {
                 unique_vertex[index] = 1;
                 mshlet.vertices.push_back(mesh.vertices[index]);
                 vertex_count++;
+                index_offset = std::min(index, index_offset);
             }
+
+            mshlet.indices.push_back(mesh.indices[i] - index_offset);
 
             if (vertex_count == 64) {
                 // new meshlet
+                mshlet.vertex_count = mshlet.vertices.size();
+                mshlet.index_count = mshlet.indices.size();
                 mesh.mshlets.push_back(mshlet);
                 unique_vertex.clear();
                 vertex_count = 0;
-                index_offset = i;
+                index_offset = UINT32_MAX;
                 mshlet.vertices.clear();
                 mshlet.indices.clear();
                 mshlet.vertex_count = 0;
                 mshlet.index_count = 0;
             }
+        }
+
+        if (vertex_count) {
+            mshlet.vertex_count = mshlet.vertices.size();
+            mshlet.index_count = mshlet.indices.size();
+            mesh.mshlets.push_back(mshlet);
         }
 
         meshes.push_back(mesh);
