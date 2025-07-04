@@ -32,6 +32,7 @@ struct meshlet {
 struct mesh {
     std::vector<vertex> vertices;
     allocated_buffer vertex_buffer;
+    VkDescriptorSet vertex_set;
 
     std::vector<uint16_t> indices;
     allocated_buffer index_buffer;

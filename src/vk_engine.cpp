@@ -415,6 +415,7 @@ void vk_engine::draw_mesh(frame *frame)
             std::vector<VkDescriptorSet> sets = {
                 _render_mat_set,
                 mesh->mshlets_set,
+                mesh->vertex_set,
                 mesh->texture_set,
             };
             vkCmdBindDescriptorSets(

@@ -387,6 +387,39 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         vmaDestroyBuffer(_allocator, staging_buffer.buffer,
                          staging_buffer.allocation);
 
+        /* vertex layout */
+        VkDescriptorSetLayoutCreateInfo vertex_data_layout_info =
+            vk_boiler::descriptor_set_layout_create_info(
+                std::vector<VkDescriptorType>{
+                    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                },
+                VK_SHADER_STAGE_MESH_BIT_EXT);
+
+        VK_CHECK(vkCreateDescriptorSetLayout(_device, &vertex_data_layout_info,
+                                             nullptr, &_vertex_layout));
+
+        deletion_queue.push_back([=]() {
+            vkDestroyDescriptorSetLayout(_device, _vertex_layout, nullptr);
+        });
+
+        VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
+            vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+                                                    &_vertex_layout);
+
+        VK_CHECK(vkAllocateDescriptorSets(
+            _device, &descriptor_set_allocate_info, &mesh->vertex_set));
+
+        VkDescriptorBufferInfo descriptor_buf_info = {};
+        descriptor_buf_info.buffer = mesh->vertex_buffer.buffer;
+        descriptor_buf_info.offset = 0;
+        descriptor_buf_info.range = mesh->vertices.size() * sizeof(vertex);
+
+        VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+            &descriptor_buf_info, mesh->vertex_set, 0,
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
+        vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+
         /* create index buffer */
         create_staging_buffer(mesh->indices.size() * sizeof(uint16_t),
                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
