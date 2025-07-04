@@ -14,7 +14,7 @@ struct vertex
 
 struct meshlet
 {
-    vertex vertices[64];
+    uint vertex_index[64];
     uint indices[378];
     uint vertex_count;
     uint index_count;
@@ -27,7 +27,12 @@ layout (set = 0, binding = 0) uniform readonly RENDER_MAT
     mat4 model;
 } render_mat;
 
-layout (set = 1, binding = 0) buffer readonly MESHLETS
+layout (set = 1, binding = 0) buffer readonly VERTICES
+{
+    vertex vertices[];
+} vertices;
+
+layout (set = 2, binding = 0) buffer readonly MESHLETS
 {
     meshlet mshlets[];
 } meshlets;
@@ -41,7 +46,7 @@ void main()
 {
     meshlet m = meshlets.mshlets[gl_WorkGroupID.x];
     for (uint i = 0; i < m.vertex_count; ++i) {
-        vertex v = m.vertices[i];
+        vertex v = vertices.vertices[m.vertex_index[i]];
         gl_MeshVerticesNV[i].gl_Position =
             render_mat.proj * render_mat.view * render_mat.model * vec4(v.pos, 1.f);
         v_out[i].texcrood = v.texcrood;
