@@ -475,6 +475,18 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 
         vmaDestroyBuffer(_allocator, staging_buffer.buffer,
                          staging_buffer.allocation);
+
+        // mesh shader meshlets buffer descriptor
+        descriptor_buf_info = {};
+        descriptor_buf_info.buffer = mesh->meshlet_buffer.buffer;
+        descriptor_buf_info.offset = 0;
+        descriptor_buf_info.range = mesh->meshlets.size() * sizeof(meshlet);
+
+        write_set = vk_boiler::write_descriptor_set(
+            &descriptor_buf_info, mesh->meshlet_set, 0,
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
+        vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
     }
 }
 
