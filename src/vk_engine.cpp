@@ -414,7 +414,7 @@ void vk_engine::draw_mesh(frame *frame)
 
             std::vector<VkDescriptorSet> sets = {
                 _render_mat_set,
-                mesh->mshlets_set,
+                mesh->meshlet_set,
                 mesh->vertex_set,
                 mesh->texture_set,
             };
@@ -422,7 +422,7 @@ void vk_engine::draw_mesh(frame *frame)
                 frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 _mesh_pipeline_layout, 0, sets.size(), sets.data(), 0, nullptr);
 
-            vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->mshlets.size(), 1, 1);
+            vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->meshlets.size(), 1, 1);
         }
     }
 }

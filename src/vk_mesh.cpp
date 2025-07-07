@@ -288,35 +288,35 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         uint32_t vertex_count = 0;
         uint32_t index_count = 0;
         uint32_t index_offset = 0;
-        meshlet mshlet;
+        meshlet meshlet;
         for (uint32_t i = 0; i < mesh.indices.size(); ++i) {
             uint32_t index = mesh.indices[i];
 
             if (!unique_vertex.count(index)) {
                 unique_vertex[index] = 1;
-                mshlet.vertex_index[vertex_count++] = index;
+                meshlet.vertex_index[vertex_count++] = index;
             }
 
-            mshlet.indices[index_count++] = mesh.indices[i] - index_offset;
+            meshlet.indices[index_count++] = mesh.indices[i] - index_offset;
 
             if (vertex_count == 64) {
                 // new meshlet
-                mshlet.vertex_count = vertex_count;
-                mshlet.index_count = index_count;
-                mesh.mshlets.push_back(mshlet);
+                meshlet.vertex_count = vertex_count;
+                meshlet.index_count = index_count;
+                mesh.meshlets.push_back(meshlet);
                 unique_vertex.clear();
                 vertex_count = 0;
                 index_count = 0;
                 index_offset = i + 1;
-                mshlet.vertex_count = 0;
-                mshlet.index_count = 0;
+                meshlet.vertex_count = 0;
+                meshlet.index_count = 0;
             }
         }
 
         if (vertex_count) {
-            mshlet.vertex_count = vertex_count;
-            mshlet.index_count = index_count;
-            mesh.mshlets.push_back(mshlet);
+            meshlet.vertex_count = vertex_count;
+            meshlet.index_count = index_count;
+            mesh.meshlets.push_back(meshlet);
         }
 
         meshes.push_back(mesh);
@@ -371,7 +371,8 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 
         create_buffer(mesh->vertices.size() * sizeof(vertex),
                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                       0, &mesh->vertex_buffer);
 
         immediate_draw(
@@ -408,6 +409,7 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         VK_CHECK(vkAllocateDescriptorSets(
             _device, &descriptor_set_allocate_info, &mesh->vertex_set));
 
+        // mesh shader vertex buffer descriptor
         VkDescriptorBufferInfo descriptor_buf_info = {};
         descriptor_buf_info.buffer = mesh->vertex_buffer.buffer;
         descriptor_buf_info.offset = 0;
@@ -441,6 +443,33 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                 region.size = mesh->indices.size() * sizeof(uint16_t);
                 vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
                                 mesh->index_buffer.buffer, 1, &region);
+            },
+            _queue);
+
+        vmaDestroyBuffer(_allocator, staging_buffer.buffer,
+                         staging_buffer.allocation);
+
+        // upload meshlets
+        create_staging_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                              &staging_buffer);
+
+        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
+        std::memcpy(data, mesh->meshlets.data(),
+                    mesh->meshlets.size() * sizeof(meshlet));
+        vmaUnmapMemory(_allocator, staging_buffer.allocation);
+
+        create_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0,
+                      &mesh->meshlet_buffer);
+
+        immediate_draw(
+            [=](VkCommandBuffer cbuffer) {
+                VkBufferCopy region = {};
+                region.size = mesh->meshlets.size() * sizeof(meshlet);
+                vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
+                                mesh->meshlet_buffer.buffer, 1, &region);
             },
             _queue);
 

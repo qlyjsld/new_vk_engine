@@ -41,9 +41,9 @@ struct mesh {
     allocated_img texture_buffer;
     VkDescriptorSet texture_set;
 
-    std::vector<meshlet> mshlets;
-    allocated_buffer mshlets_buffer;
-    VkDescriptorSet mshlets_set;
+    std::vector<meshlet> meshlets;
+    allocated_buffer meshlet_buffer;
+    VkDescriptorSet meshlet_set;
 };
 
 struct material {
