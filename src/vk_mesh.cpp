@@ -286,6 +286,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         /* fill up meshlets */
         std::unordered_map<uint32_t, uint32_t> unique_vertex;
         uint32_t vertex_count = 0;
+        uint32_t index_count = 0;
         uint32_t index_offset = 0;
         meshlet mshlet;
         for (uint32_t i = 0; i < mesh.indices.size(); ++i) {
@@ -293,30 +294,28 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
             if (!unique_vertex.count(index)) {
                 unique_vertex[index] = 1;
-                mshlet.vertex_index.push_back(index);
-                vertex_count++;
+                mshlet.vertex_index[vertex_count++] = index;
             }
 
-            mshlet.indices.push_back(mesh.indices[i] - index_offset);
+            mshlet.indices[index_count++] = mesh.indices[i] - index_offset;
 
             if (vertex_count == 64) {
                 // new meshlet
-                mshlet.vertex_count = mshlet.vertex_index.size();
-                mshlet.index_count = mshlet.indices.size();
+                mshlet.vertex_count = vertex_count;
+                mshlet.index_count = index_count;
                 mesh.mshlets.push_back(mshlet);
                 unique_vertex.clear();
                 vertex_count = 0;
+                index_count = 0;
                 index_offset = i + 1;
-                mshlet.vertex_index.clear();
-                mshlet.indices.clear();
                 mshlet.vertex_count = 0;
                 mshlet.index_count = 0;
             }
         }
 
         if (vertex_count) {
-            mshlet.vertex_count = mshlet.vertex_index.size();
-            mshlet.index_count = mshlet.indices.size();
+            mshlet.vertex_count = vertex_count;
+            mshlet.index_count = index_count;
             mesh.mshlets.push_back(mshlet);
         }
 

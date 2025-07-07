@@ -23,8 +23,8 @@ struct vertex {
 };
 
 struct meshlet {
-    std::vector<uint16_t> vertex_index;
-    std::vector<uint16_t> indices;
+    uint16_t vertex_index[64];
+    uint16_t indices[378];
     uint32_t vertex_count;
     uint32_t index_count;
 };
