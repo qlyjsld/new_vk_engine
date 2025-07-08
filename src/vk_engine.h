@@ -117,6 +117,7 @@ public:
     VkDescriptorSet _render_mat_set;
     allocated_buffer _render_mat_buffer;
     VkDescriptorSetLayout _vertex_layout;
+    VkDescriptorSetLayout _meshlet_layout;
     VkDescriptorSetLayout _texture_layout;
 
     std::vector<mesh> _meshes;
