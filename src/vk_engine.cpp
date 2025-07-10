@@ -230,7 +230,8 @@ void vk_engine::mesh_init()
     mesh_pipeline_builder._depth_stencil_state_info =
         vk_boiler::depth_stencil_state_create_info();
 
-    std::vector<VkDescriptorSetLayout> layouts = {};
+    std::vector<VkDescriptorSetLayout> layouts = {
+        _render_mat_layout, _meshlet_layout, _vertex_layout, _texture_layout};
     std::vector<VkPushConstantRange> push_constants = {};
 
     _mesh_pipeline_layout =
@@ -418,9 +419,12 @@ void vk_engine::draw_mesh(frame *frame)
                 mesh->vertex_set,
                 mesh->texture_set,
             };
-            vkCmdBindDescriptorSets(
-                frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                _mesh_pipeline_layout, 0, sets.size(), sets.data(), 0, nullptr);
+
+            uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
+            vkCmdBindDescriptorSets(frame->cbuffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    _mesh_pipeline_layout, 0, sets.size(),
+                                    sets.data(), 1, &doffset);
 
             vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->meshlets.size(), 1, 1);
         }
