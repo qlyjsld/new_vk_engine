@@ -47,13 +47,14 @@ void main()
     meshlet m = meshlets.mshlets[gl_WorkGroupID.x];
     for (uint i = 0; i < m.vertex_count; ++i) {
         vertex v = vertices.vertices[m.vertex_index[i]];
-        gl_MeshVerticesNV[i].gl_Position =
+        gl_MeshVerticesEXT[i].gl_Position =
             render_mat.proj * render_mat.view * render_mat.model * vec4(v.pos, 1.f);
         v_out[i].texcrood = v.texcrood;
     }
 
-    for (uint i = 0; i < m.index_count; ++i)
-        gl_PrimitiveTriangleIndicesEXT[i] = m.indices[i];
+    for (uint i = 0; i < m.index_count; i += 3)
+        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(m.indices[i],
+            m.indices[i + 1], m.indices[i + 2]);
 
-    gl_PrimitiveCountNV = m.index_count / 3;
+    SetMeshOutputsEXT(m.vertex_count, m.index_count / 3);
 }
