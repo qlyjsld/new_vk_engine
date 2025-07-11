@@ -287,17 +287,16 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         std::unordered_map<uint32_t, uint32_t> unique_vertex;
         uint32_t vertex_count = 0;
         uint32_t index_count = 0;
-        uint32_t index_offset = 0;
         meshlet meshlet;
         for (uint32_t i = 0; i < mesh.indices.size(); ++i) {
             uint32_t index = mesh.indices[i];
 
             if (!unique_vertex.count(index)) {
-                unique_vertex[index] = 1;
+                unique_vertex[index] = vertex_count;
                 meshlet.vertex_index[vertex_count++] = index;
             }
 
-            meshlet.indices[index_count++] = mesh.indices[i] - index_offset;
+            meshlet.indices[index_count++] = unique_vertex[index];
 
             if (vertex_count == 64) {
                 // new meshlet
@@ -307,7 +306,6 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
                 unique_vertex.clear();
                 vertex_count = 0;
                 index_count = 0;
-                index_offset = i + 1;
                 meshlet.vertex_count = 0;
                 meshlet.index_count = 0;
             }
