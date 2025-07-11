@@ -45,6 +45,8 @@ layout (location = 0) out per_vertex_data
 void main()
 {
     meshlet m = meshlets.mshlets[gl_WorkGroupID.x];
+    SetMeshOutputsEXT(m.vertex_count, m.index_count / 3);
+
     for (uint i = 0; i < m.vertex_count; ++i) {
         vertex v = vertices.vertices[m.vertex_index[i]];
         gl_MeshVerticesEXT[i].gl_Position =
@@ -55,6 +57,4 @@ void main()
     for (uint i = 0; i < m.index_count; i += 3)
         gl_PrimitiveTriangleIndicesEXT[i] = uvec3(m.indices[i],
             m.indices[i + 1], m.indices[i + 2]);
-
-    SetMeshOutputsEXT(m.vertex_count, m.index_count / 3);
 }
