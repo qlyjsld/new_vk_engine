@@ -1,6 +1,6 @@
 #version 460
 
-#extension GL_NV_mesh_shader: require
+#extension GL_EXT_mesh_shader: require
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout (triangles, max_vertices = 64, max_primitives = 126) out;
@@ -53,7 +53,7 @@ void main()
     }
 
     for (uint i = 0; i < m.index_count; ++i)
-        gl_PrimitiveIndicesNV[i] = m.indices[i];
+        gl_PrimitiveTriangleIndicesEXT[i] = m.indices[i];
 
     gl_PrimitiveCountNV = m.index_count / 3;
 }
