@@ -98,7 +98,6 @@ void vk_engine::init()
 
     load_meshes();
 
-    std::cout << "meshes size " << _meshes.size() << std::endl;
     upload_meshes(_meshes.data(), _meshes.size());
     upload_textures(_meshes.data(), _meshes.size());
 
@@ -109,6 +108,7 @@ void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
     };
@@ -454,6 +454,13 @@ void vk_engine::run()
     }
 
     std::cout << "draw " << triangles << " triangels" << std::endl;
+    std::cout << "draw " << _meshes.size() << " meshes" << std::endl;
+
+    for (uint32_t i = 0; i < _meshes.size(); ++i) {
+        std::cout << "mesh[" << i
+                  << "], meshlets size: " << _meshes[i].meshlets.size()
+                  << std::endl;
+    }
 
     SDL_SetWindowRelativeMouseMode(_window, true);
 
