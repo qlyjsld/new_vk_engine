@@ -298,7 +298,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
             meshlet.indices[index_count++] = unique_vertex[index];
 
-            if (vertex_count == 64) {
+            if (vertex_count >= 62 && index_count % 3 == 0) {
                 // new meshlet
                 meshlet.vertex_count = vertex_count;
                 meshlet.index_count = index_count;
