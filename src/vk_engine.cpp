@@ -234,7 +234,7 @@ void vk_engine::mesh_init()
         vk_boiler::depth_stencil_state_create_info();
 
     std::vector<VkDescriptorSetLayout> layouts = {
-        _render_mat_layout, _meshlet_layout, _vertex_layout, _texture_layout};
+        _render_mat_layout, _vertex_layout, _meshlet_layout, _texture_layout};
     // std::vector<VkDescriptorSetLayout> layouts = {};
     std::vector<VkPushConstantRange> push_constants = {};
 
@@ -419,8 +419,8 @@ void vk_engine::draw_mesh(frame *frame)
 
             std::vector<VkDescriptorSet> sets = {
                 _render_mat_set,
-                mesh->meshlet_set,
                 mesh->vertex_set,
+                mesh->meshlet_set,
                 mesh->texture_set,
             };
 

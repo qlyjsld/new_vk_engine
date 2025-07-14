@@ -54,7 +54,8 @@ void main()
         v_out[i].texcrood = v.texcrood;
     }
 
+    uint j = 0;
     for (uint i = 0; i < m.index_count; i += 3)
-        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(m.indices[i],
+        gl_PrimitiveTriangleIndicesEXT[j++] = uvec3(m.indices[i],
             m.indices[i + 1], m.indices[i + 2]);
 }

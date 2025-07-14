@@ -367,10 +367,14 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                     mesh->vertices.size() * sizeof(vertex));
         vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
+        // create_buffer(mesh->vertices.size() * sizeof(vertex),
+        //               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+        //                   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        //               0, &mesh->vertex_buffer);
+
         create_buffer(mesh->vertices.size() * sizeof(vertex),
-                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->vertex_buffer);
 
         immediate_draw(
