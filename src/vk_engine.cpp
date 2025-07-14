@@ -211,6 +211,9 @@ void vk_engine::mesh_init()
     _mesh = load_shader_module("../shaders/mesh.mesh.spv");
     _pixel = load_shader_module("../shaders/mesh.frag.spv");
 
+    // _mesh = load_shader_module("../shaders/triangle.mesh.spv");
+    // _pixel = load_shader_module("../shaders/triangle.frag.spv");
+
     PipelineBuilder mesh_pipeline_builder = {};
     mesh_pipeline_builder._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_MESH_BIT_EXT,
@@ -232,6 +235,7 @@ void vk_engine::mesh_init()
 
     std::vector<VkDescriptorSetLayout> layouts = {
         _render_mat_layout, _meshlet_layout, _vertex_layout, _texture_layout};
+    // std::vector<VkDescriptorSetLayout> layouts = {};
     std::vector<VkPushConstantRange> push_constants = {};
 
     _mesh_pipeline_layout =
@@ -429,6 +433,10 @@ void vk_engine::draw_mesh(frame *frame)
             vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->meshlets.size(), 1, 1);
         }
     }
+
+    // vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                   _mesh_pipeline);
+    // vkCmdDrawMeshTasksEXT(frame->cbuffer, 1, 1, 1);
 }
 
 void vk_engine::cleanup()
