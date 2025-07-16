@@ -15,7 +15,7 @@ struct vertex
 struct meshlet
 {
     uint vertex_index[64];
-    uint indices[378];
+    uint index[378];
     uint vertex_count;
     uint index_count;
 };
@@ -56,6 +56,6 @@ void main()
 
     uint j = 0;
     for (uint i = 0; i < m.index_count; i += 3)
-        gl_PrimitiveTriangleIndicesEXT[j++] = uvec3(m.indices[i],
-            m.indices[i + 1], m.indices[i + 2]);
+        gl_PrimitiveTriangleIndicesEXT[j++] = uvec3(m.index[i],
+            m.index[i + 1], m.index[i + 2]);
 }
