@@ -34,7 +34,7 @@ layout (set = 1, binding = 0) buffer readonly VERTICES
 
 layout (set = 2, binding = 0) buffer readonly MESHLETS
 {
-    meshlet mshlets[];
+    meshlet meshlets[];
 } meshlets;
 
 layout (location = 0) out per_vertex_data
@@ -44,7 +44,7 @@ layout (location = 0) out per_vertex_data
 
 void main()
 {
-    meshlet m = meshlets.mshlets[gl_WorkGroupID.x];
+    meshlet m = meshlets.meshlets[gl_WorkGroupID.x];
     SetMeshOutputsEXT(m.vertex_count, m.index_count / 3);
 
     for (uint i = 0; i < m.vertex_count; ++i) {
