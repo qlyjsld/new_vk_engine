@@ -40,7 +40,22 @@ layout (set = 2, binding = 0) buffer readonly MESHLETS
 layout (location = 0) out per_vertex_data
 {
     vec2 texcrood;
+    vec3 color;
 } v_out[];
+
+#define MAX_COLORS 10
+vec3 meshlet_colors[MAX_COLORS] = {
+    vec3(1.f, 0.f, 0.f),
+    vec3(0.f, 1.f, 0.f),
+    vec3(0.f, 0.f, 1.f),
+    vec3(1.f, 1.f, 0.f),
+    vec3(1.f, 0.f, 1.f),
+    vec3(0.f, 1.f, 1.f),
+    vec3(1.f, .5f, 0.f),
+    vec3(.5f, 1.f, 0.f),
+    vec3(0.f, .5f, 1.f),
+    vec3(1.f, 1.f, 1.f)
+};
 
 void main()
 {
@@ -52,6 +67,7 @@ void main()
         gl_MeshVerticesEXT[i].gl_Position =
             render_mat.proj * render_mat.view * render_mat.model * vec4(v.pos, 1.f);
         v_out[i].texcrood = v.texcrood;
+        v_out[i].color = meshlet_colors[gl_WorkGroupID.x % MAX_COLORS];
     }
 
     uint j = 0;
