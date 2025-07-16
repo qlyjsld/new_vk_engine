@@ -452,26 +452,24 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                          staging_buffer.allocation);
 
         // upload meshlets
-        create_staging_buffer(
-            mesh->meshlets.size() * pad_uniform_buffer_size(sizeof(meshlet)),
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, &staging_buffer);
+        create_staging_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                              &staging_buffer);
 
         vmaMapMemory(_allocator, staging_buffer.allocation, &data);
         std::memcpy(data, mesh->meshlets.data(),
-                    mesh->meshlets.size() *
-                        pad_uniform_buffer_size(sizeof(meshlet)));
+                    mesh->meshlets.size() * sizeof(meshlet));
         vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
-        create_buffer(
-            mesh->meshlets.size() * pad_uniform_buffer_size(sizeof(meshlet)),
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0, &mesh->meshlet_buffer);
+        create_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0,
+                      &mesh->meshlet_buffer);
 
         immediate_draw(
             [=](VkCommandBuffer cbuffer) {
                 VkBufferCopy region = {};
-                region.size = mesh->meshlets.size() *
-                              pad_uniform_buffer_size(sizeof(meshlet));
+                region.size = mesh->meshlets.size() * sizeof(meshlet);
                 vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
                                 mesh->meshlet_buffer.buffer, 1, &region);
             },
@@ -504,8 +502,7 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         descriptor_buf_info = {};
         descriptor_buf_info.buffer = mesh->meshlet_buffer.buffer;
         descriptor_buf_info.offset = 0;
-        descriptor_buf_info.range =
-            mesh->meshlets.size() * pad_uniform_buffer_size(sizeof(meshlet));
+        descriptor_buf_info.range = mesh->meshlets.size() * sizeof(meshlet);
 
         write_set = vk_boiler::write_descriptor_set(
             &descriptor_buf_info, mesh->meshlet_set, 0,
