@@ -54,7 +54,7 @@ vec3 meshlet_colors[MAX_COLORS] = {
     vec3(1.f, .5f, 0.f),
     vec3(.5f, 1.f, 0.f),
     vec3(0.f, .5f, 1.f),
-    vec3(1.f, 1.f, 1.f)
+    vec3(.9f, .9f, .9f)
 };
 
 void main()
