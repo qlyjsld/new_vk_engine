@@ -15,9 +15,9 @@ struct vertex_input_description {
 };
 
 struct vertex {
-    glm::vec3 pos;
-    glm::vec3 normal;
-    glm::vec2 texcoord;
+    alignas(16) glm::vec3 pos;
+    alignas(16) glm::vec3 normal;
+    alignas(16) glm::vec2 texcoord;
 
     static vertex_input_description get_vertex_input_description();
 };

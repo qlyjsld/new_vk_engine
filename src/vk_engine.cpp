@@ -494,16 +494,17 @@ void vk_engine::run()
     std::cout << "draw " << triangles << " triangels" << std::endl;
     std::cout << "draw " << _meshes.size() << " meshes" << std::endl;
 
-    for (uint32_t i = 0; i < _meshes.size(); ++i) {
-        std::cout << "mesh[" << i
-                  << "], meshlets size: " << _meshes[i].meshlets.size()
-                  << std::endl;
-        for (uint32_t j = 0; j < _meshes[i].meshlets.size(); ++j)
-            std::cout << "meshlet[" << j << "] vertex count: "
-                      << _meshes[i].meshlets[j].vertex_count
-                      << " index count: " << _meshes[i].meshlets[j].index_count
-                      << std::endl;
-    }
+    // for (uint32_t i = 0; i < _meshes.size(); ++i) {
+    //     std::cout << "mesh[" << i
+    //               << "], meshlets size: " << _meshes[i].meshlets.size()
+    //               << std::endl;
+    //     for (uint32_t j = 0; j < _meshes[i].meshlets.size(); ++j)
+    //         std::cout << "meshlet[" << j << "] vertex count: "
+    //                   << _meshes[i].meshlets[j].vertex_count
+    //                   << " index count: " <<
+    //                   _meshes[i].meshlets[j].index_count
+    //                   << std::endl;
+    // }
 
     SDL_SetWindowRelativeMouseMode(_window, true);
 
