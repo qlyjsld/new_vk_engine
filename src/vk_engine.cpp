@@ -129,7 +129,8 @@ void vk_engine::descriptor_init()
             std::vector<VkDescriptorType>{
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             },
-            VK_SHADER_STAGE_VERTEX_BIT);
+            // VK_SHADER_STAGE_VERTEX_BIT
+            VK_SHADER_STAGE_MESH_BIT_EXT);
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info,
                                          nullptr, &_render_mat_layout));
@@ -468,6 +469,11 @@ void vk_engine::run()
         std::cout << "mesh[" << i
                   << "], meshlets size: " << _meshes[i].meshlets.size()
                   << std::endl;
+        for (uint32_t j = 0; j < _meshes[i].meshlets.size(); ++j)
+            std::cout << "meshlet[" << j << "] vertex count: "
+                      << _meshes[i].meshlets[j].vertex_count
+                      << " index count: " << _meshes[i].meshlets[j].index_count
+                      << std::endl;
     }
 
     SDL_SetWindowRelativeMouseMode(_window, true);
