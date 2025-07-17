@@ -246,6 +246,8 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         buffer_view normal = retreive_buffer(&model, &primitive, -1, "NORMAL");
         data = normal.data;
         for (uint32_t i = 0; i < normal.count; ++i) {
+            if (i >= mesh.vertices.size())
+                break;
             mesh.vertices[i].normal =
                 glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
                           *(float *)(data + 2 * sizeof(float)));
@@ -257,6 +259,8 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             retreive_buffer(&model, &primitive, -1, "TEXCOORD_0");
         data = texcrood.data;
         for (uint32_t i = 0; i < texcrood.count; ++i) {
+            if (i >= mesh.vertices.size())
+                break;
             mesh.vertices[i].texcoord =
                 glm::vec2(*(float *)data, *(float *)(data + sizeof(float)));
             data += texcrood.stride;
