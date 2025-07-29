@@ -10,18 +10,19 @@ void vk_engine::immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
                                VkQueue queue)
 {
     /* prepare command buffer */
-    VkCommandBufferBeginInfo cbuffer_begin_info =
-        vk_boiler::cbuffer_begin_info();
+    VkCommandBufferBeginInfo cmd_buffer_begin_info =
+        vk_boiler::cmd_buffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(_immed_context.cbuffer, &cbuffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(_immed_context.cmd_buffer,
+                                  &cmd_buffer_begin_info));
 
-    fs(_immed_context.cbuffer);
+    fs(_immed_context.cmd_buffer);
 
-    VK_CHECK(vkEndCommandBuffer(_immed_context.cbuffer));
+    VK_CHECK(vkEndCommandBuffer(_immed_context.cmd_buffer));
 
     VkSubmitInfo submit_info = vk_boiler::submit_info(
-        &_immed_context.cbuffer, nullptr, nullptr, nullptr);
+        &_immed_context.cmd_buffer, nullptr, nullptr, nullptr);
 
     submit_info.waitSemaphoreCount = 0;
     submit_info.signalSemaphoreCount = 0;

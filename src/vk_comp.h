@@ -63,7 +63,7 @@ public:
     void init();
 
 private:
-    VkDescriptorPool comp_descriptor_pool;
+    VkDescriptorPool comp_desc_pool;
     std::vector<std::string> buffer_id;
     std::vector<std::string> img_id;
 };

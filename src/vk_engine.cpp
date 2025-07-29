@@ -193,15 +193,15 @@ void vk_engine::draw()
                           VK_NULL_HANDLE, &_img_index);
 
     /* prepare command buffer and dynamic rendering functions */
-    VkCommandBufferBeginInfo cbuffer_begin_info =
-        vk_boiler::cbuffer_begin_info();
+    VkCommandBufferBeginInfo cmd_buffer_begin_info =
+        vk_boiler::cmd_buffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(frame->cbuffer, &cbuffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(frame->cmd_buffer, &cmd_buffer_begin_info));
 
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
+        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _family_index);
 
     draw_imgui();
@@ -224,46 +224,48 @@ void vk_engine::draw()
     VkRenderingInfo rendering_info = vk_boiler::rendering_info(
         &color_attachment, &depth_attachment, _resolution);
 
-    vkCmdBeginRendering(frame->cbuffer, &rendering_info);
+    vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
     // draw_gfx(frame);
     draw_mesh(frame);
 
     /* imgui rendering */
     ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cbuffer);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cmd_buffer);
 
-    vkCmdEndRendering(frame->cbuffer);
+    vkCmdEndRendering(frame->cmd_buffer);
 
     /* transition image format for transfering */
-    vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _family_index);
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _target.img,
+                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                     _family_index);
 
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _family_index);
+        frame->cmd_buffer, _swapchain_imgs[_img_index],
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        _family_index);
 
     /* copy img to swapchain */
     vk_cmd::vk_img_copy(
-        frame->cbuffer,
+        frame->cmd_buffer,
         VkExtent3D{_window_extent.width, _window_extent.height, 1}, _target.img,
         _swapchain_imgs[_img_index]);
 
     /* transition image format for presenting */
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _swapchain_imgs[_img_index],
+        frame->cmd_buffer, _swapchain_imgs[_img_index],
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         _family_index);
 
-    VK_CHECK(vkEndCommandBuffer(frame->cbuffer));
+    VK_CHECK(vkEndCommandBuffer(frame->cmd_buffer));
 
     /* submit present queue */
     VkPipelineStageFlags pipeline_stage_flags =
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     VkSubmitInfo submit_info =
-        vk_boiler::submit_info(&frame->cbuffer, &frame->present_sem,
+        vk_boiler::submit_info(&frame->cmd_buffer, &frame->present_sem,
                                &frame->sumbit_sem, &pipeline_stage_flags);
 
     VK_CHECK(vkQueueSubmit(_queue, 1, &submit_info, frame->fence));
@@ -287,15 +289,15 @@ void vk_engine::draw_gfx(frame *frame)
 
         if (node->mesh_id != -1) {
             mesh *mesh = &_meshes[node->mesh_id];
-            vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              _gfx_pipeline);
+            vkCmdBindPipeline(frame->cmd_buffer,
+                              VK_PIPELINE_BIND_POINT_GRAPHICS, _gfx_pipeline);
 
             VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(frame->cbuffer, 0, 1,
+            vkCmdBindVertexBuffers(frame->cmd_buffer, 0, 1,
                                    &mesh->vertex_buffer.buffer, &offset);
 
-            vkCmdBindIndexBuffer(frame->cbuffer, mesh->index_buffer.buffer, 0,
-                                 VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer,
+                                 0, VK_INDEX_TYPE_UINT16);
 
             render_mat mat;
             mat.view = _vk_camera.get_view_mat();
@@ -316,10 +318,11 @@ void vk_engine::draw_gfx(frame *frame)
             };
             uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(
-                frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 _gfx_pipeline_layout, 0, sets.size(), sets.data(), 1, &doffset);
 
-            vkCmdDrawIndexed(frame->cbuffer, mesh->indices.size(), 1, 0, 0, 0);
+            vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0,
+                             0);
         }
     }
 }
@@ -337,8 +340,8 @@ void vk_engine::draw_mesh(frame *frame)
 
         if (node->mesh_id != -1) {
             mesh *mesh = &_meshes[node->mesh_id];
-            vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              _mesh_pipeline);
+            vkCmdBindPipeline(frame->cmd_buffer,
+                              VK_PIPELINE_BIND_POINT_GRAPHICS, _mesh_pipeline);
 
             render_mat mat;
             mat.view = _vk_camera.get_view_mat();
@@ -361,12 +364,13 @@ void vk_engine::draw_mesh(frame *frame)
             };
 
             uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
-            vkCmdBindDescriptorSets(frame->cbuffer,
+            vkCmdBindDescriptorSets(frame->cmd_buffer,
                                     VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     _mesh_pipeline_layout, 0, sets.size(),
                                     sets.data(), 1, &doffset);
 
-            vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->meshlets.size(), 1, 1);
+            vkCmdDrawMeshTasksEXT(frame->cmd_buffer, mesh->meshlets.size(), 1,
+                                  1);
         }
     }
 }
@@ -499,7 +503,7 @@ void vk_engine::imgui_init()
     imgui_init_info.Device = _device;
     imgui_init_info.QueueFamily = _family_index;
     imgui_init_info.Queue = _queue;
-    imgui_init_info.DescriptorPool = _descriptor_pool;
+    imgui_init_info.DescriptorPool = _desc_pool;
     imgui_init_info.MinImageCount = 2;
     imgui_init_info.ImageCount = 2;
     imgui_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;

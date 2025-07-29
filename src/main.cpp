@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
    execute immediately, the latter one is ofter used for preparing texture or
    data used later.
 
-        compute_shader_example.draw = [=](VkCommandBuffer cbuffer, cs *cs) {
+        compute_shader_example.draw = [=](VkCommandBuffer cmd_buffer, cs *cs) {
             vkCmdBindPipeline(...);
             vkCmdBindDescriptorSets(...);
             vkCmdDispatch(...);
@@ -93,14 +93,14 @@ void vk_engine::comp_init()
 
 void vk_engine::draw_comp(frame *frame)
 {
-    vk_cmd::vk_img_layout_transition(frame->cbuffer, _target.img,
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _target.img,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                      VK_IMAGE_LAYOUT_GENERAL, _family_index);
 
     for (const auto &draw : cs_draw)
-        draw(frame->cbuffer);
+        draw(frame->cmd_buffer);
 
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
+        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_GENERAL,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _family_index);
 }

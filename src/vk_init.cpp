@@ -63,6 +63,7 @@ void vk_engine::device_init()
     vkb::PhysicalDeviceSelector selector(instance);
     auto phys_ret =
         selector.add_required_extension_features(mesh_shader_features)
+            .add_required_extension_features(dynamic_rendering_features)
             .set_surface(_surface)
             .select();
 
@@ -188,38 +189,38 @@ void vk_engine::swapchain_init()
 void vk_engine::command_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
-        VkCommandPoolCreateInfo cpool_info =
-            vk_boiler::cpool_create_info(_family_index);
+        VkCommandPoolCreateInfo cmd_pool_info =
+            vk_boiler::cmd_pool_create_info(_family_index);
 
-        VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
-                                     &_frames[i].cpool));
+        VK_CHECK(vkCreateCommandPool(_device, &cmd_pool_info, nullptr,
+                                     &_frames[i].cmd_pool));
 
         deletion_queue.push_back([=]() {
-            vkDestroyCommandPool(_device, _frames[i].cpool, nullptr);
+            vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
         });
 
-        VkCommandBufferAllocateInfo cbuffer_allocate_info =
-            vk_boiler::cbuffer_allocate_info(1, _frames[i].cpool);
+        VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+            vk_boiler::cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
 
-        VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
-                                          &_frames[i].cbuffer));
+        VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                          &_frames[i].cmd_buffer));
     }
 
-    VkCommandPoolCreateInfo cpool_info =
-        vk_boiler::cpool_create_info(_family_index);
+    VkCommandPoolCreateInfo cmd_pool_info =
+        vk_boiler::cmd_pool_create_info(_family_index);
 
-    VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
-                                 &_immed_context.cpool));
+    VK_CHECK(vkCreateCommandPool(_device, &cmd_pool_info, nullptr,
+                                 &_immed_context.cmd_pool));
 
     deletion_queue.push_back([=]() {
-        vkDestroyCommandPool(_device, _immed_context.cpool, nullptr);
+        vkDestroyCommandPool(_device, _immed_context.cmd_pool, nullptr);
     });
 
-    VkCommandBufferAllocateInfo cbuffer_allocate_info =
-        vk_boiler::cbuffer_allocate_info(1, _immed_context.cpool);
+    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+        vk_boiler::cmd_buffer_allocate_info(1, _immed_context.cmd_pool);
 
-    VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
-                                      &_immed_context.cbuffer));
+    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                      &_immed_context.cmd_buffer));
 }
 
 void vk_engine::sync_init()
@@ -261,21 +262,21 @@ void vk_engine::sync_init()
 
 void vk_engine::descriptor_init()
 {
-    std::vector<VkDescriptorPoolSize> pool_sizes = {
+    std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1},
         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
     };
 
-    VkDescriptorPoolCreateInfo pool_info =
-        vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
-                                               pool_sizes.data());
+    VkDescriptorPoolCreateInfo desc_pool_info =
+        vk_boiler::descriptor_pool_create_info(desc_pool_sizes.size(),
+                                               desc_pool_sizes.data());
 
-    VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr,
-                                    &_descriptor_pool));
+    VK_CHECK(
+        vkCreateDescriptorPool(_device, &desc_pool_info, nullptr, &_desc_pool));
 
     deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
+        [=]() { vkDestroyDescriptorPool(_device, _desc_pool, nullptr); });
 
     /* render mat layout and set */
     VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
@@ -294,7 +295,7 @@ void vk_engine::descriptor_init()
     });
 
     VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+        vk_boiler::descriptor_set_allocate_info(_desc_pool,
                                                 &_render_mat_layout);
 
     VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,

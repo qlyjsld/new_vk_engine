@@ -17,14 +17,14 @@ constexpr int FRAME_OVERLAP = 2;
 struct frame {
     VkFence fence;
     VkSemaphore sumbit_sem, present_sem;
-    VkCommandPool cpool;
-    VkCommandBuffer cbuffer;
+    VkCommandPool cmd_pool;
+    VkCommandBuffer cmd_buffer;
 };
 
 struct immed_context {
     VkFence fence;
-    VkCommandPool cpool;
-    VkCommandBuffer cbuffer;
+    VkCommandPool cmd_pool;
+    VkCommandBuffer cmd_buffer;
 };
 
 struct push_constants {
@@ -112,7 +112,7 @@ public:
     VkSampler _sampler;
     VkDeviceSize _min_buffer_alignment;
 
-    VkDescriptorPool _descriptor_pool;
+    VkDescriptorPool _desc_pool;
     VkDescriptorSetLayout _render_mat_layout;
     VkDescriptorSet _render_mat_set;
     allocated_buffer _render_mat_buffer;

@@ -367,10 +367,11 @@ void vk_engine::upload_buffer(size_t size, void *src, VkBuffer buffer)
     vmaUnmapMemory(_allocator, staging_buffer.allocation);
 
     immediate_draw(
-        [=](VkCommandBuffer cbuffer) {
+        [=](VkCommandBuffer cmd_buffer) {
             VkBufferCopy region = {};
             region.size = size;
-            vkCmdCopyBuffer(cbuffer, staging_buffer.buffer, buffer, 1, &region);
+            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, buffer, 1,
+                            &region);
         },
         _queue);
 
@@ -394,7 +395,7 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                       mesh->vertices.data(), mesh->vertex_buffer.buffer);
 
         VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-            vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+            vk_boiler::descriptor_set_allocate_info(_desc_pool,
                                                     &_vertex_layout);
 
         VK_CHECK(vkAllocateDescriptorSets(
@@ -430,7 +431,7 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
                       mesh->meshlets.data(), mesh->meshlet_buffer.buffer);
 
         descriptor_set_allocate_info = vk_boiler::descriptor_set_allocate_info(
-            _descriptor_pool, &_meshlet_layout);
+            _desc_pool, &_meshlet_layout);
 
         VK_CHECK(vkAllocateDescriptorSets(
             _device, &descriptor_set_allocate_info, &mesh->meshlet_set));
@@ -478,22 +479,22 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                 &mesh->texture_buffer);
 
             immediate_draw(
-                [=](VkCommandBuffer cbuffer) {
+                [=](VkCommandBuffer cmd_buffer) {
                     vk_cmd::vk_img_layout_transition(
-                        cbuffer, mesh->texture_buffer.img,
+                        cmd_buffer, mesh->texture_buffer.img,
                         VK_IMAGE_LAYOUT_UNDEFINED,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _family_index);
 
                     VkBufferImageCopy region =
                         vk_boiler::buffer_img_copy(extent);
 
-                    vkCmdCopyBufferToImage(cbuffer, staging_buffer.buffer,
+                    vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
                                            mesh->texture_buffer.img,
                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                            1, &region);
 
                     vk_cmd::vk_img_layout_transition(
-                        cbuffer, mesh->texture_buffer.img,
+                        cmd_buffer, mesh->texture_buffer.img,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         _family_index);
@@ -504,7 +505,7 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                              staging_buffer.allocation);
 
             VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-                vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+                vk_boiler::descriptor_set_allocate_info(_desc_pool,
                                                         &_texture_layout);
 
             VK_CHECK(vkAllocateDescriptorSets(
