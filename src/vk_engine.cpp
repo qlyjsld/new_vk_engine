@@ -87,10 +87,10 @@ void vk_engine::init()
     vma_init();
 
     swapchain_init();
-    command_init();
+    cmd_init();
     sync_init();
 
-    descriptor_init();
+    desc_init();
     gfx_init();
     mesh_init();
 

@@ -147,10 +147,10 @@ private:
     void device_init();
     void vma_init();
     void swapchain_init();
-    void command_init();
+    void cmd_init();
     void sync_init();
 
-    void descriptor_init();
+    void desc_init();
     VkShaderModule load_shader_module(const char *file);
     void gfx_init();
     void mesh_init();

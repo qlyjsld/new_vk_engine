@@ -359,31 +359,31 @@ descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
         bindings->push_back(binding);
     }
 
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info = {};
-    descriptor_set_layout_info.sType =
+    VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
+    desc_set_layout_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptor_set_layout_info.pNext = nullptr;
-    // descriptor_set_layout_info.flags = ;
-    descriptor_set_layout_info.bindingCount = bindings->size();
-    descriptor_set_layout_info.pBindings = bindings->data();
+    desc_set_layout_info.pNext = nullptr;
+    // desc_set_layout_info.flags = ;
+    desc_set_layout_info.bindingCount = bindings->size();
+    desc_set_layout_info.pBindings = bindings->data();
 
     deletion_queue.push_back([=]() { delete bindings; });
 
-    return descriptor_set_layout_info;
+    return desc_set_layout_info;
 }
 
 inline VkDescriptorSetAllocateInfo
 descriptor_set_allocate_info(VkDescriptorPool desc_pool,
                              VkDescriptorSetLayout *layouts)
 {
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
-    descriptor_set_allocate_info.sType =
+    VkDescriptorSetAllocateInfo desc_set_allocate_info = {};
+    desc_set_allocate_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    descriptor_set_allocate_info.pNext = nullptr;
-    descriptor_set_allocate_info.descriptorPool = desc_pool;
-    descriptor_set_allocate_info.descriptorSetCount = 1;
-    descriptor_set_allocate_info.pSetLayouts = layouts;
-    return descriptor_set_allocate_info;
+    desc_set_allocate_info.pNext = nullptr;
+    desc_set_allocate_info.descriptorPool = desc_pool;
+    desc_set_allocate_info.descriptorSetCount = 1;
+    desc_set_allocate_info.pSetLayouts = layouts;
+    return desc_set_allocate_info;
 }
 
 inline VkWriteDescriptorSet

@@ -186,7 +186,7 @@ void vk_engine::swapchain_init()
         [=]() { vkDestroySampler(_device, _sampler, nullptr); });
 }
 
-void vk_engine::command_init()
+void vk_engine::cmd_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
         VkCommandPoolCreateInfo cmd_pool_info =
@@ -260,7 +260,7 @@ void vk_engine::sync_init()
         [=]() { vkDestroyFence(_device, _immed_context.fence, nullptr); });
 }
 
-void vk_engine::descriptor_init()
+void vk_engine::desc_init()
 {
     std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1},
@@ -293,11 +293,11 @@ void vk_engine::descriptor_init()
         vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
     });
 
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
+    VkDescriptorSetAllocateInfo desc_set_allocate_info =
         vk_boiler::descriptor_set_allocate_info(_desc_pool,
                                                 &_render_mat_layout);
 
-    VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
+    VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
                                       &_render_mat_set));
 
     /* texture layout */
