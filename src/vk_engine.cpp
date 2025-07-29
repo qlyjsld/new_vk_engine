@@ -226,8 +226,8 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
-    draw_gfx(frame);
-    // draw_mesh(frame);
+    // draw_gfx(frame);
+    draw_mesh(frame);
 
     /* imgui rendering */
     ImGui::Render();
