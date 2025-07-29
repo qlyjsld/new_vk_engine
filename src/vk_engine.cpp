@@ -226,8 +226,8 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
-    // draw_gfx(frame);
-    draw_mesh(frame);
+    draw_gfx(frame);
+    // draw_mesh(frame);
 
     /* imgui rendering */
     ImGui::Render();
@@ -316,10 +316,12 @@ void vk_engine::draw_gfx(frame *frame)
                 _render_mat_set,
                 mesh->texture_set,
             };
-            uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
-            vkCmdBindDescriptorSets(
-                frame->cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                _gfx_pipeline_layout, 0, sets.size(), sets.data(), 1, &doffset);
+            uint32_t dynamic_offset =
+                i * pad_uniform_buffer_size(sizeof(render_mat));
+            vkCmdBindDescriptorSets(frame->cmd_buffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    _gfx_pipeline_layout, 0, sets.size(),
+                                    sets.data(), 1, &dynamic_offset);
 
             vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0,
                              0);
@@ -362,12 +364,12 @@ void vk_engine::draw_mesh(frame *frame)
                 mesh->meshlet_set,
                 mesh->texture_set,
             };
-
-            uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
+            uint32_t dynamic_offset =
+                i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(frame->cmd_buffer,
                                     VK_PIPELINE_BIND_POINT_GRAPHICS,
                                     _mesh_pipeline_layout, 0, sets.size(),
-                                    sets.data(), 1, &doffset);
+                                    sets.data(), 1, &dynamic_offset);
 
             vkCmdDrawMeshTasksEXT(frame->cmd_buffer, mesh->meshlets.size(), 1,
                                   1);

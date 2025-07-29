@@ -284,8 +284,7 @@ void vk_engine::descriptor_init()
             std::vector<VkDescriptorType>{
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
             },
-            // VK_SHADER_STAGE_VERTEX_BIT
-            VK_SHADER_STAGE_MESH_BIT_EXT);
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_MESH_BIT_EXT);
 
     VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info,
                                          nullptr, &_render_mat_layout));
