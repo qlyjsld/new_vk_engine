@@ -116,12 +116,13 @@ public:
     VkDescriptorSetLayout _render_mat_layout;
     VkDescriptorSet _render_mat_set;
     allocated_buffer _render_mat_buffer;
+
     VkDescriptorSetLayout _vertex_layout;
     VkDescriptorSetLayout _meshlet_layout;
     VkDescriptorSetLayout _texture_layout;
 
-    std::vector<mesh> _meshes;
     std::vector<node> _nodes;
+    std::vector<mesh> _meshes;
 
     VkShaderModule _vert;
     VkShaderModule _frag;
@@ -151,7 +152,7 @@ private:
 
     void descriptor_init();
     VkShaderModule load_shader_module(const char *file);
-    void pipeline_init();
+    void gfx_init();
     void mesh_init();
 
     void imgui_init();
@@ -168,7 +169,7 @@ private:
 
     void draw_imgui();
     void draw_comp(frame *frame);
-    void draw_nodes(frame *frame);
+    void draw_gfx(frame *frame);
     void draw_mesh(frame *frame);
 
     inline frame *get_current_frame()

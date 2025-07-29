@@ -258,3 +258,91 @@ void vk_engine::sync_init()
     deletion_queue.push_back(
         [=]() { vkDestroyFence(_device, _immed_context.fence, nullptr); });
 }
+
+void vk_engine::descriptor_init()
+{
+    std::vector<VkDescriptorPoolSize> pool_sizes = {
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
+    };
+
+    VkDescriptorPoolCreateInfo pool_info =
+        vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
+                                               pool_sizes.data());
+
+    VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr,
+                                    &_descriptor_pool));
+
+    deletion_queue.push_back(
+        [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
+
+    /* render mat layout and set */
+    VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            },
+            // VK_SHADER_STAGE_VERTEX_BIT
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info,
+                                         nullptr, &_render_mat_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
+    });
+
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
+        vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+                                                &_render_mat_layout);
+
+    VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
+                                      &_render_mat_set));
+
+    /* texture layout */
+    VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            },
+            VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info,
+                                         nullptr, &_texture_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr);
+    });
+
+    /* vertex layout */
+    VkDescriptorSetLayoutCreateInfo vertex_data_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            },
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &vertex_data_layout_info,
+                                         nullptr, &_vertex_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _vertex_layout, nullptr);
+    });
+
+    /* meshlet layout */
+    VkDescriptorSetLayoutCreateInfo meshlet_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            },
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &meshlet_layout_info, nullptr,
+                                         &_meshlet_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _meshlet_layout, nullptr);
+    });
+}

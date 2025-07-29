@@ -91,107 +91,19 @@ void vk_engine::init()
     sync_init();
 
     descriptor_init();
-    pipeline_init();
+    gfx_init();
     mesh_init();
 
     imgui_init();
 
     load_meshes();
-
     upload_meshes(_meshes.data(), _meshes.size());
     upload_textures(_meshes.data(), _meshes.size());
 
     comp_init();
 }
 
-void vk_engine::descriptor_init()
-{
-    std::vector<VkDescriptorPoolSize> pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
-    };
-
-    VkDescriptorPoolCreateInfo pool_info =
-        vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
-                                               pool_sizes.data());
-
-    VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr,
-                                    &_descriptor_pool));
-
-    deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
-
-    /* render mat layout and set */
-    VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            },
-            // VK_SHADER_STAGE_VERTEX_BIT
-            VK_SHADER_STAGE_MESH_BIT_EXT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info,
-                                         nullptr, &_render_mat_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
-    });
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
-                                                &_render_mat_layout);
-
-    VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
-                                      &_render_mat_set));
-
-    /* texture layout */
-    VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            },
-            VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info,
-                                         nullptr, &_texture_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr);
-    });
-
-    /* vertex layout */
-    VkDescriptorSetLayoutCreateInfo vertex_data_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            },
-            VK_SHADER_STAGE_MESH_BIT_EXT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &vertex_data_layout_info,
-                                         nullptr, &_vertex_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _vertex_layout, nullptr);
-    });
-
-    VkDescriptorSetLayoutCreateInfo meshlet_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            },
-            VK_SHADER_STAGE_MESH_BIT_EXT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &meshlet_layout_info, nullptr,
-                                         &_meshlet_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _meshlet_layout, nullptr);
-    });
-}
-
-void vk_engine::pipeline_init()
+void vk_engine::gfx_init()
 {
     /* build graphics pipeline */
     _vert = load_shader_module("../shaders/def.vert.spv");
@@ -225,7 +137,6 @@ void vk_engine::pipeline_init()
         _render_mat_layout,
         _texture_layout,
     };
-
     std::vector<VkPushConstantRange> push_constants = {};
 
     _gfx_pipeline_layout =
@@ -241,9 +152,6 @@ void vk_engine::mesh_init()
     _mesh = load_shader_module("../shaders/mesh.mesh.spv");
     _pixel = load_shader_module("../shaders/mesh.frag.spv");
 
-    // _mesh = load_shader_module("../shaders/triangle.mesh.spv");
-    // _pixel = load_shader_module("../shaders/triangle.frag.spv");
-
     PipelineBuilder mesh_pipeline_builder = {};
     mesh_pipeline_builder._shader_stage_infos.push_back(
         vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_MESH_BIT_EXT,
@@ -253,7 +161,6 @@ void vk_engine::mesh_init()
                                             _pixel));
     mesh_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
     mesh_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
-
     mesh_pipeline_builder._rasterization_state_info =
         vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
     mesh_pipeline_builder._color_blend_attachment_state =
@@ -265,7 +172,6 @@ void vk_engine::mesh_init()
 
     std::vector<VkDescriptorSetLayout> layouts = {
         _render_mat_layout, _vertex_layout, _meshlet_layout, _texture_layout};
-    // std::vector<VkDescriptorSetLayout> layouts = {};
     std::vector<VkPushConstantRange> push_constants = {};
 
     _mesh_pipeline_layout =
@@ -320,7 +226,7 @@ void vk_engine::draw()
 
     vkCmdBeginRendering(frame->cbuffer, &rendering_info);
 
-    // draw_nodes(frame);
+    // draw_gfx(frame);
     draw_mesh(frame);
 
     /* imgui rendering */
@@ -368,7 +274,7 @@ void vk_engine::draw()
     vkQueuePresentKHR(_queue, &present_info);
 }
 
-void vk_engine::draw_nodes(frame *frame)
+void vk_engine::draw_gfx(frame *frame)
 {
     std::vector<node> nodes(_nodes);
 
