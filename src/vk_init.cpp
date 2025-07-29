@@ -262,10 +262,9 @@ void vk_engine::sync_init()
 void vk_engine::descriptor_init()
 {
     std::vector<VkDescriptorPoolSize> pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 16},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
     };
 
     VkDescriptorPoolCreateInfo pool_info =
