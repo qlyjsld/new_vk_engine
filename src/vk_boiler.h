@@ -387,13 +387,14 @@ descriptor_set_allocate_info(VkDescriptorPool desc_pool,
 }
 
 inline VkWriteDescriptorSet
-write_descriptor_set(VkDescriptorBufferInfo *buffer_info, VkDescriptorSet set,
-                     uint32_t binding, VkDescriptorType type)
+write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
+                     VkDescriptorSet desc_set, uint32_t binding,
+                     VkDescriptorType type)
 {
     VkWriteDescriptorSet write_desc_set = {};
     write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_desc_set.pNext = nullptr;
-    write_desc_set.dstSet = set;
+    write_desc_set.dstSet = desc_set;
     write_desc_set.dstBinding = binding;
     write_desc_set.descriptorCount = 1;
     write_desc_set.descriptorType = type;
@@ -402,13 +403,13 @@ write_descriptor_set(VkDescriptorBufferInfo *buffer_info, VkDescriptorSet set,
 }
 
 inline VkWriteDescriptorSet
-write_descriptor_set(VkDescriptorImageInfo *img_info, VkDescriptorSet set,
+write_descriptor_set(VkDescriptorImageInfo *img_info, VkDescriptorSet desc_set,
                      uint32_t binding, VkDescriptorType type)
 {
     VkWriteDescriptorSet write_desc_set = {};
     write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write_desc_set.pNext = nullptr;
-    write_desc_set.dstSet = set;
+    write_desc_set.dstSet = desc_set;
     write_desc_set.dstBinding = binding;
     write_desc_set.descriptorCount = 1;
     write_desc_set.descriptorType = type;

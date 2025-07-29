@@ -312,7 +312,7 @@ void vk_engine::draw_gfx(frame *frame)
                         &mat, sizeof(render_mat));
             vmaUnmapMemory(_allocator, _render_mat_buffer.allocation);
 
-            std::vector<VkDescriptorSet> sets = {
+            std::vector<VkDescriptorSet> desc_sets = {
                 _render_mat_set,
                 mesh->texture_set,
             };
@@ -320,8 +320,8 @@ void vk_engine::draw_gfx(frame *frame)
                 i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(frame->cmd_buffer,
                                     VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    _gfx_pipeline_layout, 0, sets.size(),
-                                    sets.data(), 1, &dynamic_offset);
+                                    _gfx_pipeline_layout, 0, desc_sets.size(),
+                                    desc_sets.data(), 1, &dynamic_offset);
 
             vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0,
                              0);
@@ -358,7 +358,7 @@ void vk_engine::draw_mesh(frame *frame)
                         &mat, sizeof(render_mat));
             vmaUnmapMemory(_allocator, _render_mat_buffer.allocation);
 
-            std::vector<VkDescriptorSet> sets = {
+            std::vector<VkDescriptorSet> desc_sets = {
                 _render_mat_set,
                 mesh->vertex_set,
                 mesh->meshlet_set,
@@ -368,8 +368,8 @@ void vk_engine::draw_mesh(frame *frame)
                 i * pad_uniform_buffer_size(sizeof(render_mat));
             vkCmdBindDescriptorSets(frame->cmd_buffer,
                                     VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    _mesh_pipeline_layout, 0, sets.size(),
-                                    sets.data(), 1, &dynamic_offset);
+                                    _mesh_pipeline_layout, 0, desc_sets.size(),
+                                    desc_sets.data(), 1, &dynamic_offset);
 
             vkCmdDrawMeshTasksEXT(frame->cmd_buffer, mesh->meshlets.size(), 1,
                                   1);

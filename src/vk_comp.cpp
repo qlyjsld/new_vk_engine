@@ -106,13 +106,14 @@ comp_allocator::create_desc_set_layout(std::vector<VkDescriptorType> &types)
 
 VkDescriptorSet comp_allocator::allocate_desc_set(VkDescriptorSetLayout layout)
 {
-    VkDescriptorSet set = VK_NULL_HANDLE;
+    VkDescriptorSet desc_set = VK_NULL_HANDLE;
     VkDescriptorSetAllocateInfo desc_set_allocate_info =
         vk_boiler::descriptor_set_allocate_info(comp_desc_pool, &layout);
 
-    VK_CHECK(vkAllocateDescriptorSets(device, &desc_set_allocate_info, &set));
+    VK_CHECK(
+        vkAllocateDescriptorSets(device, &desc_set_allocate_info, &desc_set));
 
-    return set;
+    return desc_set;
 };
 
 void cs::write_desc_set(std::vector<VkDescriptorType> types,
@@ -134,7 +135,7 @@ void cs::write_desc_set(std::vector<VkDescriptorType> types,
 
             VkWriteDescriptorSet write_desc_set =
                 vk_boiler::write_descriptor_set(
-                    &desc_buffer_info, set, i,
+                    &desc_buffer_info, desc_set, i,
                     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
             vkUpdateDescriptorSets(device, 1, &write_desc_set, 0, nullptr);
@@ -148,7 +149,8 @@ void cs::write_desc_set(std::vector<VkDescriptorType> types,
 
             VkWriteDescriptorSet write_desc_set =
                 vk_boiler::write_descriptor_set(
-                    &desc_img_info, set, i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+                    &desc_img_info, desc_set, i,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
             vkUpdateDescriptorSets(device, 1, &write_desc_set, 0, nullptr);
         } break;

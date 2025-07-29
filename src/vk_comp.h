@@ -84,8 +84,8 @@ public:
             names.push_back(descriptors[i].second);
         }
 
-        layout = allocator->create_desc_set_layout(types);
-        set = allocator->allocate_desc_set(layout);
+        desc_set_layout = allocator->create_desc_set_layout(types);
+        desc_set = allocator->allocate_desc_set(desc_set_layout);
 
         write_desc_set(types, names);
 
@@ -95,8 +95,8 @@ public:
     comp_allocator *allocator;
 
     VkShaderModule module;
-    VkDescriptorSet set;
-    VkDescriptorSetLayout layout;
+    VkDescriptorSet desc_set;
+    VkDescriptorSetLayout desc_set_layout;
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
 
