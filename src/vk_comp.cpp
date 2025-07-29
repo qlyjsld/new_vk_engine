@@ -140,11 +140,12 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
             descriptor_buffer_info.range =
                 pad_uniform_buffer_size(allocator->buffers[buffer_id].size);
 
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_buffer_info, set, i,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+            VkWriteDescriptorSet write_desc_set =
+                vk_boiler::write_descriptor_set(
+                    &descriptor_buffer_info, set, i,
+                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
-            vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(device, 1, &write_desc_set, 0, nullptr);
         } break;
 
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
@@ -153,10 +154,12 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
             descriptor_img_info.imageView = allocator->imgs[img_id].img_view;
             descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, set, i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+            VkWriteDescriptorSet write_desc_set =
+                vk_boiler::write_descriptor_set(
+                    &descriptor_img_info, set, i,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
-            vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(device, 1, &write_desc_set, 0, nullptr);
         } break;
 
         default:

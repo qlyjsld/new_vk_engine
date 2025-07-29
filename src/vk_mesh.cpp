@@ -346,11 +346,11 @@ void vk_engine::load_meshes()
     descriptor_buffer_info.offset = 0;
     descriptor_buffer_info.range = sizeof(render_mat);
 
-    VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+    VkWriteDescriptorSet write_desc_set = vk_boiler::write_descriptor_set(
         &descriptor_buffer_info, _render_mat_set, 0,
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
-    vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+    vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
 }
 
 void vk_engine::upload_buffer(size_t size, void *src, VkBuffer buffer)
@@ -407,11 +407,11 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         descriptor_buf_info.offset = 0;
         descriptor_buf_info.range = mesh->vertices.size() * sizeof(vertex);
 
-        VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
+        VkWriteDescriptorSet write_desc_set = vk_boiler::write_descriptor_set(
             &descriptor_buf_info, mesh->vertex_set, 0,
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
-        vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
 
         /* index buffer */
         create_buffer(mesh->indices.size() * sizeof(uint16_t),
@@ -442,11 +442,11 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
         descriptor_buf_info.offset = 0;
         descriptor_buf_info.range = mesh->meshlets.size() * sizeof(meshlet);
 
-        write_set = vk_boiler::write_descriptor_set(
+        write_desc_set = vk_boiler::write_descriptor_set(
             &descriptor_buf_info, mesh->meshlet_set, 0,
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
-        vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+        vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
     }
 }
 
@@ -517,11 +517,12 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
             descriptor_img_info.imageLayout =
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, mesh->texture_set, 0,
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            VkWriteDescriptorSet write_desc_set =
+                vk_boiler::write_descriptor_set(
+                    &descriptor_img_info, mesh->texture_set, 0,
+                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
         }
     }
 }

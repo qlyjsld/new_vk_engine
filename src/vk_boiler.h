@@ -390,30 +390,30 @@ inline VkWriteDescriptorSet
 write_descriptor_set(VkDescriptorBufferInfo *buffer_info, VkDescriptorSet set,
                      uint32_t binding, VkDescriptorType type)
 {
-    VkWriteDescriptorSet write_set = {};
-    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_set.pNext = nullptr;
-    write_set.dstSet = set;
-    write_set.dstBinding = binding;
-    write_set.descriptorCount = 1;
-    write_set.descriptorType = type;
-    write_set.pBufferInfo = buffer_info;
-    return write_set;
+    VkWriteDescriptorSet write_desc_set = {};
+    write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_desc_set.pNext = nullptr;
+    write_desc_set.dstSet = set;
+    write_desc_set.dstBinding = binding;
+    write_desc_set.descriptorCount = 1;
+    write_desc_set.descriptorType = type;
+    write_desc_set.pBufferInfo = buffer_info;
+    return write_desc_set;
 }
 
 inline VkWriteDescriptorSet
 write_descriptor_set(VkDescriptorImageInfo *img_info, VkDescriptorSet set,
                      uint32_t binding, VkDescriptorType type)
 {
-    VkWriteDescriptorSet write_set = {};
-    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_set.pNext = nullptr;
-    write_set.dstSet = set;
-    write_set.dstBinding = binding;
-    write_set.descriptorCount = 1;
-    write_set.descriptorType = type;
-    write_set.pImageInfo = img_info;
-    return write_set;
+    VkWriteDescriptorSet write_desc_set = {};
+    write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_desc_set.pNext = nullptr;
+    write_desc_set.dstSet = set;
+    write_desc_set.dstBinding = binding;
+    write_desc_set.descriptorCount = 1;
+    write_desc_set.descriptorType = type;
+    write_desc_set.pImageInfo = img_info;
+    return write_desc_set;
 }
 
 inline VkBufferImageCopy buffer_img_copy(VkExtent3D extent)
