@@ -157,6 +157,7 @@ private:
     void imgui_init();
 
     void load_meshes();
+    void upload_buffer(size_t size, void *src, VkBuffer buffer);
     void upload_meshes(mesh *meshes, size_t size);
     void upload_textures(mesh *meshes, size_t size);
 

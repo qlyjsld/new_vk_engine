@@ -90,35 +90,6 @@ void vk_engine::init()
     command_init();
     sync_init();
 
-    /* vertex layout */
-    VkDescriptorSetLayoutCreateInfo vertex_data_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            },
-            VK_SHADER_STAGE_MESH_BIT_EXT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &vertex_data_layout_info,
-                                         nullptr, &_vertex_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _vertex_layout, nullptr);
-    });
-
-    VkDescriptorSetLayoutCreateInfo meshlet_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            },
-            VK_SHADER_STAGE_MESH_BIT_EXT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &meshlet_layout_info, nullptr,
-                                         &_meshlet_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _meshlet_layout, nullptr);
-    });
-
     descriptor_init();
     pipeline_init();
     mesh_init();
@@ -188,6 +159,35 @@ void vk_engine::descriptor_init()
 
     deletion_queue.push_back([=]() {
         vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr);
+    });
+
+    /* vertex layout */
+    VkDescriptorSetLayoutCreateInfo vertex_data_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            },
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &vertex_data_layout_info,
+                                         nullptr, &_vertex_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _vertex_layout, nullptr);
+    });
+
+    VkDescriptorSetLayoutCreateInfo meshlet_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            },
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &meshlet_layout_info, nullptr,
+                                         &_meshlet_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _meshlet_layout, nullptr);
     });
 }
 
@@ -463,10 +463,6 @@ void vk_engine::draw_mesh(frame *frame)
             vkCmdDrawMeshTasksEXT(frame->cbuffer, mesh->meshlets.size(), 1, 1);
         }
     }
-
-    // vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                   _mesh_pipeline);
-    // vkCmdDrawMeshTasksEXT(frame->cbuffer, 1, 1, 1);
 }
 
 void vk_engine::cleanup()

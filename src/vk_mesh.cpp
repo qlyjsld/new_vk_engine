@@ -353,45 +353,44 @@ void vk_engine::load_meshes()
     vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 }
 
+void vk_engine::upload_buffer(size_t size, void *src, VkBuffer buffer)
+{
+    allocated_buffer staging_buffer;
+
+    create_staging_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                          VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                          &staging_buffer);
+
+    void *data;
+    vmaMapMemory(_allocator, staging_buffer.allocation, &data);
+    std::memcpy(data, src, size);
+    vmaUnmapMemory(_allocator, staging_buffer.allocation);
+
+    immediate_draw(
+        [=](VkCommandBuffer cbuffer) {
+            VkBufferCopy region = {};
+            region.size = size;
+            vkCmdCopyBuffer(cbuffer, staging_buffer.buffer, buffer, 1, &region);
+        },
+        _queue);
+
+    vmaDestroyBuffer(_allocator, staging_buffer.buffer,
+                     staging_buffer.allocation);
+}
+
 void vk_engine::upload_meshes(mesh *meshes, size_t size)
 {
     for (uint32_t i = 0; i < size; ++i) {
         mesh *mesh = &meshes[i];
-        allocated_buffer staging_buffer;
 
-        /* create vertex buffer */
-        create_staging_buffer(mesh->vertices.size() * sizeof(vertex),
-                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                              &staging_buffer);
-
-        void *data;
-        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
-        std::memcpy(data, mesh->vertices.data(),
-                    mesh->vertices.size() * sizeof(vertex));
-        vmaUnmapMemory(_allocator, staging_buffer.allocation);
-
-        // create_buffer(mesh->vertices.size() * sizeof(vertex),
-        //               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-        //                   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        //               0, &mesh->vertex_buffer);
-
+        /* vertex buffer */
         create_buffer(mesh->vertices.size() * sizeof(vertex),
                       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                           VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->vertex_buffer);
 
-        immediate_draw(
-            [=](VkCommandBuffer cbuffer) {
-                VkBufferCopy region = {};
-                region.size = mesh->vertices.size() * sizeof(vertex);
-                vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
-                                mesh->vertex_buffer.buffer, 1, &region);
-            },
-            _queue);
-
-        vmaDestroyBuffer(_allocator, staging_buffer.buffer,
-                         staging_buffer.allocation);
+        upload_buffer(mesh->vertices.size() * sizeof(vertex),
+                      mesh->vertices.data(), mesh->vertex_buffer.buffer);
 
         VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
             vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
@@ -412,60 +411,22 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 
         vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
 
-        /* create index buffer */
-        create_staging_buffer(mesh->indices.size() * sizeof(uint16_t),
-                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                              &staging_buffer);
-
-        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
-        std::memcpy(data, mesh->indices.data(),
-                    mesh->indices.size() * sizeof(uint16_t));
-        vmaUnmapMemory(_allocator, staging_buffer.allocation);
-
+        /* index buffer */
         create_buffer(mesh->indices.size() * sizeof(uint16_t),
                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
                           VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->index_buffer);
 
-        immediate_draw(
-            [=](VkCommandBuffer cbuffer) {
-                VkBufferCopy region = {};
-                region.size = mesh->indices.size() * sizeof(uint16_t);
-                vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
-                                mesh->index_buffer.buffer, 1, &region);
-            },
-            _queue);
+        upload_buffer(mesh->indices.size() * sizeof(uint16_t),
+                      mesh->indices.data(), mesh->index_buffer.buffer);
 
-        vmaDestroyBuffer(_allocator, staging_buffer.buffer,
-                         staging_buffer.allocation);
-
-        // upload meshlets
-        create_staging_buffer(mesh->meshlets.size() * sizeof(meshlet),
-                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                              VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                              &staging_buffer);
-
-        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
-        std::memcpy(data, mesh->meshlets.data(),
-                    mesh->meshlets.size() * sizeof(meshlet));
-        vmaUnmapMemory(_allocator, staging_buffer.allocation);
-
+        /* meshlets buffer */
         create_buffer(mesh->meshlets.size() * sizeof(meshlet),
                       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0,
                       &mesh->meshlet_buffer);
 
-        immediate_draw(
-            [=](VkCommandBuffer cbuffer) {
-                VkBufferCopy region = {};
-                region.size = mesh->meshlets.size() * sizeof(meshlet);
-                vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
-                                mesh->meshlet_buffer.buffer, 1, &region);
-            },
-            _queue);
-
-        vmaDestroyBuffer(_allocator, staging_buffer.buffer,
-                         staging_buffer.allocation);
+        upload_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                      mesh->meshlets.data(), mesh->meshlet_buffer.buffer);
 
         descriptor_set_allocate_info = vk_boiler::descriptor_set_allocate_info(
             _descriptor_pool, &_meshlet_layout);
