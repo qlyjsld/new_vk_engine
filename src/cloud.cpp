@@ -50,7 +50,7 @@ void vk_engine::cloudtex_init()
 
             vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                                     cloudtex.pipeline_layout, 0, 1,
-                                    &cloudtex.set, 0, nullptr);
+                                    &cloudtex.desc_set, 0, nullptr);
 
             vkCmdDispatch(cmd_buffer, cloudtex_size / 8, cloudtex_size / 8,
                           cloudtex_size / 8);
@@ -95,8 +95,8 @@ void vk_engine::weather_init()
                           weather.pipeline);
 
         vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                weather.pipeline_layout, 0, 1, &weather.set, 0,
-                                nullptr);
+                                weather.pipeline_layout, 0, 1,
+                                &weather.desc_set, 0, nullptr);
 
         u_time = SDL_GetTicks() / 10000.f;
         vkCmdPushConstants(cmd_buffer, weather.pipeline_layout,
@@ -146,39 +146,39 @@ void vk_engine::cloud_init()
 
     uint32_t camera_id = _comp_allocator.get_buffer_id("camera");
 
-    cs_draw.push_back(
-        [&, cloud, camera_id, cloud_id](VkCommandBuffer cmd_buffer) {
-            vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                              cloud.pipeline);
+    cs_draw.push_back([&, cloud, camera_id,
+                       cloud_id](VkCommandBuffer cmd_buffer) {
+        vkCmdBindPipeline(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          cloud.pipeline);
 
-            _camera_data.pos = _vk_camera.get_pos();
-            _camera_data.fov = _vk_camera.get_fov();
-            _camera_data.dir = _vk_camera.get_dir();
-            _camera_data.width = _resolution.width;
-            _camera_data.left = _vk_camera.get_left();
-            _camera_data.height = _resolution.height;
+        _camera_data.pos = _vk_camera.get_pos();
+        _camera_data.fov = _vk_camera.get_fov();
+        _camera_data.dir = _vk_camera.get_dir();
+        _camera_data.width = _resolution.width;
+        _camera_data.left = _vk_camera.get_left();
+        _camera_data.height = _resolution.height;
 
-            void *data;
-            vmaMapMemory(_allocator,
-                         _comp_allocator.buffers[camera_id].allocation, &data);
-            std::memcpy(data, &_camera_data,
-                        pad_uniform_buffer_size(sizeof(camera_data)));
-            vmaUnmapMemory(_allocator,
-                           _comp_allocator.buffers[camera_id].allocation);
+        void *data;
+        vmaMapMemory(_allocator, _comp_allocator.buffers[camera_id].allocation,
+                     &data);
+        std::memcpy(data, &_camera_data,
+                    pad_uniform_buffer_size(sizeof(camera_data)));
+        vmaUnmapMemory(_allocator,
+                       _comp_allocator.buffers[camera_id].allocation);
 
-            vmaMapMemory(_allocator,
-                         _comp_allocator.buffers[cloud_id].allocation, &data);
-            std::memcpy(data, &_cloud_data,
-                        pad_uniform_buffer_size(sizeof(cloud_data)));
-            vmaUnmapMemory(_allocator,
-                           _comp_allocator.buffers[cloud_id].allocation);
+        vmaMapMemory(_allocator, _comp_allocator.buffers[cloud_id].allocation,
+                     &data);
+        std::memcpy(data, &_cloud_data,
+                    pad_uniform_buffer_size(sizeof(cloud_data)));
+        vmaUnmapMemory(_allocator,
+                       _comp_allocator.buffers[cloud_id].allocation);
 
-            std::vector<uint32_t> doffsets = {0, 0};
-            vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                                    cloud.pipeline_layout, 0, 1, &cloud.set,
-                                    doffsets.size(), doffsets.data());
+        std::vector<uint32_t> doffsets = {0, 0};
+        vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                cloud.pipeline_layout, 0, 1, &cloud.desc_set,
+                                doffsets.size(), doffsets.data());
 
-            vkCmdDispatch(cmd_buffer, _resolution.width / 8,
-                          _resolution.height / 8, 1);
-        });
+        vkCmdDispatch(cmd_buffer, _resolution.width / 8, _resolution.height / 8,
+                      1);
+    });
 }
