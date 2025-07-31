@@ -8,7 +8,60 @@
 #include "vk_cmd.h"
 #include "vk_pipeline.h"
 
-void vk_engine::cloudtex_init()
+/*
+    Each of the functions below initialize a compute shader
+    for running, follwing the structure:
+
+        comp_allocator allocator(_device, _allocator);
+
+        allocator.create_img(..., img_name);
+        allocator.create_buffer(..., buffer_name);
+        allocator.load_img(img_name, ...);
+
+    comp_allocator has static class member for storing buffers and images
+    in unordered_map with their name as key, it is common to share resources
+    within multiple shaders. By default, _target, "target" is the framebuffer
+    we draw to.
+
+        std::vector<descriptor> descriptors = {
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, img_name},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, buffer_name},
+        };
+
+        cs compute_shader_example(allocator,
+                                descriptors,
+                                "../shaders/example.spv",
+                                _min_buffer_alignment);
+
+    Descriptors binding is done with vector of "descriptor" which is std::pair
+   of <VkDescriptorType, std::string>, provided the name and arguments, create
+   class cs. Then start building pipeline using info from struct cs and
+   comp_allocator.
+
+        PipelineBuilder pb = {};
+        pb._shader_stage_infos.push_back(vk_boiler::shader_stage_create_info(
+            VK_SHADER_STAGE_COMPUTE_BIT, compute_shader_example.module));
+
+        pb.build_comp(...);
+
+    Finally, add draw commands. At this point, you have mutiple options, you
+   have to run cc_init(...) the first time. After that, you could push_back(...)
+   to have it executed in the main loop, or call comp_immediate_submit(...) to
+   execute immediately, the latter one is ofter used for preparing texture or
+   data used later.
+
+        compute_shader_example.draw = [=](VkCommandBuffer cmd_buffer, cs *cs) {
+            vkCmdBindPipeline(...);
+            vkCmdBindDescriptorSets(...);
+            vkCmdDispatch(...);
+        };
+
+        cs::cc_init(_comp_index, _device);
+        cs::push_back(compute_shader_example);
+        cs::comp_immediate_submit(_device, _queue, &compute_shader_example);
+*/
+
+void vk_engine::cloudtex_shader_init()
 {
     uint32_t cloudtex_size = 128;
 
@@ -58,7 +111,7 @@ void vk_engine::cloudtex_init()
         _queue);
 }
 
-void vk_engine::weather_init()
+void vk_engine::weather_shader_init()
 {
     uint32_t weather_size = 512;
 
@@ -107,7 +160,7 @@ void vk_engine::weather_init()
     });
 }
 
-void vk_engine::cloud_init()
+void vk_engine::cloud_shader_init()
 {
     uint32_t cloud_id = _comp_allocator.create_buffer(
         pad_uniform_buffer_size(sizeof(cloud_data)),

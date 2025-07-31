@@ -163,9 +163,9 @@ private:
     void upload_textures(mesh *meshes, size_t size);
 
     void comp_init();
-    void cloudtex_init();
-    void weather_init();
-    void cloud_init();
+    void cloudtex_shader_init();
+    void weather_shader_init();
+    void cloud_shader_init();
 
     void draw_imgui();
     void draw_comp(frame *frame);
