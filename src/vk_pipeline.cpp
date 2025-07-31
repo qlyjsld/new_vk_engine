@@ -96,7 +96,7 @@ VkPipeline PipelineBuilder::build_gfx(VkDevice device, VkFormat *format,
 void PipelineBuilder::build_comp(
     VkDevice device, std::vector<VkPushConstantRange> &push_constants, cs *cs)
 {
-    std::vector<VkDescriptorSetLayout> layouts = {cs->layout};
+    std::vector<VkDescriptorSetLayout> layouts = {cs->desc_set_layout};
     cs->pipeline_layout = build_layout(device, layouts, push_constants);
 
     VkComputePipelineCreateInfo comp_pipeline_info = {};

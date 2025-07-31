@@ -56,14 +56,14 @@ public:
     }
 
     VkDescriptorSetLayout
-    create_descriptor_set_layout(std::vector<VkDescriptorType> &types);
+    create_desc_set_layout(std::vector<VkDescriptorType> &types);
 
-    VkDescriptorSet allocate_descriptor_set(VkDescriptorSetLayout layout);
+    VkDescriptorSet allocate_desc_set(VkDescriptorSetLayout layout);
 
     void init();
 
 private:
-    VkDescriptorPool comp_descriptor_pool;
+    VkDescriptorPool comp_desc_pool;
     std::vector<std::string> buffer_id;
     std::vector<std::string> img_id;
 };
@@ -84,10 +84,10 @@ public:
             names.push_back(descriptors[i].second);
         }
 
-        layout = allocator->create_descriptor_set_layout(types);
-        set = allocator->allocate_descriptor_set(layout);
+        desc_set_layout = allocator->create_desc_set_layout(types);
+        desc_set = allocator->allocate_desc_set(desc_set_layout);
 
-        write_descriptor_set(types, names);
+        write_desc_set(types, names);
 
         load_shader_module(shader_file.data());
     };
@@ -95,8 +95,8 @@ public:
     comp_allocator *allocator;
 
     VkShaderModule module;
-    VkDescriptorSet set;
-    VkDescriptorSetLayout layout;
+    VkDescriptorSet desc_set;
+    VkDescriptorSetLayout desc_set_layout;
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
 
@@ -104,8 +104,8 @@ private:
     VkDeviceSize min_buffer_alignment;
     VkDevice device;
 
-    void write_descriptor_set(std::vector<VkDescriptorType> types,
-                              std::vector<std::string> names);
+    void write_desc_set(std::vector<VkDescriptorType> types,
+                        std::vector<std::string> names);
 
     bool load_shader_module(const char *filename);
     size_t pad_uniform_buffer_size(size_t original_size);

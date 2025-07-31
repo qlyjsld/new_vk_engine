@@ -7,28 +7,28 @@
 
 namespace vk_boiler
 {
-inline VkCommandPoolCreateInfo cpool_create_info(uint32_t index)
+inline VkCommandPoolCreateInfo cmd_pool_create_info(uint32_t index)
 {
-    VkCommandPoolCreateInfo cpool_info = {};
-    cpool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cpool_info.pNext = nullptr;
-    cpool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
-                       VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    cpool_info.queueFamilyIndex = index;
-    return cpool_info;
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.pNext = nullptr;
+    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT |
+                          VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.queueFamilyIndex = index;
+    return cmd_pool_info;
 }
 
-inline VkCommandBufferAllocateInfo cbuffer_allocate_info(uint32_t cbuffer_count,
-                                                         VkCommandPool cpool)
+inline VkCommandBufferAllocateInfo
+cmd_buffer_allocate_info(uint32_t cmd_buffer_count, VkCommandPool cmd_pool)
 {
-    VkCommandBufferAllocateInfo cbuffer_allocate_info = {};
-    cbuffer_allocate_info.sType =
+    VkCommandBufferAllocateInfo cmd_buffer_allocate_info = {};
+    cmd_buffer_allocate_info.sType =
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cbuffer_allocate_info.pNext = nullptr;
-    cbuffer_allocate_info.commandPool = cpool;
-    cbuffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cbuffer_allocate_info.commandBufferCount = cbuffer_count;
-    return cbuffer_allocate_info;
+    cmd_buffer_allocate_info.pNext = nullptr;
+    cmd_buffer_allocate_info.commandPool = cmd_pool;
+    cmd_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd_buffer_allocate_info.commandBufferCount = cmd_buffer_count;
+    return cmd_buffer_allocate_info;
 }
 
 inline VkFenceCreateInfo fence_create_info(bool signaled)
@@ -92,18 +92,18 @@ rendering_info(VkRenderingAttachmentInfo *color_attachments,
     return rendering_info;
 }
 
-inline VkCommandBufferBeginInfo cbuffer_begin_info()
+inline VkCommandBufferBeginInfo cmd_buffer_begin_info()
 {
-    VkCommandBufferBeginInfo cbuffer_begin_info = {};
-    cbuffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cbuffer_begin_info.pNext = nullptr;
-    cbuffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    cbuffer_begin_info.pInheritanceInfo = nullptr;
-    return cbuffer_begin_info;
+    VkCommandBufferBeginInfo cmd_buffer_begin_info = {};
+    cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buffer_begin_info.pNext = nullptr;
+    cmd_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buffer_begin_info.pInheritanceInfo = nullptr;
+    return cmd_buffer_begin_info;
 }
 
-inline VkSubmitInfo submit_info(VkCommandBuffer *cbuffer, VkSemaphore *wait_sem,
-                                VkSemaphore *signal_sem,
+inline VkSubmitInfo submit_info(VkCommandBuffer *cmd_buffer,
+                                VkSemaphore *wait_sem, VkSemaphore *signal_sem,
                                 VkPipelineStageFlags *flags)
 {
     VkSubmitInfo submit_info = {};
@@ -113,7 +113,7 @@ inline VkSubmitInfo submit_info(VkCommandBuffer *cbuffer, VkSemaphore *wait_sem,
     submit_info.pWaitSemaphores = wait_sem;
     submit_info.pWaitDstStageMask = flags;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = cbuffer;
+    submit_info.pCommandBuffers = cmd_buffer;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_sem;
     return submit_info;
@@ -330,18 +330,17 @@ inline VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info()
 }
 
 inline VkDescriptorPoolCreateInfo
-descriptor_pool_create_info(uint32_t pool_size_count,
-                            VkDescriptorPoolSize *pool_sizes)
+descriptor_pool_create_info(uint32_t desc_pool_size_count,
+                            VkDescriptorPoolSize *desc_pool_sizes)
 {
-    VkDescriptorPoolCreateInfo descriptor_pool_info = {};
-    descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptor_pool_info.pNext = nullptr;
-    descriptor_pool_info.flags =
-        VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    descriptor_pool_info.maxSets = 1024;
-    descriptor_pool_info.poolSizeCount = pool_size_count;
-    descriptor_pool_info.pPoolSizes = pool_sizes;
-    return descriptor_pool_info;
+    VkDescriptorPoolCreateInfo desc_pool_info = {};
+    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_info.pNext = nullptr;
+    desc_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    desc_pool_info.maxSets = 1024;
+    desc_pool_info.poolSizeCount = desc_pool_size_count;
+    desc_pool_info.pPoolSizes = desc_pool_sizes;
+    return desc_pool_info;
 }
 
 inline VkDescriptorSetLayoutCreateInfo
@@ -360,61 +359,62 @@ descriptor_set_layout_create_info(std::vector<VkDescriptorType> types,
         bindings->push_back(binding);
     }
 
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info = {};
-    descriptor_set_layout_info.sType =
+    VkDescriptorSetLayoutCreateInfo desc_set_layout_info = {};
+    desc_set_layout_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptor_set_layout_info.pNext = nullptr;
-    // descriptor_set_layout_info.flags = ;
-    descriptor_set_layout_info.bindingCount = bindings->size();
-    descriptor_set_layout_info.pBindings = bindings->data();
+    desc_set_layout_info.pNext = nullptr;
+    // desc_set_layout_info.flags = ;
+    desc_set_layout_info.bindingCount = bindings->size();
+    desc_set_layout_info.pBindings = bindings->data();
 
     deletion_queue.push_back([=]() { delete bindings; });
 
-    return descriptor_set_layout_info;
+    return desc_set_layout_info;
 }
 
 inline VkDescriptorSetAllocateInfo
-descriptor_set_allocate_info(VkDescriptorPool pool,
+descriptor_set_allocate_info(VkDescriptorPool desc_pool,
                              VkDescriptorSetLayout *layouts)
 {
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {};
-    descriptor_set_allocate_info.sType =
+    VkDescriptorSetAllocateInfo desc_set_allocate_info = {};
+    desc_set_allocate_info.sType =
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    descriptor_set_allocate_info.pNext = nullptr;
-    descriptor_set_allocate_info.descriptorPool = pool;
-    descriptor_set_allocate_info.descriptorSetCount = 1;
-    descriptor_set_allocate_info.pSetLayouts = layouts;
-    return descriptor_set_allocate_info;
+    desc_set_allocate_info.pNext = nullptr;
+    desc_set_allocate_info.descriptorPool = desc_pool;
+    desc_set_allocate_info.descriptorSetCount = 1;
+    desc_set_allocate_info.pSetLayouts = layouts;
+    return desc_set_allocate_info;
 }
 
 inline VkWriteDescriptorSet
-write_descriptor_set(VkDescriptorBufferInfo *buffer_info, VkDescriptorSet set,
-                     uint32_t binding, VkDescriptorType type)
+write_descriptor_set(VkDescriptorBufferInfo *buffer_info,
+                     VkDescriptorSet desc_set, uint32_t binding,
+                     VkDescriptorType type)
 {
-    VkWriteDescriptorSet write_set = {};
-    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_set.pNext = nullptr;
-    write_set.dstSet = set;
-    write_set.dstBinding = binding;
-    write_set.descriptorCount = 1;
-    write_set.descriptorType = type;
-    write_set.pBufferInfo = buffer_info;
-    return write_set;
+    VkWriteDescriptorSet write_desc_set = {};
+    write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_desc_set.pNext = nullptr;
+    write_desc_set.dstSet = desc_set;
+    write_desc_set.dstBinding = binding;
+    write_desc_set.descriptorCount = 1;
+    write_desc_set.descriptorType = type;
+    write_desc_set.pBufferInfo = buffer_info;
+    return write_desc_set;
 }
 
 inline VkWriteDescriptorSet
-write_descriptor_set(VkDescriptorImageInfo *img_info, VkDescriptorSet set,
+write_descriptor_set(VkDescriptorImageInfo *img_info, VkDescriptorSet desc_set,
                      uint32_t binding, VkDescriptorType type)
 {
-    VkWriteDescriptorSet write_set = {};
-    write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write_set.pNext = nullptr;
-    write_set.dstSet = set;
-    write_set.dstBinding = binding;
-    write_set.descriptorCount = 1;
-    write_set.descriptorType = type;
-    write_set.pImageInfo = img_info;
-    return write_set;
+    VkWriteDescriptorSet write_desc_set = {};
+    write_desc_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_desc_set.pNext = nullptr;
+    write_desc_set.dstSet = desc_set;
+    write_desc_set.dstBinding = binding;
+    write_desc_set.descriptorCount = 1;
+    write_desc_set.descriptorType = type;
+    write_desc_set.pImageInfo = img_info;
+    return write_desc_set;
 }
 
 inline VkBufferImageCopy buffer_img_copy(VkExtent3D extent)

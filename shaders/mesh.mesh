@@ -1,0 +1,77 @@
+#version 460
+
+#extension GL_EXT_mesh_shader: require
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (triangles, max_vertices = 64, max_primitives = 126) out;
+
+struct vertex
+{
+    vec3 pos;
+    vec3 normal;
+    vec2 texcrood;
+};
+
+struct meshlet
+{
+    uint vertex_index[64];
+    uint index[378];
+    uint vertex_count;
+    uint index_count;
+};
+
+layout (set = 0, binding = 0) uniform readonly RENDER_MAT
+{
+    mat4 view;
+    mat4 proj;
+    mat4 model;
+} render_mat;
+
+layout (set = 1, binding = 0) buffer readonly VERTICES
+{
+    vertex vertices[];
+} vertices;
+
+layout (set = 2, binding = 0) buffer readonly MESHLETS
+{
+    meshlet meshlets[];
+} meshlets;
+
+layout (location = 0) out per_vertex_data
+{
+    vec2 texcrood;
+    vec3 color;
+} v_out[];
+
+#define MAX_COLORS 10
+vec3 meshlet_colors[MAX_COLORS] = {
+    vec3(1.f, 0.f, 0.f),
+    vec3(0.f, 1.f, 0.f),
+    vec3(0.f, 0.f, 1.f),
+    vec3(1.f, 1.f, 0.f),
+    vec3(1.f, 0.f, 1.f),
+    vec3(0.f, 1.f, 1.f),
+    vec3(1.f, .5f, 0.f),
+    vec3(.5f, 1.f, 0.f),
+    vec3(0.f, .5f, 1.f),
+    vec3(.9f, .9f, .9f)
+};
+
+void main()
+{
+    meshlet m = meshlets.meshlets[gl_WorkGroupID.x];
+    SetMeshOutputsEXT(m.vertex_count, m.index_count / 3);
+
+    for (uint i = 0; i < m.vertex_count; ++i) {
+        vertex v = vertices.vertices[m.vertex_index[i]];
+        gl_MeshVerticesEXT[i].gl_Position =
+            render_mat.proj * render_mat.view * render_mat.model * vec4(v.pos, 1.f);
+        v_out[i].texcrood = v.texcrood;
+        v_out[i].color = meshlet_colors[gl_WorkGroupID.x % MAX_COLORS];
+    }
+
+    uint j = 0;
+    for (uint i = 0; i < m.index_count; i += 3)
+        gl_PrimitiveTriangleIndicesEXT[j++] = uvec3(m.index[i],
+            m.index[i + 1], m.index[i + 2]);
+}

@@ -4,7 +4,7 @@
 
 namespace vk_cmd
 {
-inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
+inline void vk_img_layout_transition(VkCommandBuffer cmd_buffer, VkImage img,
                                      VkImageLayout old_layout,
                                      VkImageLayout new_layout,
                                      uint32_t family_index)
@@ -27,13 +27,13 @@ inline void vk_img_layout_transition(VkCommandBuffer cbuffer, VkImage img,
     img_mem_barrier.image = img;
     img_mem_barrier.subresourceRange = subresource_range;
 
-    vkCmdPipelineBarrier(cbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0,
                          nullptr, 1, &img_mem_barrier);
 }
 
-inline void vk_img_copy(VkCommandBuffer cbuffer, VkExtent3D extent, VkImage src,
-                        VkImage dst)
+inline void vk_img_copy(VkCommandBuffer cmd_buffer, VkExtent3D extent,
+                        VkImage src, VkImage dst)
 {
     VkImageCopy img_copy = {};
     img_copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -48,7 +48,7 @@ inline void vk_img_copy(VkCommandBuffer cbuffer, VkExtent3D extent, VkImage src,
     img_copy.dstOffset = VkOffset3D{0, 0, 0};
     img_copy.extent = extent;
 
-    vkCmdCopyImage(cbuffer, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst,
+    vkCmdCopyImage(cmd_buffer, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst,
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &img_copy);
 }
 } // namespace vk_cmd

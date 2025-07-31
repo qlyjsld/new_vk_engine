@@ -4,6 +4,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <VkBootstrap.h>
 #include <iostream>
+#include <vulkan/vulkan_core.h>
 
 #include "vk_boiler.h"
 #include "vk_type.h"
@@ -42,17 +43,29 @@ void vk_engine::device_init()
     deletion_queue.push_back(
         [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
 
-    VkPhysicalDeviceDynamicRenderingFeatures features = {};
-    features.sType =
+    VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
+    dynamic_rendering_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-    features.pNext = nullptr;
-    features.dynamicRendering = VK_TRUE;
+    dynamic_rendering_features.pNext = nullptr;
+    dynamic_rendering_features.dynamicRendering = VK_TRUE;
+
+    VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
+    mesh_shader_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    mesh_shader_features.pNext = nullptr;
+    mesh_shader_features.taskShader = VK_FALSE;
+    mesh_shader_features.meshShader = VK_TRUE;
+    mesh_shader_features.multiviewMeshShader = VK_FALSE;
+    mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+    mesh_shader_features.meshShaderQueries = VK_FALSE;
 
     // create physical device
     vkb::PhysicalDeviceSelector selector(instance);
-    auto phys_ret = selector.add_required_extension_features(features)
-                        .set_surface(_surface)
-                        .select();
+    auto phys_ret =
+        selector.add_required_extension_features(mesh_shader_features)
+            .add_required_extension_features(dynamic_rendering_features)
+            .set_surface(_surface)
+            .select();
 
     if (!phys_ret) {
         std::cerr << "failed to find suitable physical device: "
@@ -61,6 +74,7 @@ void vk_engine::device_init()
     }
 
     auto physical_device = phys_ret.value();
+    physical_device.enable_extension_if_present("VK_EXT_mesh_shader");
     _physical_device = physical_device.physical_device;
     _min_buffer_alignment =
         physical_device.properties.limits.minUniformBufferOffsetAlignment;
@@ -172,41 +186,41 @@ void vk_engine::swapchain_init()
         [=]() { vkDestroySampler(_device, _sampler, nullptr); });
 }
 
-void vk_engine::command_init()
+void vk_engine::cmd_init()
 {
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
-        VkCommandPoolCreateInfo cpool_info =
-            vk_boiler::cpool_create_info(_fam_index);
+        VkCommandPoolCreateInfo cmd_pool_info =
+            vk_boiler::cmd_pool_create_info(_family_index);
 
-        VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
-                                     &_frames[i].cpool));
+        VK_CHECK(vkCreateCommandPool(_device, &cmd_pool_info, nullptr,
+                                     &_frames[i].cmd_pool));
 
         deletion_queue.push_back([=]() {
-            vkDestroyCommandPool(_device, _frames[i].cpool, nullptr);
+            vkDestroyCommandPool(_device, _frames[i].cmd_pool, nullptr);
         });
 
-        VkCommandBufferAllocateInfo cbuffer_allocate_info =
-            vk_boiler::cbuffer_allocate_info(1, _frames[i].cpool);
+        VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+            vk_boiler::cmd_buffer_allocate_info(1, _frames[i].cmd_pool);
 
-        VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
-                                          &_frames[i].cbuffer));
+        VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                          &_frames[i].cmd_buffer));
     }
 
-    VkCommandPoolCreateInfo cpool_info =
-        vk_boiler::cpool_create_info(_fam_index);
+    VkCommandPoolCreateInfo cmd_pool_info =
+        vk_boiler::cmd_pool_create_info(_family_index);
 
-    VK_CHECK(vkCreateCommandPool(_device, &cpool_info, nullptr,
-                                 &_immed_context.cpool));
+    VK_CHECK(vkCreateCommandPool(_device, &cmd_pool_info, nullptr,
+                                 &_immed_context.cmd_pool));
 
     deletion_queue.push_back([=]() {
-        vkDestroyCommandPool(_device, _immed_context.cpool, nullptr);
+        vkDestroyCommandPool(_device, _immed_context.cmd_pool, nullptr);
     });
 
-    VkCommandBufferAllocateInfo cbuffer_allocate_info =
-        vk_boiler::cbuffer_allocate_info(1, _immed_context.cpool);
+    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+        vk_boiler::cmd_buffer_allocate_info(1, _immed_context.cmd_pool);
 
-    VK_CHECK(vkAllocateCommandBuffers(_device, &cbuffer_allocate_info,
-                                      &_immed_context.cbuffer));
+    VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_buffer_allocate_info,
+                                      &_immed_context.cmd_buffer));
 }
 
 void vk_engine::sync_init()
@@ -244,4 +258,90 @@ void vk_engine::sync_init()
 
     deletion_queue.push_back(
         [=]() { vkDestroyFence(_device, _immed_context.fence, nullptr); });
+}
+
+void vk_engine::desc_init()
+{
+    std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
+    };
+
+    VkDescriptorPoolCreateInfo desc_pool_info =
+        vk_boiler::descriptor_pool_create_info(desc_pool_sizes.size(),
+                                               desc_pool_sizes.data());
+
+    VK_CHECK(
+        vkCreateDescriptorPool(_device, &desc_pool_info, nullptr, &_desc_pool));
+
+    deletion_queue.push_back(
+        [=]() { vkDestroyDescriptorPool(_device, _desc_pool, nullptr); });
+
+    /* render mat layout and set */
+    VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info,
+                                         nullptr, &_render_mat_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
+    });
+
+    VkDescriptorSetAllocateInfo desc_set_allocate_info =
+        vk_boiler::descriptor_set_allocate_info(_desc_pool,
+                                                &_render_mat_layout);
+
+    VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
+                                      &_render_mat_set));
+
+    /* texture layout */
+    VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            },
+            VK_SHADER_STAGE_FRAGMENT_BIT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info,
+                                         nullptr, &_texture_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr);
+    });
+
+    /* vertex layout */
+    VkDescriptorSetLayoutCreateInfo vertex_data_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            },
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &vertex_data_layout_info,
+                                         nullptr, &_vertex_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _vertex_layout, nullptr);
+    });
+
+    /* meshlet layout */
+    VkDescriptorSetLayoutCreateInfo meshlet_layout_info =
+        vk_boiler::descriptor_set_layout_create_info(
+            std::vector<VkDescriptorType>{
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            },
+            VK_SHADER_STAGE_MESH_BIT_EXT);
+
+    VK_CHECK(vkCreateDescriptorSetLayout(_device, &meshlet_layout_info, nullptr,
+                                         &_meshlet_layout));
+
+    deletion_queue.push_back([=]() {
+        vkDestroyDescriptorSetLayout(_device, _meshlet_layout, nullptr);
+    });
 }

@@ -10,18 +10,19 @@ void vk_engine::immediate_draw(std::function<void(VkCommandBuffer cmd)> &&fs,
                                VkQueue queue)
 {
     /* prepare command buffer */
-    VkCommandBufferBeginInfo cbuffer_begin_info =
-        vk_boiler::cbuffer_begin_info();
+    VkCommandBufferBeginInfo cmd_buffer_begin_info =
+        vk_boiler::cmd_buffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(_immed_context.cbuffer, &cbuffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(_immed_context.cmd_buffer,
+                                  &cmd_buffer_begin_info));
 
-    fs(_immed_context.cbuffer);
+    fs(_immed_context.cmd_buffer);
 
-    VK_CHECK(vkEndCommandBuffer(_immed_context.cbuffer));
+    VK_CHECK(vkEndCommandBuffer(_immed_context.cmd_buffer));
 
     VkSubmitInfo submit_info = vk_boiler::submit_info(
-        &_immed_context.cbuffer, nullptr, nullptr, nullptr);
+        &_immed_context.cmd_buffer, nullptr, nullptr, nullptr);
 
     submit_info.waitSemaphoreCount = 0;
     submit_info.signalSemaphoreCount = 0;
@@ -82,6 +83,23 @@ void vk_engine::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
     deletion_queue.push_back([=]() {
         vmaDestroyBuffer(_allocator, buffer->buffer, buffer->allocation);
     });
+}
+
+void vk_engine::create_staging_buffer(VkDeviceSize size,
+                                      VkBufferUsageFlags usage,
+                                      VmaAllocationCreateFlags flags,
+                                      allocated_buffer *buffer)
+{
+    VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    buffer_info.size = size;
+    buffer_info.usage = usage;
+
+    VmaAllocationCreateInfo vma_allocation_info = {};
+    vma_allocation_info.flags = flags;
+    vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VK_CHECK(vmaCreateBuffer(_allocator, &buffer_info, &vma_allocation_info,
+                             &buffer->buffer, &buffer->allocation, nullptr));
 }
 
 void vk_engine::create_img(VkFormat format, VkExtent3D extent,

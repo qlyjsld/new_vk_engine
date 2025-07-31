@@ -1,6 +1,7 @@
 #include "vk_mesh.h"
 
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -245,6 +246,8 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
         buffer_view normal = retreive_buffer(&model, &primitive, -1, "NORMAL");
         data = normal.data;
         for (uint32_t i = 0; i < normal.count; ++i) {
+            if (i >= mesh.vertices.size())
+                break;
             mesh.vertices[i].normal =
                 glm::vec3(*(float *)data, *(float *)(data + sizeof(float)),
                           *(float *)(data + 2 * sizeof(float)));
@@ -256,6 +259,8 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             retreive_buffer(&model, &primitive, -1, "TEXCOORD_0");
         data = texcrood.data;
         for (uint32_t i = 0; i < texcrood.count; ++i) {
+            if (i >= mesh.vertices.size())
+                break;
             mesh.vertices[i].texcoord =
                 glm::vec2(*(float *)data, *(float *)(data + sizeof(float)));
             data += texcrood.stride;
@@ -272,7 +277,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             }
         }
 
-        // /* TEXTURE */
+        /* TEXTURE */
         if (primitive.material != -1) {
             texture_view texture_view =
                 retreive_texture(&model, primitive.material);
@@ -280,6 +285,40 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
             mesh.texture_buffer.extent.width = texture_view.width;
             mesh.texture_buffer.extent.height = texture_view.height;
             mesh.texture_buffer.format = VK_FORMAT_R8G8B8A8_SRGB;
+        }
+
+        /* fill up meshlets */
+        std::unordered_map<uint32_t, uint32_t> unique_vertex;
+        uint32_t vertex_count = 0;
+        uint32_t index_count = 0;
+        meshlet meshlet;
+        for (uint32_t i = 0; i < mesh.indices.size(); ++i) {
+            uint32_t index = mesh.indices[i];
+
+            if (!unique_vertex.count(index)) {
+                unique_vertex[index] = vertex_count;
+                meshlet.vertex_index[vertex_count++] = index;
+            }
+
+            meshlet.indices[index_count++] = unique_vertex[index];
+
+            if (vertex_count >= 62 && index_count % 3 == 0) {
+                // new meshlet
+                meshlet.vertex_count = vertex_count;
+                meshlet.index_count = index_count;
+                mesh.meshlets.push_back(meshlet);
+                unique_vertex.clear();
+                vertex_count = 0;
+                index_count = 0;
+                meshlet.vertex_count = 0;
+                meshlet.index_count = 0;
+            }
+        }
+
+        if (vertex_count) {
+            meshlet.vertex_count = vertex_count;
+            meshlet.index_count = index_count;
+            mesh.meshlets.push_back(meshlet);
         }
 
         meshes.push_back(mesh);
@@ -293,8 +332,7 @@ std::vector<mesh> load_from_gltf(const char *filename, std::vector<node> &nodes)
 
 void vk_engine::load_meshes()
 {
-    std::vector<mesh> example = load_from_gltf(
-        "./assets/glTF-Sample-Assets/Models/Duck/glTF-Binary/Duck.glb", _nodes);
+    std::vector<mesh> example = load_from_gltf("../assets/Duck.glb", _nodes);
 
     _meshes.insert(_meshes.end(), example.begin(), example.end());
 
@@ -303,85 +341,112 @@ void vk_engine::load_meshes()
                   VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
                   &_render_mat_buffer);
 
-    VkDescriptorBufferInfo descriptor_buffer_info = {};
-    descriptor_buffer_info.buffer = _render_mat_buffer.buffer;
-    descriptor_buffer_info.offset = 0;
-    descriptor_buffer_info.range = sizeof(render_mat);
+    VkDescriptorBufferInfo desc_buffer_info = {};
+    desc_buffer_info.buffer = _render_mat_buffer.buffer;
+    desc_buffer_info.offset = 0;
+    desc_buffer_info.range = sizeof(render_mat);
 
-    VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-        &descriptor_buffer_info, _render_mat_set, 0,
+    VkWriteDescriptorSet write_desc_set = vk_boiler::write_descriptor_set(
+        &desc_buffer_info, _render_mat_set, 0,
         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
-    vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+    vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
+}
+
+void vk_engine::upload_buffer(size_t size, void *src, VkBuffer buffer)
+{
+    allocated_buffer staging_buffer;
+
+    create_staging_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                          VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                          &staging_buffer);
+
+    void *data;
+    vmaMapMemory(_allocator, staging_buffer.allocation, &data);
+    std::memcpy(data, src, size);
+    vmaUnmapMemory(_allocator, staging_buffer.allocation);
+
+    immediate_draw(
+        [=](VkCommandBuffer cmd_buffer) {
+            VkBufferCopy region = {};
+            region.size = size;
+            vkCmdCopyBuffer(cmd_buffer, staging_buffer.buffer, buffer, 1,
+                            &region);
+        },
+        _queue);
+
+    vmaDestroyBuffer(_allocator, staging_buffer.buffer,
+                     staging_buffer.allocation);
 }
 
 void vk_engine::upload_meshes(mesh *meshes, size_t size)
 {
     for (uint32_t i = 0; i < size; ++i) {
         mesh *mesh = &meshes[i];
-        allocated_buffer staging_buffer;
 
-        /* create vertex buffer */
-        create_buffer(mesh->vertices.size() * sizeof(vertex),
-                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                      &staging_buffer);
-
-        void *data;
-        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
-        std::memcpy(data, mesh->vertices.data(),
-                    mesh->vertices.size() * sizeof(vertex));
-        vmaUnmapMemory(_allocator, staging_buffer.allocation);
-
+        /* vertex buffer */
         create_buffer(mesh->vertices.size() * sizeof(vertex),
                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                           VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->vertex_buffer);
 
-        deletion_queue.push_back([=]() {
-            vmaDestroyBuffer(_allocator, _meshes[i].vertex_buffer.buffer,
-                             _meshes[i].vertex_buffer.allocation);
-        });
+        upload_buffer(mesh->vertices.size() * sizeof(vertex),
+                      mesh->vertices.data(), mesh->vertex_buffer.buffer);
 
-        immediate_draw(
-            [=](VkCommandBuffer cbuffer) {
-                VkBufferCopy region = {};
-                region.size = mesh->vertices.size() * sizeof(vertex);
-                vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
-                                mesh->vertex_buffer.buffer, 1, &region);
-            },
-            _queue);
+        VkDescriptorSetAllocateInfo desc_set_allocate_info =
+            vk_boiler::descriptor_set_allocate_info(_desc_pool,
+                                                    &_vertex_layout);
 
-        vmaDestroyBuffer(_allocator, staging_buffer.buffer,
-                         staging_buffer.allocation);
+        VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
+                                          &mesh->vertex_set));
 
-        /* create index buffer */
-        create_buffer(mesh->indices.size() * sizeof(uint16_t),
-                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                      &staging_buffer);
+        // mesh shader vertex buffer descriptor
+        VkDescriptorBufferInfo desc_buffer_info = {};
+        desc_buffer_info.buffer = mesh->vertex_buffer.buffer;
+        desc_buffer_info.offset = 0;
+        desc_buffer_info.range = mesh->vertices.size() * sizeof(vertex);
 
-        vmaMapMemory(_allocator, staging_buffer.allocation, &data);
-        std::memcpy(data, mesh->indices.data(),
-                    mesh->indices.size() * sizeof(uint16_t));
-        vmaUnmapMemory(_allocator, staging_buffer.allocation);
+        VkWriteDescriptorSet write_desc_set = vk_boiler::write_descriptor_set(
+            &desc_buffer_info, mesh->vertex_set, 0,
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
+        vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
+
+        /* index buffer */
         create_buffer(mesh->indices.size() * sizeof(uint16_t),
                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
                           VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                       0, &mesh->index_buffer);
 
-        immediate_draw(
-            [=](VkCommandBuffer cbuffer) {
-                VkBufferCopy region = {};
-                region.size = mesh->indices.size() * sizeof(uint16_t);
-                vkCmdCopyBuffer(cbuffer, staging_buffer.buffer,
-                                mesh->index_buffer.buffer, 1, &region);
-            },
-            _queue);
+        upload_buffer(mesh->indices.size() * sizeof(uint16_t),
+                      mesh->indices.data(), mesh->index_buffer.buffer);
 
-        vmaDestroyBuffer(_allocator, staging_buffer.buffer,
-                         staging_buffer.allocation);
+        /* meshlets buffer */
+        create_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0,
+                      &mesh->meshlet_buffer);
+
+        upload_buffer(mesh->meshlets.size() * sizeof(meshlet),
+                      mesh->meshlets.data(), mesh->meshlet_buffer.buffer);
+
+        desc_set_allocate_info = vk_boiler::descriptor_set_allocate_info(
+            _desc_pool, &_meshlet_layout);
+
+        VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
+                                          &mesh->meshlet_set));
+
+        // mesh shader meshlets buffer descriptor
+        desc_buffer_info = {};
+        desc_buffer_info.buffer = mesh->meshlet_buffer.buffer;
+        desc_buffer_info.offset = 0;
+        desc_buffer_info.range = mesh->meshlets.size() * sizeof(meshlet);
+
+        write_desc_set = vk_boiler::write_descriptor_set(
+            &desc_buffer_info, mesh->meshlet_set, 0,
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
+        vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
     }
 }
 
@@ -392,10 +457,10 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
         allocated_buffer staging_buffer;
 
         if (mesh->texture.size() != 0) {
-            create_buffer(mesh->texture.size() * sizeof(unsigned char),
-                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                          VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                          &staging_buffer);
+            create_staging_buffer(mesh->texture.size() * sizeof(unsigned char),
+                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                  VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+                                  &staging_buffer);
 
             void *data;
             vmaMapMemory(_allocator, staging_buffer.allocation, &data);
@@ -414,48 +479,50 @@ void vk_engine::upload_textures(mesh *meshes, size_t size)
                 &mesh->texture_buffer);
 
             immediate_draw(
-                [=](VkCommandBuffer cbuffer) {
+                [=](VkCommandBuffer cmd_buffer) {
                     vk_cmd::vk_img_layout_transition(
-                        cbuffer, mesh->texture_buffer.img,
+                        cmd_buffer, mesh->texture_buffer.img,
                         VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _fam_index);
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _family_index);
 
                     VkBufferImageCopy region =
                         vk_boiler::buffer_img_copy(extent);
 
-                    vkCmdCopyBufferToImage(cbuffer, staging_buffer.buffer,
+                    vkCmdCopyBufferToImage(cmd_buffer, staging_buffer.buffer,
                                            mesh->texture_buffer.img,
                                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                            1, &region);
 
                     vk_cmd::vk_img_layout_transition(
-                        cbuffer, mesh->texture_buffer.img,
+                        cmd_buffer, mesh->texture_buffer.img,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _fam_index);
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        _family_index);
                 },
                 _queue);
 
             vmaDestroyBuffer(_allocator, staging_buffer.buffer,
                              staging_buffer.allocation);
 
-            VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-                vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
+            VkDescriptorSetAllocateInfo desc_set_allocate_info =
+                vk_boiler::descriptor_set_allocate_info(_desc_pool,
                                                         &_texture_layout);
 
-            VK_CHECK(vkAllocateDescriptorSets(
-                _device, &descriptor_set_allocate_info, &mesh->texture_set));
+            VK_CHECK(vkAllocateDescriptorSets(_device, &desc_set_allocate_info,
+                                              &mesh->texture_set));
 
-            VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.sampler = _sampler;
-            descriptor_img_info.imageView = mesh->texture_buffer.img_view;
-            descriptor_img_info.imageLayout =
+            VkDescriptorImageInfo desc_img_info = {};
+            desc_img_info.sampler = _sampler;
+            desc_img_info.imageView = mesh->texture_buffer.img_view;
+            desc_img_info.imageLayout =
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, mesh->texture_set, 0,
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+            VkWriteDescriptorSet write_desc_set =
+                vk_boiler::write_descriptor_set(
+                    &desc_img_info, mesh->texture_set, 0,
+                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-            vkUpdateDescriptorSets(_device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(_device, 1, &write_desc_set, 0, nullptr);
         }
     }
 }

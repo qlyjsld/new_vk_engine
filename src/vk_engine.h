@@ -17,14 +17,14 @@ constexpr int FRAME_OVERLAP = 2;
 struct frame {
     VkFence fence;
     VkSemaphore sumbit_sem, present_sem;
-    VkCommandPool cpool;
-    VkCommandBuffer cbuffer;
+    VkCommandPool cmd_pool;
+    VkCommandBuffer cmd_buffer;
 };
 
 struct immed_context {
     VkFence fence;
-    VkCommandPool cpool;
-    VkCommandBuffer cbuffer;
+    VkCommandPool cmd_pool;
+    VkCommandBuffer cmd_buffer;
 };
 
 struct push_constants {
@@ -84,7 +84,7 @@ public:
     allocated_img _target;
     uint64_t _last_frame = 0;
     uint32_t _img_index;
-    uint32_t _fam_index = 0;
+    uint32_t _family_index = 0;
 
     VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
     VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
@@ -100,6 +100,9 @@ public:
     VkPipeline _gfx_pipeline;
     VkPipelineLayout _gfx_pipeline_layout;
 
+    VkPipeline _mesh_pipeline;
+    VkPipelineLayout _mesh_pipeline_layout;
+
     VkInstance _instance;
     VkDebugUtilsMessengerEXT _debug_utils_messenger;
     VkPhysicalDevice _physical_device;
@@ -109,17 +112,22 @@ public:
     VkSampler _sampler;
     VkDeviceSize _min_buffer_alignment;
 
-    VkDescriptorPool _descriptor_pool;
+    VkDescriptorPool _desc_pool;
     VkDescriptorSetLayout _render_mat_layout;
     VkDescriptorSet _render_mat_set;
     allocated_buffer _render_mat_buffer;
+
+    VkDescriptorSetLayout _vertex_layout;
+    VkDescriptorSetLayout _meshlet_layout;
     VkDescriptorSetLayout _texture_layout;
 
-    std::vector<mesh> _meshes;
     std::vector<node> _nodes;
+    std::vector<mesh> _meshes;
 
     VkShaderModule _vert;
     VkShaderModule _frag;
+    VkShaderModule _mesh;
+    VkShaderModule _pixel;
 
     immed_context _immed_context;
 
@@ -134,32 +142,35 @@ public:
 private:
     VmaVulkanFunctions vma_vulkan_func;
 
-    constexpr static VkClearValue clear_value = {{{1.f}}};
+    constexpr static VkClearValue clear_value = {{{1.f, 1.f, 1.f}}};
 
     void device_init();
     void vma_init();
     void swapchain_init();
-    void command_init();
+    void cmd_init();
     void sync_init();
 
-    void descriptor_init();
+    void desc_init();
     VkShaderModule load_shader_module(const char *file);
-    void pipeline_init();
+    void gfx_init();
+    void mesh_init();
 
     void imgui_init();
 
     void load_meshes();
+    void upload_buffer(size_t size, void *src, VkBuffer buffer);
     void upload_meshes(mesh *meshes, size_t size);
     void upload_textures(mesh *meshes, size_t size);
 
     void comp_init();
-    void cloudtex_init();
-    void weather_init();
-    void cloud_init();
+    void cloudtex_shader_init();
+    void weather_shader_init();
+    void cloud_shader_init();
 
     void draw_imgui();
     void draw_comp(frame *frame);
-    void draw_nodes(frame *frame);
+    void draw_gfx(frame *frame);
+    void draw_mesh(frame *frame);
 
     inline frame *get_current_frame()
     {
@@ -170,6 +181,10 @@ private:
     void create_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
                        VmaAllocationCreateFlags flags,
                        allocated_buffer *buffer);
+
+    void create_staging_buffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                               VmaAllocationCreateFlags flags,
+                               allocated_buffer *buffer);
 
     void create_img(VkFormat format, VkExtent3D extent,
                     VkImageAspectFlags aspect, VkImageUsageFlags usage,

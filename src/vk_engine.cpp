@@ -1,6 +1,7 @@
 ﻿#include "vk_engine.h"
 
 #include <future>
+#include <iostream>
 #include <vector>
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
@@ -86,83 +87,27 @@ void vk_engine::init()
     vma_init();
 
     swapchain_init();
-    command_init();
+    cmd_init();
     sync_init();
 
-    descriptor_init();
-    // pipeline_init();
+    desc_init();
+    gfx_init();
+    mesh_init();
 
     imgui_init();
 
-    // load_meshes();
-    // std::cout << "meshes size " << _meshes.size() << std::endl;
-    // upload_meshes(_meshes.data(), _meshes.size());
-    // upload_textures(_meshes.data(), _meshes.size());
+    load_meshes();
+    upload_meshes(_meshes.data(), _meshes.size());
+    upload_textures(_meshes.data(), _meshes.size());
 
     comp_init();
 }
 
-void vk_engine::descriptor_init()
-{
-    std::vector<VkDescriptorPoolSize> pool_sizes = {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
-    };
-
-    VkDescriptorPoolCreateInfo pool_info =
-        vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
-                                               pool_sizes.data());
-
-    VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr,
-                                    &_descriptor_pool));
-
-    deletion_queue.push_back(
-        [=]() { vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr); });
-
-    /* render mat layout and set */
-    VkDescriptorSetLayoutCreateInfo render_mat_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            },
-            VK_SHADER_STAGE_VERTEX_BIT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &render_mat_layout_info,
-                                         nullptr, &_render_mat_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _render_mat_layout, nullptr);
-    });
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(_descriptor_pool,
-                                                &_render_mat_layout);
-
-    VK_CHECK(vkAllocateDescriptorSets(_device, &descriptor_set_allocate_info,
-                                      &_render_mat_set));
-
-    /* texture layout */
-    VkDescriptorSetLayoutCreateInfo texture_data_layout_info =
-        vk_boiler::descriptor_set_layout_create_info(
-            std::vector<VkDescriptorType>{
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            },
-            VK_SHADER_STAGE_FRAGMENT_BIT);
-
-    VK_CHECK(vkCreateDescriptorSetLayout(_device, &texture_data_layout_info,
-                                         nullptr, &_texture_layout));
-
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorSetLayout(_device, _texture_layout, nullptr);
-    });
-}
-
-void vk_engine::pipeline_init()
+void vk_engine::gfx_init()
 {
     /* build graphics pipeline */
-    _vert = load_shader_module("../shaders/.vert.spv");
-    _frag = load_shader_module("../shaders/.frag.spv");
+    _vert = load_shader_module("../shaders/def.vert.spv");
+    _frag = load_shader_module("../shaders/def.frag.spv");
 
     PipelineBuilder gfx_pipeline_builder = {};
     gfx_pipeline_builder._shader_stage_infos.push_back(
@@ -192,7 +137,6 @@ void vk_engine::pipeline_init()
         _render_mat_layout,
         _texture_layout,
     };
-
     std::vector<VkPushConstantRange> push_constants = {};
 
     _gfx_pipeline_layout =
@@ -200,6 +144,41 @@ void vk_engine::pipeline_init()
 
     _gfx_pipeline = gfx_pipeline_builder.build_gfx(
         _device, &_format, _depth_img.format, _gfx_pipeline_layout);
+}
+
+void vk_engine::mesh_init()
+{
+    /* build graphics pipeline */
+    _mesh = load_shader_module("../shaders/mesh.mesh.spv");
+    _pixel = load_shader_module("../shaders/mesh.frag.spv");
+
+    PipelineBuilder mesh_pipeline_builder = {};
+    mesh_pipeline_builder._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_MESH_BIT_EXT,
+                                            _mesh));
+    mesh_pipeline_builder._shader_stage_infos.push_back(
+        vk_boiler::shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT,
+                                            _pixel));
+    mesh_pipeline_builder._viewport = vk_boiler::viewport(_resolution);
+    mesh_pipeline_builder._scissor = vk_boiler::scissor(_resolution);
+    mesh_pipeline_builder._rasterization_state_info =
+        vk_boiler::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+    mesh_pipeline_builder._color_blend_attachment_state =
+        vk_boiler::color_blend_attachment_state();
+    mesh_pipeline_builder._multisample_state_info =
+        vk_boiler::multisample_state_create_info();
+    mesh_pipeline_builder._depth_stencil_state_info =
+        vk_boiler::depth_stencil_state_create_info();
+
+    std::vector<VkDescriptorSetLayout> layouts = {
+        _render_mat_layout, _vertex_layout, _meshlet_layout, _texture_layout};
+    std::vector<VkPushConstantRange> push_constants = {};
+
+    _mesh_pipeline_layout =
+        mesh_pipeline_builder.build_layout(_device, layouts, push_constants);
+
+    _mesh_pipeline = mesh_pipeline_builder.build_gfx(
+        _device, &_format, _depth_img.format, _mesh_pipeline_layout);
 }
 
 void vk_engine::draw()
@@ -214,16 +193,16 @@ void vk_engine::draw()
                           VK_NULL_HANDLE, &_img_index);
 
     /* prepare command buffer and dynamic rendering functions */
-    VkCommandBufferBeginInfo cbuffer_begin_info =
-        vk_boiler::cbuffer_begin_info();
+    VkCommandBufferBeginInfo cmd_buffer_begin_info =
+        vk_boiler::cmd_buffer_begin_info();
 
     /* begin command buffer recording */
-    VK_CHECK(vkBeginCommandBuffer(frame->cbuffer, &cbuffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(frame->cmd_buffer, &cmd_buffer_begin_info));
 
     /* transition image format for rendering */
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _fam_index);
+        frame->cmd_buffer, _target.img, VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _family_index);
 
     draw_imgui();
 
@@ -245,45 +224,48 @@ void vk_engine::draw()
     VkRenderingInfo rendering_info = vk_boiler::rendering_info(
         &color_attachment, &depth_attachment, _resolution);
 
-    vkCmdBeginRendering(frame->cbuffer, &rendering_info);
+    vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
-    // draw_nodes(frame);
+    // draw_gfx(frame);
+    // draw_mesh(frame);
 
     /* imgui rendering */
     ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cbuffer);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame->cmd_buffer);
 
-    vkCmdEndRendering(frame->cbuffer);
+    vkCmdEndRendering(frame->cmd_buffer);
 
     /* transition image format for transfering */
-    vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _target.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _fam_index);
+    vk_cmd::vk_img_layout_transition(frame->cmd_buffer, _target.img,
+                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                     _family_index);
 
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _swapchain_imgs[_img_index], VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _fam_index);
+        frame->cmd_buffer, _swapchain_imgs[_img_index],
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        _family_index);
 
     /* copy img to swapchain */
     vk_cmd::vk_img_copy(
-        frame->cbuffer,
+        frame->cmd_buffer,
         VkExtent3D{_window_extent.width, _window_extent.height, 1}, _target.img,
         _swapchain_imgs[_img_index]);
 
     /* transition image format for presenting */
     vk_cmd::vk_img_layout_transition(
-        frame->cbuffer, _swapchain_imgs[_img_index],
+        frame->cmd_buffer, _swapchain_imgs[_img_index],
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        _fam_index);
+        _family_index);
 
-    VK_CHECK(vkEndCommandBuffer(frame->cbuffer));
+    VK_CHECK(vkEndCommandBuffer(frame->cmd_buffer));
 
     /* submit present queue */
     VkPipelineStageFlags pipeline_stage_flags =
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     VkSubmitInfo submit_info =
-        vk_boiler::submit_info(&frame->cbuffer, &frame->present_sem,
+        vk_boiler::submit_info(&frame->cmd_buffer, &frame->present_sem,
                                &frame->sumbit_sem, &pipeline_stage_flags);
 
     VK_CHECK(vkQueueSubmit(_queue, 1, &submit_info, frame->fence));
@@ -294,7 +276,7 @@ void vk_engine::draw()
     vkQueuePresentKHR(_queue, &present_info);
 }
 
-void vk_engine::draw_nodes(frame *frame)
+void vk_engine::draw_gfx(frame *frame)
 {
     std::vector<node> nodes(_nodes);
 
@@ -307,15 +289,15 @@ void vk_engine::draw_nodes(frame *frame)
 
         if (node->mesh_id != -1) {
             mesh *mesh = &_meshes[node->mesh_id];
-            vkCmdBindPipeline(frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              _gfx_pipeline);
+            vkCmdBindPipeline(frame->cmd_buffer,
+                              VK_PIPELINE_BIND_POINT_GRAPHICS, _gfx_pipeline);
 
             VkDeviceSize offset = 0;
-            vkCmdBindVertexBuffers(frame->cbuffer, 0, 1,
+            vkCmdBindVertexBuffers(frame->cmd_buffer, 0, 1,
                                    &mesh->vertex_buffer.buffer, &offset);
 
-            vkCmdBindIndexBuffer(frame->cbuffer, mesh->index_buffer.buffer, 0,
-                                 VK_INDEX_TYPE_UINT16);
+            vkCmdBindIndexBuffer(frame->cmd_buffer, mesh->index_buffer.buffer,
+                                 0, VK_INDEX_TYPE_UINT16);
 
             render_mat mat;
             mat.view = _vk_camera.get_view_mat();
@@ -330,16 +312,67 @@ void vk_engine::draw_nodes(frame *frame)
                         &mat, sizeof(render_mat));
             vmaUnmapMemory(_allocator, _render_mat_buffer.allocation);
 
-            std::vector<VkDescriptorSet> sets = {
+            std::vector<VkDescriptorSet> desc_sets = {
                 _render_mat_set,
                 mesh->texture_set,
             };
-            uint32_t doffset = i * pad_uniform_buffer_size(sizeof(render_mat));
-            vkCmdBindDescriptorSets(
-                frame->cbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                _gfx_pipeline_layout, 0, sets.size(), sets.data(), 1, &doffset);
+            uint32_t dynamic_offset =
+                i * pad_uniform_buffer_size(sizeof(render_mat));
+            vkCmdBindDescriptorSets(frame->cmd_buffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    _gfx_pipeline_layout, 0, desc_sets.size(),
+                                    desc_sets.data(), 1, &dynamic_offset);
 
-            vkCmdDrawIndexed(frame->cbuffer, mesh->indices.size(), 1, 0, 0, 0);
+            vkCmdDrawIndexed(frame->cmd_buffer, mesh->indices.size(), 1, 0, 0,
+                             0);
+        }
+    }
+}
+
+void vk_engine::draw_mesh(frame *frame)
+{
+    std::vector<node> nodes(_nodes);
+
+    for (uint32_t i = 0; i < nodes.size(); ++i) {
+        node *node = &nodes[i];
+
+        for (auto c = node->children.cbegin(); c != node->children.cend(); ++c)
+            nodes[*c].transform_mat =
+                node->transform_mat * nodes[*c].transform_mat;
+
+        if (node->mesh_id != -1) {
+            mesh *mesh = &_meshes[node->mesh_id];
+            vkCmdBindPipeline(frame->cmd_buffer,
+                              VK_PIPELINE_BIND_POINT_GRAPHICS, _mesh_pipeline);
+
+            render_mat mat;
+            mat.view = _vk_camera.get_view_mat();
+            mat.proj = _vk_camera.get_proj_mat();
+            mat.proj[1][1] *= -1;
+            mat.model = node->transform_mat;
+
+            void *data;
+            vmaMapMemory(_allocator, _render_mat_buffer.allocation, &data);
+            std::memcpy((char *)data +
+                            i * pad_uniform_buffer_size(sizeof(render_mat)),
+                        &mat, sizeof(render_mat));
+            vmaUnmapMemory(_allocator, _render_mat_buffer.allocation);
+
+            std::vector<VkDescriptorSet> desc_sets = {
+                _render_mat_set,
+                mesh->vertex_set,
+                mesh->meshlet_set,
+                mesh->texture_set,
+            };
+            uint32_t dynamic_offset =
+                i * pad_uniform_buffer_size(sizeof(render_mat));
+            vkCmdBindDescriptorSets(frame->cmd_buffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    _mesh_pipeline_layout, 0, desc_sets.size(),
+                                    desc_sets.data(), 1, &dynamic_offset);
+
+            vkCmdDrawMeshTasksEXT(frame->cmd_buffer, mesh->meshlets.size(), 1,
+                                  1);
         }
     }
 }
@@ -360,13 +393,26 @@ void vk_engine::run()
     SDL_Event e;
     bool bquit = false;
 
-    // uint32_t triangles = 0;
-    // for (uint32_t i = 0; i < _nodes.size(); ++i) {
-    //     if (_nodes[i].mesh_id != -1)
-    //         triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
-    // }
+    uint32_t triangles = 0;
+    for (uint32_t i = 0; i < _nodes.size(); ++i) {
+        if (_nodes[i].mesh_id != -1)
+            triangles += _meshes[_nodes[i].mesh_id].indices.size() / 3;
+    }
 
-    // std::cout << "draw " << triangles << " triangels" << std::endl;
+    std::cout << "draw " << triangles << " triangels" << std::endl;
+    std::cout << "draw " << _meshes.size() << " meshes" << std::endl;
+
+    // for (uint32_t i = 0; i < _meshes.size(); ++i) {
+    //     std::cout << "mesh[" << i
+    //               << "], meshlets size: " << _meshes[i].meshlets.size()
+    //               << std::endl;
+    //     for (uint32_t j = 0; j < _meshes[i].meshlets.size(); ++j)
+    //         std::cout << "meshlet[" << j << "] vertex count: "
+    //                   << _meshes[i].meshlets[j].vertex_count
+    //                   << " index count: " <<
+    //                   _meshes[i].meshlets[j].index_count
+    //                   << std::endl;
+    // }
 
     SDL_SetWindowRelativeMouseMode(_window, true);
 
@@ -457,9 +503,9 @@ void vk_engine::imgui_init()
     imgui_init_info.Instance = _instance;
     imgui_init_info.PhysicalDevice = _physical_device;
     imgui_init_info.Device = _device;
-    imgui_init_info.QueueFamily = _fam_index;
+    imgui_init_info.QueueFamily = _family_index;
     imgui_init_info.Queue = _queue;
-    imgui_init_info.DescriptorPool = _descriptor_pool;
+    imgui_init_info.DescriptorPool = _desc_pool;
     imgui_init_info.MinImageCount = 2;
     imgui_init_info.ImageCount = 2;
     imgui_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;

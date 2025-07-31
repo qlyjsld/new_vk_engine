@@ -7,21 +7,20 @@
 
 void comp_allocator::init()
 {
-    std::vector<VkDescriptorPoolSize> pool_sizes = {
+    std::vector<VkDescriptorPoolSize> desc_pool_sizes = {
         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 16},
         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16},
         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 16},
     };
 
-    VkDescriptorPoolCreateInfo pool_info =
-        vk_boiler::descriptor_pool_create_info(pool_sizes.size(),
-                                               pool_sizes.data());
+    VkDescriptorPoolCreateInfo desc_pool_info =
+        vk_boiler::descriptor_pool_create_info(desc_pool_sizes.size(),
+                                               desc_pool_sizes.data());
 
-    vkCreateDescriptorPool(device, &pool_info, nullptr, &comp_descriptor_pool);
+    vkCreateDescriptorPool(device, &desc_pool_info, nullptr, &comp_desc_pool);
 
-    deletion_queue.push_back([=]() {
-        vkDestroyDescriptorPool(device, comp_descriptor_pool, nullptr);
-    });
+    deletion_queue.push_back(
+        [=]() { vkDestroyDescriptorPool(device, comp_desc_pool, nullptr); });
 }
 
 uint32_t comp_allocator::create_buffer(VkDeviceSize size,
@@ -30,7 +29,6 @@ uint32_t comp_allocator::create_buffer(VkDeviceSize size,
                                        std::string name)
 {
     allocated_buffer buffer;
-
     VkBufferCreateInfo buffer_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     buffer_info.size = size;
     buffer_info.usage = usage;
@@ -61,14 +59,12 @@ uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
                                     std::string name)
 {
     allocated_img img;
-
     VkImageCreateInfo img_info =
         vk_boiler::img_create_info(format, extent, usage);
 
     VmaAllocationCreateInfo vma_allocation_info = {};
     vma_allocation_info.flags = flags;
     vma_allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
-
     img.format = format;
 
     VK_CHECK(vmaCreateImage(vma_allocator, &img_info, &vma_allocation_info,
@@ -91,11 +87,10 @@ uint32_t comp_allocator::create_img(VkFormat format, VkExtent3D extent,
     return id;
 }
 
-VkDescriptorSetLayout comp_allocator::create_descriptor_set_layout(
-    std::vector<VkDescriptorType> &types)
+VkDescriptorSetLayout
+comp_allocator::create_desc_set_layout(std::vector<VkDescriptorType> &types)
 {
     VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-
     VkDescriptorSetLayoutCreateInfo layout_info =
         vk_boiler::descriptor_set_layout_create_info(
             types, VK_SHADER_STAGE_COMPUTE_BIT);
@@ -109,22 +104,20 @@ VkDescriptorSetLayout comp_allocator::create_descriptor_set_layout(
     return layout;
 }
 
-VkDescriptorSet
-comp_allocator::allocate_descriptor_set(VkDescriptorSetLayout layout)
+VkDescriptorSet comp_allocator::allocate_desc_set(VkDescriptorSetLayout layout)
 {
-    VkDescriptorSet set = VK_NULL_HANDLE;
-
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info =
-        vk_boiler::descriptor_set_allocate_info(comp_descriptor_pool, &layout);
+    VkDescriptorSet desc_set = VK_NULL_HANDLE;
+    VkDescriptorSetAllocateInfo desc_set_allocate_info =
+        vk_boiler::descriptor_set_allocate_info(comp_desc_pool, &layout);
 
     VK_CHECK(
-        vkAllocateDescriptorSets(device, &descriptor_set_allocate_info, &set));
+        vkAllocateDescriptorSets(device, &desc_set_allocate_info, &desc_set));
 
-    return set;
+    return desc_set;
 };
 
-void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
-                              std::vector<std::string> names)
+void cs::write_desc_set(std::vector<VkDescriptorType> types,
+                        std::vector<std::string> names)
 {
     for (uint32_t i = 0; i < types.size(); ++i) {
         VkDescriptorType type = types[i];
@@ -134,30 +127,32 @@ void cs::write_descriptor_set(std::vector<VkDescriptorType> types,
         switch (type) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC: {
             uint32_t buffer_id = allocator->get_buffer_id(name);
-            VkDescriptorBufferInfo descriptor_buffer_info = {};
-            descriptor_buffer_info.buffer =
-                allocator->buffers[buffer_id].buffer;
-            descriptor_buffer_info.offset = 0;
-            descriptor_buffer_info.range =
+            VkDescriptorBufferInfo desc_buffer_info = {};
+            desc_buffer_info.buffer = allocator->buffers[buffer_id].buffer;
+            desc_buffer_info.offset = 0;
+            desc_buffer_info.range =
                 pad_uniform_buffer_size(allocator->buffers[buffer_id].size);
 
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_buffer_info, set, i,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+            VkWriteDescriptorSet write_desc_set =
+                vk_boiler::write_descriptor_set(
+                    &desc_buffer_info, desc_set, i,
+                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
-            vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(device, 1, &write_desc_set, 0, nullptr);
         } break;
 
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
             uint32_t img_id = allocator->get_img_id(name);
-            VkDescriptorImageInfo descriptor_img_info = {};
-            descriptor_img_info.imageView = allocator->imgs[img_id].img_view;
-            descriptor_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            VkDescriptorImageInfo desc_img_info = {};
+            desc_img_info.imageView = allocator->imgs[img_id].img_view;
+            desc_img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-            VkWriteDescriptorSet write_set = vk_boiler::write_descriptor_set(
-                &descriptor_img_info, set, i, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+            VkWriteDescriptorSet write_desc_set =
+                vk_boiler::write_descriptor_set(
+                    &desc_img_info, desc_set, i,
+                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
-            vkUpdateDescriptorSets(device, 1, &write_set, 0, nullptr);
+            vkUpdateDescriptorSets(device, 1, &write_desc_set, 0, nullptr);
         } break;
 
         default:

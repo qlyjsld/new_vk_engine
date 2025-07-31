@@ -15,16 +15,24 @@ struct vertex_input_description {
 };
 
 struct vertex {
-    glm::vec3 pos;
-    glm::vec3 normal;
-    glm::vec2 texcoord;
+    alignas(16) glm::vec3 pos;
+    alignas(16) glm::vec3 normal;
+    alignas(16) glm::vec2 texcoord;
 
     static vertex_input_description get_vertex_input_description();
+};
+
+struct meshlet {
+    uint32_t vertex_index[64];
+    uint32_t indices[378];
+    uint32_t vertex_count;
+    uint32_t index_count;
 };
 
 struct mesh {
     std::vector<vertex> vertices;
     allocated_buffer vertex_buffer;
+    VkDescriptorSet vertex_set;
 
     std::vector<uint16_t> indices;
     allocated_buffer index_buffer;
@@ -32,6 +40,10 @@ struct mesh {
     std::vector<unsigned char> texture;
     allocated_img texture_buffer;
     VkDescriptorSet texture_set;
+
+    std::vector<meshlet> meshlets;
+    allocated_buffer meshlet_buffer;
+    VkDescriptorSet meshlet_set;
 };
 
 struct material {
