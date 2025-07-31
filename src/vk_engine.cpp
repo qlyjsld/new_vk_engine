@@ -212,7 +212,7 @@ void vk_engine::draw()
     /* frame attachment info */
     VkRenderingAttachmentInfo color_attachment =
         vk_boiler::rendering_attachment_info(
-            _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true,
+            _target.img_view, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
             clear_value);
 
     VkRenderingAttachmentInfo depth_attachment =
@@ -227,7 +227,7 @@ void vk_engine::draw()
     vkCmdBeginRendering(frame->cmd_buffer, &rendering_info);
 
     // draw_gfx(frame);
-    draw_mesh(frame);
+    // draw_mesh(frame);
 
     /* imgui rendering */
     ImGui::Render();
@@ -546,23 +546,21 @@ void vk_engine::imgui_init()
 
 void vk_engine::draw_imgui()
 {
-    // vol branch
-    // ImGui::Begin("cloud", &cloud_ui, ImGuiWindowFlags_NoResize);
-    // ImGui::SetWindowSize(ImVec2(290.f, 290.f));
-    // ImGui::Text("'tab' to toggle; 'ese' to close");
-    // ImGui::Text("application average %.3f ms/frame \n (%.1f FPS)",
-    //             1000.0f / ImGui::GetIO().Framerate,
-    //             ImGui::GetIO().Framerate);
-    // ImGui::SliderFloat("type", &_cloud_data.type, 0.f, 1.f);
-    // ImGui::SliderFloat("freq", &_cloud_data.freq, 0.f, 1.f);
-    // ImGui::SliderFloat("ambient", &_cloud_data.ambient, 0.f, 1.f);
-    // ImGui::SliderFloat("sigma_a", &_cloud_data.sigma_a, 0.f, 1.f);
-    // ImGui::SliderFloat("sigma_s", &_cloud_data.sigma_s, 0.f, 1.f);
-    // ImGui::SliderFloat("step", &_cloud_data.step, .1f, 2.f);
-    // ImGui::SliderInt("max_steps", &_cloud_data.max_steps, 0, 128);
-    // ImGui::SliderFloat("cutoff", &_cloud_data.cutoff, 0.f, 1.f);
-    // ImGui::SliderFloat("density", &_cloud_data.density, 0.f, 3.f);
-    // ImGui::ColorEdit3("sun_color", (float *)&_cloud_data.sun_color);
-    // ImGui::ColorEdit3("sky_color", (float *)&_cloud_data.sky_color);
-    // ImGui::End();
+    ImGui::Begin("cloud", &cloud_ui, ImGuiWindowFlags_NoResize);
+    ImGui::SetWindowSize(ImVec2(290.f, 290.f));
+    ImGui::Text("'tab' to toggle; 'ese' to close");
+    ImGui::Text("application average %.3f ms/frame \n (%.1f FPS)",
+                1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::SliderFloat("type", &_cloud_data.type, 0.f, 1.f);
+    ImGui::SliderFloat("freq", &_cloud_data.freq, 0.f, 1.f);
+    ImGui::SliderFloat("ambient", &_cloud_data.ambient, 0.f, 1.f);
+    ImGui::SliderFloat("sigma_a", &_cloud_data.sigma_a, 0.f, 1.f);
+    ImGui::SliderFloat("sigma_s", &_cloud_data.sigma_s, 0.f, 1.f);
+    ImGui::SliderFloat("step", &_cloud_data.step, .1f, 2.f);
+    ImGui::SliderInt("max_steps", &_cloud_data.max_steps, 0, 128);
+    ImGui::SliderFloat("cutoff", &_cloud_data.cutoff, 0.f, 1.f);
+    ImGui::SliderFloat("density", &_cloud_data.density, 0.f, 3.f);
+    ImGui::ColorEdit3("sun_color", (float *)&_cloud_data.sun_color);
+    ImGui::ColorEdit3("sky_color", (float *)&_cloud_data.sky_color);
+    ImGui::End();
 }
