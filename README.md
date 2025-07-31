@@ -26,8 +26,7 @@ require: Vulkan SDK
 See src/main.cpp, src/cloud.cpp and shaders/*.comp.
 
 ## Demo
-![alt text](https://github.com/qlyjsld/new_vk_engine/blob/vol/screenshots/cloud.gif)
-** *cloud*
+*See screenshots/**
 
 ## Discussion
 Feel free to send me an email.
