@@ -59,11 +59,27 @@ void vk_engine::device_init()
     mesh_shader_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
     mesh_shader_features.meshShaderQueries = VK_FALSE;
 
+#ifndef NDEBUG
+    std::vector<VkValidationFeatureEnableEXT> enabled_validation_features = {
+        VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
+
+    VkValidationFeaturesEXT validation_features = {};
+    validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+    validation_features.pNext = nullptr;
+    validation_features.enabledValidationFeatureCount =
+        enabled_validation_features.size();
+    validation_features.pEnabledValidationFeatures =
+        enabled_validation_features.data();
+#endif
+
     // create physical device
     vkb::PhysicalDeviceSelector selector(instance);
     auto phys_ret =
         selector.add_required_extension_features(mesh_shader_features)
             .add_required_extension_features(dynamic_rendering_features)
+#ifndef NDEBUG
+            .add_required_extension_features(validation_features)
+#endif
             .set_surface(_surface)
             .select();
 
