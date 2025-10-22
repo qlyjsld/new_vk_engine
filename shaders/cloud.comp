@@ -166,7 +166,7 @@ void main()
             step_count++;
 
             // dome check
-            if (p.y < 0.f) { t.x += 16.f * tstep; continue; }
+            // if (p.y < 0.f) { t.x += 16.f * tstep; continue; }
             float c = imageLoad(weather, ivec2(p.xz * .3f + vec2(256.f))).x;
             if (c < .01f) { t.x += 16.f * tstep; continue; }
             float h = (length(p) - inner.radius) / 800.f;
