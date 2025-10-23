@@ -11,4 +11,5 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}/vendor/imgui"
 	"${PROJECT_SOURCE_DIR}/vendor/imgui/backends"
 	"${PROJECT_SOURCE_DIR}/vendor/volk"
+	"${PROJECT_SOURCE_DIR}/vendor/vulkan-headers/include"
 	"${PROJECT_SOURCE_DIR}/vendor/glm")

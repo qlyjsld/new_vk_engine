@@ -12,6 +12,9 @@ add_subdirectory(vma)
 add_subdirectory(tinygltf)
 add_subdirectory(volk)
 
+target_include_directories(volk PUBLIC
+	"${PROJECT_SOURCE_DIR}/vendor/vulkan-headers/include")
+
 add_library(imgui STATIC)
 add_compile_definitions(IMGUI_IMPL_VULKAN_USE_VOLK)
 
