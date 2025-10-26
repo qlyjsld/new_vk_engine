@@ -19,7 +19,6 @@ This project uses CMake and Make, to clone and build:
 5. make -j <threads>
 6. ./src/vk_engine
 
-require: Vulkan SDK
 ```
 
 ## How to use
