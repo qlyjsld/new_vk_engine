@@ -25,6 +25,8 @@ This project uses CMake and Make, to clone and build:
 See src/main.cpp, src/cloud.cpp and shaders/*.comp.
 
 ## Demo
+![alt text](https://github.com/qlyjsld/new_vk_engine/blob/vol/screenshots/cloud.png)
+
 *See screenshots/**
 
 ## Discussion
