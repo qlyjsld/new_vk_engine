@@ -43,6 +43,12 @@ void vk_engine::device_init()
     deletion_queue.push_back(
         [=]() { vkDestroySurfaceKHR(_instance, _surface, nullptr); });
 
+    VkPhysicalDeviceMaintenance4Features maintenance4_features = {};
+    maintenance4_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_4_FEATURES;
+    maintenance4_features.pNext = nullptr;
+    maintenance4_features.maintenance4 = VK_TRUE;
+
     VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {};
     dynamic_rendering_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
@@ -77,6 +83,7 @@ void vk_engine::device_init()
     auto phys_ret =
         selector.add_required_extension_features(mesh_shader_features)
             .add_required_extension_features(dynamic_rendering_features)
+            .add_required_extension_features(maintenance4_features)
 #ifndef NDEBUG
             .add_required_extension_features(validation_features)
 #endif
@@ -91,6 +98,8 @@ void vk_engine::device_init()
 
     auto physical_device = phys_ret.value();
     physical_device.enable_extension_if_present("VK_EXT_mesh_shader");
+    physical_device.enable_extension_if_present("VK_KHR_dynamic_rendering");
+    physical_device.enable_extension_if_present("VK_KHR_maintenance4");
     _physical_device = physical_device.physical_device;
     _min_buffer_alignment =
         physical_device.properties.limits.minUniformBufferOffsetAlignment;

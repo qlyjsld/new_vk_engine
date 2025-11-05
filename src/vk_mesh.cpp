@@ -424,8 +424,9 @@ void vk_engine::upload_meshes(mesh *meshes, size_t size)
 
         /* meshlets buffer */
         create_buffer(mesh->meshlets.size() * sizeof(meshlet),
-                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0,
-                      &mesh->meshlet_buffer);
+                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                      0, &mesh->meshlet_buffer);
 
         upload_buffer(mesh->meshlets.size() * sizeof(meshlet),
                       mesh->meshlets.data(), mesh->meshlet_buffer.buffer);

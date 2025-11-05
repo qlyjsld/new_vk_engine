@@ -86,7 +86,7 @@ public:
     uint32_t _img_index;
     uint32_t _family_index = 0;
 
-    VkFormat _format = {VK_FORMAT_B8G8R8A8_UNORM};
+    VkFormat _format = {VK_FORMAT_R16G16B16A16_SFLOAT};
     VkColorSpaceKHR _colorspace = {VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
     allocated_img _depth_img;
     VkQueue _queue;

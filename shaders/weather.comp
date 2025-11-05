@@ -6,7 +6,7 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout (set = 0, binding = 0, r16f) uniform writeonly image2D out_frame;
 
-layout (push_constant) uniform readonly U_TIME {
+layout (push_constant) uniform U_TIME {
     float value;
 } u_time;
 
